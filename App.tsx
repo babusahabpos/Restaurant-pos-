@@ -217,7 +217,7 @@ function App() {
 
     const renderPage = () => {
         switch (currentPage) {
-            case 'dashboard': return <Dashboard data={dashboardData} orders={orders} />;
+            case 'dashboard': return <Dashboard data={dashboardData} orders={orders} onCompleteOrder={handleCompleteOrder} />;
             case 'billing': return <Billing onPrintKOT={handlePrintKOT} />;
             case 'online': return <OnlineOrders onPrintKOT={handlePrintKOT} />;
             case 'menu': return <Menu />;
@@ -227,7 +227,7 @@ function App() {
             case 'settings': return <Settings />;
             case 'subscription': return <Subscription />;
             case 'help': return <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={handleCreateTicket} />;
-            default: return <Dashboard data={dashboardData} orders={orders} />;
+            default: return <Dashboard data={dashboardData} orders={orders} onCompleteOrder={handleCompleteOrder} />;
         }
     };
 

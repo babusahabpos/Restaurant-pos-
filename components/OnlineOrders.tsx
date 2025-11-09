@@ -111,7 +111,7 @@ const OnlineOrders: React.FC<{ onPrintKOT: (order: Omit<OrderStatusItem, 'id' | 
     const total = subtotal;
 
     return (
-        <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-10rem)]">
+        <div className="flex flex-col lg:flex-row gap-6 h-full">
             {/* Menu Selection */}
             <div className="lg:w-3/5 bg-black p-6 rounded-lg border border-gray-800 flex flex-col">
                 <h3 className="text-lg font-semibold text-white mb-4">Menu</h3>

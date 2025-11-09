@@ -1,9 +1,88 @@
 import React, { useState } from 'react';
 import { DashboardData, OrderStatusItem } from '../types';
 
+const triggerPrint = (content: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write('<html><head><title>Print Bill</title></head><body>' + content + '</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    } else {
+        alert('Could not open print window. Please disable popup blockers.');
+    }
+};
+
+const createBillContent = (order: OrderStatusItem, paymentMethod: string) => {
+    // Assuming 5% total tax (2.5% CGST + 2.5% SGST) was applied to get order.total
+    const subtotal = order.type === 'Offline' ? order.total / 1.05 : order.total;
+    const cgst = order.type === 'Offline' ? subtotal * 0.025 : 0;
+    const sgst = order.type === 'Offline' ? subtotal * 0.025 : 0;
+
+    return `
+        <style>
+            body { font-family: 'Courier New', monospace; font-size: 10pt; width: 80mm; margin: 0; padding: 5px; color: black; }
+            .center { text-align: center; }
+            .right { text-align: right; }
+            h2, p { margin: 2px 0; }
+            hr { border: none; border-top: 1px dashed black; margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 2px; }
+            .items th, .items td { border-bottom: 1px dashed #ccc; }
+            .totals td:first-child { text-align: left; }
+            .totals td:last-child { text-align: right; }
+        </style>
+        <div class="center">
+            <h2>BaBu SAHAB</h2>
+            <p>123 Food Street, Culinary City, 400001</p>
+            <p>GSTIN: 27ABCDE1234F1Z5</p>
+        </div>
+        <hr>
+        <p><strong>Order:</strong> ${order.sourceInfo}</p>
+        <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
+        <p><strong>Payment Mode:</strong> ${paymentMethod}</p>
+        <hr>
+        <table class="items">
+            <thead><tr><th>Item</th><th class="center">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead>
+            <tbody>
+                ${order.items.map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td class="center">${item.quantity}</td>
+                        <td class="right">₹${(item.offlinePrice || item.onlinePrice).toFixed(2)}</td>
+                        <td class="right">₹${((item.offlinePrice || item.onlinePrice) * item.quantity).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <hr>
+        <table class="totals">
+            <tbody>
+                <tr><td>Subtotal</td><td>₹${subtotal.toFixed(2)}</td></tr>
+                ${order.type === 'Offline' ? `
+                <tr><td>CGST (2.5%)</td><td>₹${cgst.toFixed(2)}</td></tr>
+                <tr><td>SGST (2.5%)</td><td>₹${sgst.toFixed(2)}</td></tr>
+                ` : ''}
+            </tbody>
+        </table>
+        <hr>
+        <table class="totals">
+            <tbody>
+                <tr><td><strong>Grand Total</strong></td><td><strong>₹${Math.round(order.total).toFixed(2)}</strong></td></tr>
+            </tbody>
+        </table>
+        <hr>
+        <p class="center">Thank you for dining with us!</p>
+    `;
+};
+
+
 const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => void }> = ({ orders, onClose }) => {
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
             <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">Today's Orders</h3>
@@ -11,35 +90,80 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
                 </div>
                 <div className="overflow-y-auto">
                     {orders.length > 0 ? (
-                         <table className="w-full text-sm text-left text-gray-400">
-                            <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Order Info</th>
-                                    <th scope="col" className="px-6 py-3">Time</th>
-                                    <th scope="col" className="px-6 py-3">Items</th>
-                                    <th scope="col" className="px-6 py-3">Total</th>
-                                    <th scope="col" className="px-6 py-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                                    <tr key={order.id} className="bg-black border-b border-gray-800">
-                                        <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
-                                        <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
-                                        <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
-                                        <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`${order.status === 'Completed' ? 'text-green-400' : 'text-yellow-400'}`}>
-                                                {order.status}
-                                            </span>
-                                        </td>
+                        <div className="overflow-x-auto">
+                             <table className="w-full min-w-[640px] text-sm text-left text-gray-400">
+                                <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3">Order Info</th>
+                                        <th scope="col" className="px-6 py-3">Time</th>
+                                        <th scope="col" className="px-6 py-3">Items</th>
+                                        <th scope="col" className="px-6 py-3">Total</th>
+                                        <th scope="col" className="px-6 py-3">Status</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
+                                        <tr key={order.id} className="bg-black border-b border-gray-800">
+                                            <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
+                                            <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
+                                            <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
+                                            <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`${order.status === 'Completed' ? 'text-green-400' : 'text-yellow-400'}`}>
+                                                    {order.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     ) : (
                         <p className="text-center py-10 text-gray-500">No orders for today yet.</p>
                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SettleBillModal: React.FC<{
+    order: OrderStatusItem;
+    onClose: () => void;
+    onSettle: (orderId: number, paymentMethod: string) => void;
+}> = ({ order, onClose, onSettle }) => {
+    const paymentMethods = ['Cash', 'PhonePe', 'Google Pay'];
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
+            <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-sm">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold text-white">Settle Bill</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <div className="space-y-4">
+                    <div className="bg-gray-900 p-4 rounded-lg">
+                        <div className="flex justify-between text-gray-400">
+                            <span>Order:</span>
+                            <span className="font-semibold text-white">{order.sourceInfo}</span>
+                        </div>
+                         <div className="flex justify-between text-gray-400 mt-2">
+                            <span>Total Amount:</span>
+                            <span className="font-bold text-2xl text-lemon">₹{order.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <p className="text-center text-gray-400">Select Payment Method</p>
+                    <div className="grid grid-cols-1 gap-3">
+                        {paymentMethods.map(method => (
+                             <button
+                                key={method}
+                                onClick={() => onSettle(order.id, method)}
+                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-bold py-3 px-4 rounded-lg transition-colors"
+                            >
+                                {method}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
@@ -50,42 +174,65 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
 const PendingOrdersModal: React.FC<{ 
     onlineOrders: OrderStatusItem[]; 
     offlineOrders: OrderStatusItem[]; 
-    onClose: () => void 
-}> = ({ onlineOrders, offlineOrders, onClose }) => {
+    onClose: () => void;
+    onCompleteOrder: (orderId: number) => void;
+    onInitiateSettle: (order: OrderStatusItem) => void;
+}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle }) => {
     const [activeTab, setActiveTab] = useState<'Online' | 'Offline'>('Online');
 
     const ordersToShow = activeTab === 'Online' ? onlineOrders : offlineOrders;
-
+    
     const renderOrderList = (orders: OrderStatusItem[]) => {
         if (orders.length === 0) {
             return <p className="text-center py-10 text-gray-500">No pending {activeTab.toLowerCase()} orders.</p>;
         }
         return (
-            <table className="w-full text-sm text-left text-gray-400">
-                <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
-                    <tr>
-                        <th scope="col" className="px-6 py-3">Order Info</th>
-                        <th scope="col" className="px-6 py-3">Time</th>
-                        <th scope="col" className="px-6 py-3">Items</th>
-                        <th scope="col" className="px-6 py-3">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                        <tr key={order.id} className="bg-black border-b border-gray-800">
-                            <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
-                            <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
-                            <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
-                            <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
+            <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm text-left text-gray-400">
+                    <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
+                        <tr>
+                            <th scope="col" className="px-6 py-3">Order Info</th>
+                            <th scope="col" className="px-6 py-3">Time</th>
+                            <th scope="col" className="px-6 py-3">Items</th>
+                            <th scope="col" className="px-6 py-3">Total</th>
+                            <th scope="col" className="px-6 py-3">Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
+                            <tr key={order.id} className="bg-black border-b border-gray-800">
+                                <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
+                                <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
+                                <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
+                                <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {activeTab === 'Offline' && (
+                                        <button
+                                            onClick={() => onInitiateSettle(order)}
+                                            className="bg-lemon hover:bg-lemon-dark text-black font-bold py-1 px-3 rounded text-xs"
+                                        >
+                                            Generate Bill
+                                        </button>
+                                    )}
+                                    {activeTab === 'Online' && (
+                                        <button
+                                            onClick={() => onCompleteOrder(order.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs"
+                                        >
+                                            Complete
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         );
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
             <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">Pending Orders</h3>
@@ -133,9 +280,10 @@ const PlatformCard: React.FC<{ name: string; logoUrl: string; }> = ({ name, logo
     </div>
 );
 
-const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[] }> = ({ data, orders }) => {
+const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCompleteOrder: (orderId: number) => void; }> = ({ data, orders, onCompleteOrder }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
+    const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
 
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
     const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
@@ -149,10 +297,37 @@ const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[] }> = 
              orderDate.getFullYear() === today.getFullYear();
     });
 
+    const handleSettleAndPrint = (orderId: number, paymentMethod: string) => {
+        const orderToSettle = orders.find(o => o.id === orderId);
+        if (orderToSettle) {
+            onCompleteOrder(orderId);
+            const billContent = createBillContent(orderToSettle, paymentMethod);
+            triggerPrint(billContent);
+            setSettlingOrder(null);
+        } else {
+            console.error("Could not find order to settle with ID:", orderId);
+            setSettlingOrder(null);
+        }
+    };
+
     return (
         <>
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrders} onClose={() => setShowTodaysOrders(false)} />}
-            {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} />}
+            
+            {showPendingOrdersModal && <PendingOrdersModal 
+                onlineOrders={pendingOnlineOrders} 
+                offlineOrders={pendingOfflineOrders} 
+                onClose={() => setShowPendingOrdersModal(false)} 
+                onCompleteOrder={onCompleteOrder}
+                onInitiateSettle={setSettlingOrder}
+            />}
+
+            {settlingOrder && <SettleBillModal
+                order={settlingOrder}
+                onClose={() => setSettlingOrder(null)}
+                onSettle={handleSettleAndPrint}
+            />}
+
             <div className="space-y-6">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
