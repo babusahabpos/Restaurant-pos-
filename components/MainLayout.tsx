@@ -116,9 +116,9 @@ const BottomNavBar: React.FC<{
                             aria-current={isActive ? 'page' : undefined}
                             className={`flex items-center justify-center w-16 h-16 -mt-8 rounded-full transition-transform duration-300 shadow-lg shadow-lemon/30 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`}
                         >
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center justify-center pt-1">
                                 <Icon className="w-7 h-7" />
-                                <span className="text-xs font-bold capitalize mt-1">
+                                <span className="text-[10px] font-bold capitalize mt-2 leading-none">
                                     {item.name}
                                 </span>
                             </div>

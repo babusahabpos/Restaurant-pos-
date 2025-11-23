@@ -401,7 +401,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                     <h3 className="text-lg font-semibold text-white mb-4">Online Platforms</h3>
                     <div className="grid grid-cols-2 gap-4">
                         <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />
-                        <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/business/login" />
+                        <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/partners/onlineordering" />
                     </div>
                 </div>
             </div>
