@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MenuItem, RegisteredUser } from '../types';
 import QrCodeModal from './QrCodeModal';
 
@@ -98,8 +98,10 @@ const MenuItemFormModal: React.FC<{
 };
 
 
-const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
-    const [activeTab, setActiveTab] = useState<'menu' | 'link'>('menu');
+const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => {
+    // Safety check
+    const validMenuItems = useMemo(() => (menu || []).filter(item => item && item.name && item.category), [menu]);
+
     const [categories, setCategories] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -111,9 +113,9 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
     const [menuUrl, setMenuUrl] = useState('');
 
     useEffect(() => {
-        const uniqueCategories = [...new Set(menu.map(item => item.category))];
+        const uniqueCategories = [...new Set(validMenuItems.map(item => item.category))];
         setCategories(uniqueCategories.sort());
-    }, [menu]);
+    }, [validMenuItems]);
 
     const toggleStock = (id: number) => {
         setMenu(menu.map(item =>
@@ -122,7 +124,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
     };
     
     const handleOpenItemModal = (item: MenuItem | null = null) => {
-        const initialData = item ? item : { category: selectedCategory, inStock: true };
+        const initialData = item ? item : { category: selectedCategory || '', inStock: true };
         setEditingItem(initialData);
         setIsItemModalOpen(true);
     };
@@ -200,7 +202,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
                     placeholder="Search categories..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full md:flex-grow bg-gray-900 text-white placeholder-gray-400 p-2.5 rounded-lg border border-gray-800 focus:outline-none focus:ring-1 focus:ring-lemon"
+                    className="w-full md:flex-grow bg-gray-900 text-white placeholder-gray-400 p-2.5 rounded-lg border border-gray-800 focus:outline-none focus:ring-1 focus:ring-lemon focus:border-lemon"
                 />
                 <button onClick={() => setIsCategoryModalOpen(true)} className="w-full md:w-auto bg-lemon text-black font-bold py-2.5 px-5 rounded-lg hover:bg-lemon-dark transition">
                     Add New Category
@@ -211,7 +213,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
                     <div key={category} onClick={() => setSelectedCategory(category)} className="bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:ring-2 hover:ring-lemon transition border border-gray-800 h-32">
                         <h4 className="text-lg font-bold text-white capitalize">{category}</h4>
                         <p className="text-sm text-gray-400 mt-1">
-                            {menu.filter(item => item.category === category).length} items
+                            {validMenuItems.filter(item => item.category === category).length} items
                         </p>
                     </div>
                 ))}
@@ -221,7 +223,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
 
     const renderItemView = () => {
         if (!selectedCategory) return null;
-        const itemsToShow = menu.filter(item => item.category === selectedCategory && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        const itemsToShow = validMenuItems.filter(item => item.category === selectedCategory && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
         return (
             <>
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
@@ -280,31 +282,25 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
 
     return (
         <>
-            {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} />}
             {isItemModalOpen && <MenuItemFormModal item={editingItem} onClose={handleCloseModals} onSave={handleSaveItem} categories={categories} />}
             {isCategoryModalOpen && <AddCategoryModal onClose={handleCloseModals} onSave={handleSaveCategory} />}
+            {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} />}
 
-            <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
-                 <div className="flex border-b border-gray-700 mb-6">
-                    <button onClick={() => setActiveTab('menu')} className={`py-2 px-4 ${activeTab === 'menu' ? 'border-b-2 border-lemon text-lemon' : 'text-gray-400'}`}>Menu Management</button>
-                    <button onClick={() => setActiveTab('link')} className={`py-2 px-4 ${activeTab === 'link' ? 'border-b-2 border-lemon text-lemon' : 'text-gray-400'}`}>Order Link & QR</button>
-                </div>
-                
-                {activeTab === 'menu' && (
-                    <div>
-                        {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
-                    </div>
-                )}
-
-                {activeTab === 'link' && (
-                    <div className="p-4">
-                        <h3 className="text-xl font-semibold text-white mb-4">Customer Order Link</h3>
-                        <p className="text-gray-400 mb-6 max-w-2xl">Generate a unique QR code and link for your customers. They can scan it to view your menu and place orders directly from their phones. Any changes you make in the 'Menu Management' tab will be reflected instantly.</p>
-                        <button onClick={handleGenerateUrl} className="bg-lemon text-black font-bold py-3 px-6 rounded-lg hover:bg-lemon-dark transition">
-                            Generate Link & QR Code
+            <div className="space-y-6">
+                <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
+                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-800 pb-6">
+                        <div>
+                            <h3 className="text-xl font-bold text-white">QR Menu Management</h3>
+                            <p className="text-gray-400 mt-1">Manage your menu items and generate QR codes for customers.</p>
+                        </div>
+                        <button onClick={handleGenerateUrl} className="flex items-center gap-2 bg-lemon text-black font-bold py-3 px-6 rounded-lg hover:bg-lemon-dark transition shadow-lg shadow-lemon/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            Generate QR Code
                         </button>
                     </div>
-                )}
+
+                    {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
+                </div>
             </div>
         </>
     );

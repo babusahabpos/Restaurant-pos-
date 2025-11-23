@@ -6,8 +6,10 @@ interface OnlineOrdersProps {
     menuItems: MenuItem[];
 }
 
-const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems }) => {
-    const categories = useMemo(() => ['All', ...new Set(menuItems.map(item => item.category))], [menuItems]);
+const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] }) => {
+    // Safety check
+    const validMenuItems = useMemo(() => (menuItems || []).filter(item => item && item.name && item.category), [menuItems]);
+    const categories = useMemo(() => ['All', ...new Set(validMenuItems.map(item => item.category))], [validMenuItems]);
 
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +17,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems }) =>
     const [platform, setPlatform] = useState<'Swiggy' | 'Zomato'>('Swiggy');
     const [orderId, setOrderId] = useState('');
 
-    const filteredMenuItems = menuItems.filter(item => 
+    const filteredMenuItems = validMenuItems.filter(item => 
         item.inStock &&
         (activeCategory === 'All' || item.category === activeCategory) &&
         item.name.toLowerCase().includes(searchTerm.toLowerCase())

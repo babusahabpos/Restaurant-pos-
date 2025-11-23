@@ -6,8 +6,11 @@ interface BillingProps {
     menuItems: MenuItem[];
 }
 
-const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems }) => {
-    const categories = useMemo(() => ['All', ...new Set(menuItems.map(item => item.category))], [menuItems]);
+const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [] }) => {
+    // Safety check: Filter out null/undefined items and ensure required properties exist
+    const validMenuItems = useMemo(() => (menuItems || []).filter(item => item && item.name && item.category), [menuItems]);
+    
+    const categories = useMemo(() => ['All', ...new Set(validMenuItems.map(item => item.category))], [validMenuItems]);
     
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +20,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems }) => {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
 
-    const filteredMenuItems = menuItems.filter(item => 
+    const filteredMenuItems = validMenuItems.filter(item => 
         item.inStock &&
         (activeCategory === 'All' || item.category === activeCategory) &&
         item.name.toLowerCase().includes(searchTerm.toLowerCase())

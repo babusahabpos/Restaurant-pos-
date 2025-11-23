@@ -249,7 +249,7 @@ const CustomerOrderPage: React.FC = () => {
                             <div key={category}>
                                 <h2 className="text-2xl font-bold text-white capitalize mb-4">{category}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {items.filter(item => item.inStock).map(item => (
+                                    {(items as MenuItem[]).filter(item => item.inStock).map(item => (
                                         <div key={item.id} className="bg-gray-900 rounded-lg p-4 flex justify-between items-center border border-gray-800">
                                             <div>
                                                 <h3 className="font-semibold text-white">{item.name}</h3>

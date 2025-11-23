@@ -32,7 +32,25 @@ function App() {
     // --- State Management ---
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-    const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_users') || JSON.stringify(MOCK_USERS)));
+    
+    // Robust user loading with data migration for missing menus
+    const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
+        try {
+            const storedUsers = localStorage.getItem('babuSahabPos_users');
+            if (storedUsers) {
+                const parsedUsers = JSON.parse(storedUsers);
+                // Ensure every user has a menu property (migration fix for blank pages)
+                return parsedUsers.map((u: any) => ({
+                    ...u,
+                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu : MOCK_MENU_ITEMS
+                }));
+            }
+        } catch (error) {
+            console.error("Error loading users from local storage", error);
+        }
+        return JSON.parse(JSON.stringify(MOCK_USERS));
+    });
+
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
@@ -236,6 +254,8 @@ function App() {
                 user.id === loggedInUser.id ? { ...user, menu: newMenu } : user
             )
         );
+        // Also update loggedInUser state to reflect changes immediately
+        setLoggedInUser(prev => prev ? { ...prev, menu: newMenu } : null);
     };
 
     const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
@@ -243,6 +263,7 @@ function App() {
         setRegisteredUsers(prev => prev.map(user => 
             user.id === loggedInUser.id ? { ...user, ...updates } : user
         ));
+        setLoggedInUser(prev => prev ? { ...prev, ...updates } : null);
         alert('Settings updated successfully!');
     };
     
@@ -331,7 +352,7 @@ function App() {
         };
 
         return (
-            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
+            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout}>
                 {adminPages[currentAdminPage]}
             </AdminLayout>
         );
@@ -340,12 +361,15 @@ function App() {
     if (authState === 'loggedIn' && loggedInUser) {
         const userOrders = orders.filter(o => o.restaurantId === loggedInUser.id);
         
+        // Ensure menu is an array and filter out malformed items to prevent crashes
+        const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
+
         const pages = {
             dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} />,
-            billing: <Billing menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
-            online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
-            menu: <Menu menu={loggedInUser.menu} setMenu={handleUpdateMenu} />,
-            qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
+            billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} />,
+            online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
+            menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
+            qrMenu: <QrMenu menu={safeMenu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
             inventory: <Inventory />,
             staff: <Staff />,
             reports: <Reports />,
