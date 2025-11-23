@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem } from '../types';
 
@@ -21,6 +22,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
     const [tableNumber, setTableNumber] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+    const [discount, setDiscount] = useState<number>(0);
 
     const filteredMenuItems = validMenuItems.filter(item => 
         item.inStock &&
@@ -56,6 +58,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
             setTableNumber('');
             setCustomerName('');
             setCustomerPhone('');
+            setDiscount(0);
         }
     };
 
@@ -115,6 +118,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
             type: 'Offline',
             items: currentOrder,
             total,
+            discount,
             sourceInfo: orderSource === 'Dine-in' ? `Table: ${tableNumber}` : `Takeaway (${customerName || 'N/A'})`
         };
         onPrintKOT(newOrderData);
@@ -133,11 +137,12 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
         setTableNumber('');
         setCustomerName('');
         setCustomerPhone('');
+        setDiscount(0);
     };
 
     const subtotal = currentOrder.reduce((acc, item) => acc + (Number(item.offlinePrice) || 0) * item.quantity, 0);
     const tax = subtotal * (taxRate / 100);
-    const total = subtotal + tax;
+    const total = subtotal + tax - discount;
 
     return (
         <div className="flex flex-col lg:flex-row gap-6 h-full">
@@ -215,7 +220,19 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                 <div className="border-t border-gray-800 mt-auto pt-4 space-y-2">
                     <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
                     <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>₹{tax.toFixed(2)}</span></div>
-                    <div className="flex justify-between text-white font-bold text-lg"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+                    
+                    {/* Discount Input */}
+                    <div className="flex justify-between items-center text-gray-400">
+                        <span>Discount (₹)</span>
+                        <input 
+                            type="number" 
+                            value={discount} 
+                            onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} 
+                            className="w-24 bg-gray-900 text-white p-1 text-right rounded border border-gray-700 focus:outline-none focus:ring-1 focus:ring-lemon" 
+                        />
+                    </div>
+
+                    <div className="flex justify-between text-white font-bold text-lg"><span>Total</span><span>₹{Math.max(0, total).toFixed(2)}</span></div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 mt-6">

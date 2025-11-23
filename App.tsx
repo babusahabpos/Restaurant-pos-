@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -257,6 +258,12 @@ function App() {
         ));
     };
 
+    const handleUpdateOrder = (updatedOrder: OrderStatusItem) => {
+        setOrders(prevOrders => prevOrders.map(order => 
+            order.id === updatedOrder.id ? updatedOrder : order
+        ));
+    };
+
     const handleCreateTicket = (subject: string, message: string) => {
         if (!loggedInUser) return;
         const newTicket: SupportTicket = {
@@ -404,6 +411,8 @@ function App() {
                 restaurantName={loggedInUser.restaurantName}
                 address={loggedInUser.address}
                 fssai={loggedInUser.fssai || ''}
+                menuItems={safeMenu}
+                onUpdateOrder={handleUpdateOrder}
             />,
             billing: <Billing 
                 menuItems={safeMenu} 

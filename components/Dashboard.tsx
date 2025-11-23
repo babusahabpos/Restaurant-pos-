@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { DashboardData, OrderStatusItem } from '../types';
+
+import React, { useState, useMemo } from 'react';
+import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 
 const triggerPrint = (content: string) => {
     const printWindow = window.open('', '_blank');
@@ -17,29 +18,33 @@ const triggerPrint = (content: string) => {
 };
 
 const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRate: number, restaurantName: string, address: string, fssai: string) => {
-    // Reverse calculation based on the current tax rate for offline orders if total includes tax.
-    // However, for online orders with delivery, calculations might differ.
-    // Simplifying: If Offline, assume total includes tax. If Online, check if deliveryDetails exist.
     
     let subtotal = order.total;
     let taxAmount = 0;
     let deliveryCharge = 0;
+    let discount = order.discount || 0;
 
+    // Calculation Logic considering Discount
     if (order.type === 'Offline') {
-        subtotal = order.total / (1 + taxRate / 100);
-        taxAmount = order.total - subtotal;
+        // Reverse calculation: Total = (Subtotal + Tax) - Discount
+        // If we assume the stored `total` is the final amount payable.
+        // We need to back-calculate Taxable Amount.
+        // TaxableAmount * (1 + TaxRate) = Total + Discount
+        const totalIncludingTax = order.total + discount;
+        subtotal = totalIncludingTax / (1 + taxRate / 100);
+        taxAmount = totalIncludingTax - subtotal;
     } else {
-        // Online Orders (QR or Platform)
+        // Online Orders
         if (order.deliveryDetails) {
             deliveryCharge = order.deliveryDetails.deliveryCharge;
-            // Total = Items + Tax + Delivery
-            // Items + Tax = Total - Delivery
-            const totalBeforeDelivery = order.total - deliveryCharge;
+            // Total = Items + Tax + Delivery - Discount
+            // Items + Tax = Total - Delivery + Discount
+            const totalBeforeDelivery = order.total - deliveryCharge + discount;
             subtotal = totalBeforeDelivery / (1 + taxRate / 100);
             taxAmount = totalBeforeDelivery - subtotal;
         } else {
-            // Default Online (Swiggy/Zomato entered manually) - treat same as offline (inclusive) or just raw total
-             subtotal = order.total; // Assumes manually entered online orders are flat amounts for now
+             // Basic manual online order
+             subtotal = order.total + discount; 
         }
     }
 
@@ -89,6 +94,7 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
                 <tr><td>Subtotal</td><td>₹${subtotal.toFixed(2)}</td></tr>
                 <tr><td>CGST (${(taxRate/2)}%)</td><td>₹${cgst.toFixed(2)}</td></tr>
                 <tr><td>SGST (${(taxRate/2)}%)</td><td>₹${sgst.toFixed(2)}</td></tr>
+                ${discount > 0 ? `<tr><td>Discount</td><td>-₹${discount.toFixed(2)}</td></tr>` : ''}
                 ${deliveryCharge > 0 ? `<tr><td>Delivery Charge</td><td>₹${deliveryCharge.toFixed(2)}</td></tr>` : ''}
             </tbody>
         </table>
@@ -152,6 +158,129 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
     );
 };
 
+const EditOrderModal: React.FC<{
+    order: OrderStatusItem;
+    menuItems: MenuItem[];
+    onClose: () => void;
+    onSave: (updatedOrder: OrderStatusItem) => void;
+    taxRate: number;
+}> = ({ order, menuItems, onClose, onSave, taxRate }) => {
+    const [editedItems, setEditedItems] = useState<OrderItem[]>(order.items);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [discount, setDiscount] = useState<number>(order.discount || 0);
+
+    const priceType = order.type === 'Online' ? 'onlinePrice' : 'offlinePrice';
+
+    const addToOrder = (item: MenuItem) => {
+        const existingItem = editedItems.find(orderItem => orderItem.id === item.id);
+        if (existingItem) {
+            setEditedItems(editedItems.map(orderItem => orderItem.id === item.id ? { ...orderItem, quantity: orderItem.quantity + 1 } : orderItem));
+        } else {
+            setEditedItems([...editedItems, { ...item, quantity: 1 }]);
+        }
+    };
+
+    const updateQuantity = (id: number, quantity: number) => {
+        if (quantity < 1) {
+            setEditedItems(editedItems.filter(item => item.id !== id));
+        } else {
+            setEditedItems(editedItems.map(item => item.id === id ? { ...item, quantity } : item));
+        }
+    };
+
+    const calculateTotal = () => {
+        const subtotal = editedItems.reduce((acc, item) => acc + (Number(item[priceType]) || 0) * item.quantity, 0);
+        const deliveryCharge = order.deliveryDetails?.deliveryCharge || 0;
+        const tax = subtotal * (taxRate / 100);
+        return subtotal + tax + deliveryCharge - discount;
+    };
+
+    const handleSave = () => {
+        const updatedOrder: OrderStatusItem = {
+            ...order,
+            items: editedItems,
+            discount: discount,
+            total: calculateTotal()
+        };
+        onSave(updatedOrder);
+        onClose();
+    };
+
+    const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) && item.inStock);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4">
+            <div className="bg-gray-900 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold text-white">Edit Order: {order.sourceInfo}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-6 overflow-hidden flex-1">
+                    {/* Items List */}
+                    <div className="flex-1 overflow-y-auto pr-2">
+                        <h4 className="text-lemon font-bold mb-2">Current Items</h4>
+                        {editedItems.map(item => (
+                            <div key={item.id} className="flex justify-between items-center bg-gray-800 p-2 rounded mb-2">
+                                <div>
+                                    <p className="text-white text-sm">{item.name}</p>
+                                    <p className="text-gray-400 text-xs">₹{item[priceType]}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="bg-gray-700 w-6 h-6 rounded text-white">-</button>
+                                    <span className="text-white text-sm">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="bg-gray-700 w-6 h-6 rounded text-white">+</button>
+                                </div>
+                            </div>
+                        ))}
+                        
+                         <div className="mt-4 pt-4 border-t border-gray-700">
+                             <div className="flex justify-between items-center mb-2">
+                                 <label className="text-gray-400 text-sm">Discount (₹)</label>
+                                 <input 
+                                    type="number" 
+                                    value={discount} 
+                                    onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                    className="bg-gray-800 text-white p-1 rounded w-24 text-right"
+                                />
+                             </div>
+                             <div className="flex justify-between items-center">
+                                 <span className="text-white font-bold">New Total:</span>
+                                 <span className="text-lemon font-bold">₹{calculateTotal().toFixed(2)}</span>
+                             </div>
+                         </div>
+                    </div>
+
+                    {/* Add Items */}
+                    <div className="flex-1 flex flex-col">
+                         <h4 className="text-lemon font-bold mb-2">Add Items</h4>
+                         <input 
+                            type="text" 
+                            placeholder="Search menu..." 
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="bg-gray-800 text-white p-2 rounded mb-2"
+                        />
+                        <div className="overflow-y-auto flex-1">
+                            {filteredMenu.map(item => (
+                                <div key={item.id} onClick={() => addToOrder(item)} className="cursor-pointer hover:bg-gray-800 p-2 rounded border-b border-gray-800 flex justify-between">
+                                    <span className="text-white text-sm">{item.name}</span>
+                                    <span className="text-gray-400 text-xs">₹{item[priceType]}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-4 flex justify-end gap-3">
+                    <button onClick={onClose} className="bg-gray-700 text-white px-4 py-2 rounded font-bold">Cancel</button>
+                    <button onClick={handleSave} className="bg-lemon text-black px-4 py-2 rounded font-bold">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const SettleBillModal: React.FC<{
     order: OrderStatusItem;
     onClose: () => void;
@@ -176,6 +305,12 @@ const SettleBillModal: React.FC<{
                             <span>Total Amount:</span>
                             <span className="font-bold text-2xl text-lemon">₹{order.total.toFixed(2)}</span>
                         </div>
+                        {order.discount && order.discount > 0 && (
+                             <div className="flex justify-between text-green-400 mt-1 text-sm">
+                                <span>Discount Applied:</span>
+                                <span>-₹{order.discount.toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
                     <p className="text-center text-gray-400">Select Payment Method</p>
                     <div className="grid grid-cols-1 gap-3">
@@ -202,7 +337,8 @@ const PendingOrdersModal: React.FC<{
     onClose: () => void;
     onCompleteOrder: (orderId: number) => void;
     onInitiateSettle: (order: OrderStatusItem) => void;
-}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle }) => {
+    onEditOrder: (order: OrderStatusItem) => void;
+}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder }) => {
     const [activeTab, setActiveTab] = useState<'Online' | 'Offline'>('Online');
 
     const ordersToShow = activeTab === 'Online' ? onlineOrders : offlineOrders;
@@ -230,8 +366,15 @@ const PendingOrdersModal: React.FC<{
                                 <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Time</span>{new Date(order.timestamp).toLocaleTimeString()}</td>
                                 <td className="px-4 py-2 md:px-6 md:py-4 text-xs block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Items</span>{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
                                 <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Total</span>₹{order.total.toFixed(2)}</td>
-                                <td className="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell text-right md:text-left">
+                                <td className="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell text-right md:text-left space-x-2">
                                     <span className="float-left font-bold md:hidden">Actions</span>
+                                    <button 
+                                        onClick={() => onEditOrder(order)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-xs"
+                                    >
+                                        Edit
+                                    </button>
+
                                     {activeTab === 'Offline' && (
                                         <button
                                             onClick={() => onInitiateSettle(order)}
@@ -324,12 +467,15 @@ interface DashboardProps {
     restaurantName: string;
     address: string;
     fssai: string;
+    menuItems: MenuItem[];
+    onUpdateOrder: (updatedOrder: OrderStatusItem) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
+    const [editingOrder, setEditingOrder] = useState<OrderStatusItem | null>(null);
 
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
     const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
@@ -366,6 +512,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                 onClose={() => setShowPendingOrdersModal(false)} 
                 onCompleteOrder={onCompleteOrder}
                 onInitiateSettle={setSettlingOrder}
+                onEditOrder={setEditingOrder}
+            />}
+
+            {editingOrder && <EditOrderModal 
+                order={editingOrder} 
+                menuItems={menuItems}
+                onClose={() => setEditingOrder(null)}
+                onSave={onUpdateOrder}
+                taxRate={taxRate}
             />}
 
             {settlingOrder && <SettleBillModal

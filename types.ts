@@ -1,3 +1,4 @@
+
 // FIX: Removed circular import of 'Page' type.
 export type Page = 
     'dashboard' | 
@@ -32,6 +33,7 @@ export interface OrderStatusItem {
     status: 'Preparation' | 'Completed';
     items: OrderItem[];
     total: number;
+    discount?: number; // Added discount field
     sourceInfo: string; // e.g., "Swiggy #12345" or "Table: 5" or "Delivery (Name)"
     timestamp: Date;
     deliveryDetails?: {
