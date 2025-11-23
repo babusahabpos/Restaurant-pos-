@@ -33,16 +33,28 @@ function App() {
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
-    // Robust user loading with data migration for missing menus
+    // Robust user loading with data migration for missing menus and sanitizing prices
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
         try {
             const storedUsers = localStorage.getItem('babuSahabPos_users');
             if (storedUsers) {
                 const parsedUsers = JSON.parse(storedUsers);
-                // Ensure every user has a menu property (migration fix for blank pages)
+                // Ensure every user has a menu property (migration fix) and valid prices and delivery settings
                 return parsedUsers.map((u: any) => ({
                     ...u,
-                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu : MOCK_MENU_ITEMS
+                    taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5, // Default to 5% if missing
+                    deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30, // Default delivery charge
+                    isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true, // Default delivery enabled
+                    fssai: u.fssai !== undefined ? u.fssai : '', // Default empty FSSAI
+                    menu: (Array.isArray(u.menu) && u.menu.length > 0) 
+                        ? u.menu.map((m: any) => ({
+                            ...m,
+                            // Force prices to be numbers to prevent .toFixed crashes
+                            offlinePrice: Number(m.offlinePrice) || 0,
+                            onlinePrice: Number(m.onlinePrice) || 0,
+                            inStock: m.inStock !== undefined ? m.inStock : true
+                        })) 
+                        : MOCK_MENU_ITEMS
                 }));
             }
         } catch (error) {
@@ -157,7 +169,8 @@ function App() {
     // --- Handlers ---
 
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' => {
-        if (email === 'admin@babushab.com' && pass === 'admin') {
+        // Updated Admin Credentials
+        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') {
             setAuthState('adminLoggedIn');
             setLoggedInUser(null);
             return 'admin';
@@ -182,7 +195,7 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>) => {
+    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'taxRate' | 'fssai'>) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         const user: RegisteredUser = {
@@ -192,12 +205,22 @@ function App() {
             lastLogin: 'Never',
             subscriptionEndDate: getFutureDate(30), // Default 30 day trial
             address: 'Please update in settings',
+            taxRate: 5, // Default tax rate
+            deliveryCharge: 30, // Default delivery charge
+            isDeliveryEnabled: true,
+            fssai: '', // Default empty FSSAI
             menu: MOCK_MENU_ITEMS, // Start with a default menu
         };
         setRegisteredUsers(prev => [...prev, user]);
     };
 
     const handleForgotPassword = (identifier: string): boolean => {
+        // Check for Admin email for password reset simulation
+        if (identifier === 'diptifoodice@gmail.com') {
+             alert(`A password reset link has been sent to ${identifier}. (Simulation)`);
+             return true;
+        }
+
         const user = registeredUsers.find(u => u.email === identifier || u.phone === identifier);
         if (user) {
             alert(`A password reset link has been sent to ${user.email}. (Simulation)`);
@@ -223,6 +246,7 @@ function App() {
             timestamp: new Date()
         };
         setOrders(prev => [...prev, newOrder]);
+        
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if(audio) audio.play();
     };
@@ -249,13 +273,20 @@ function App() {
 
     const handleUpdateMenu = (newMenu: MenuItem[]) => {
         if (!loggedInUser) return;
+        // Ensure new menu items also have numeric prices to avoid future issues
+        const sanitizedMenu = newMenu.map(item => ({
+            ...item,
+            offlinePrice: Number(item.offlinePrice) || 0,
+            onlinePrice: Number(item.onlinePrice) || 0
+        }));
+
         setRegisteredUsers(prevUsers => 
             prevUsers.map(user => 
-                user.id === loggedInUser.id ? { ...user, menu: newMenu } : user
+                user.id === loggedInUser.id ? { ...user, menu: sanitizedMenu } : user
             )
         );
         // Also update loggedInUser state to reflect changes immediately
-        setLoggedInUser(prev => prev ? { ...prev, menu: newMenu } : null);
+        setLoggedInUser(prev => prev ? { ...prev, menu: sanitizedMenu } : null);
     };
 
     const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
@@ -365,8 +396,21 @@ function App() {
         const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
 
         const pages = {
-            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} />,
-            billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} />,
+            dashboard: <Dashboard 
+                data={dashboardData} 
+                orders={userOrders} 
+                onCompleteOrder={handleCompleteOrder} 
+                taxRate={loggedInUser.taxRate || 5} 
+                restaurantName={loggedInUser.restaurantName}
+                address={loggedInUser.address}
+                fssai={loggedInUser.fssai || ''}
+            />,
+            billing: <Billing 
+                menuItems={safeMenu} 
+                onPrintKOT={handleKOT} 
+                taxRate={loggedInUser.taxRate || 5} 
+                restaurantName={loggedInUser.restaurantName}
+            />,
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
             qrMenu: <QrMenu menu={safeMenu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,

@@ -16,11 +16,35 @@ const triggerPrint = (content: string) => {
     }
 };
 
-const createBillContent = (order: OrderStatusItem, paymentMethod: string) => {
-    // Assuming 5% total tax (2.5% CGST + 2.5% SGST) was applied to get order.total
-    const subtotal = order.type === 'Offline' ? order.total / 1.05 : order.total;
-    const cgst = order.type === 'Offline' ? subtotal * 0.025 : 0;
-    const sgst = order.type === 'Offline' ? subtotal * 0.025 : 0;
+const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRate: number, restaurantName: string, address: string, fssai: string) => {
+    // Reverse calculation based on the current tax rate for offline orders if total includes tax.
+    // However, for online orders with delivery, calculations might differ.
+    // Simplifying: If Offline, assume total includes tax. If Online, check if deliveryDetails exist.
+    
+    let subtotal = order.total;
+    let taxAmount = 0;
+    let deliveryCharge = 0;
+
+    if (order.type === 'Offline') {
+        subtotal = order.total / (1 + taxRate / 100);
+        taxAmount = order.total - subtotal;
+    } else {
+        // Online Orders (QR or Platform)
+        if (order.deliveryDetails) {
+            deliveryCharge = order.deliveryDetails.deliveryCharge;
+            // Total = Items + Tax + Delivery
+            // Items + Tax = Total - Delivery
+            const totalBeforeDelivery = order.total - deliveryCharge;
+            subtotal = totalBeforeDelivery / (1 + taxRate / 100);
+            taxAmount = totalBeforeDelivery - subtotal;
+        } else {
+            // Default Online (Swiggy/Zomato entered manually) - treat same as offline (inclusive) or just raw total
+             subtotal = order.total; // Assumes manually entered online orders are flat amounts for now
+        }
+    }
+
+    const cgst = taxAmount / 2;
+    const sgst = taxAmount / 2;
 
     return `
         <style>
@@ -36,14 +60,15 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string) => {
             .totals td:last-child { text-align: right; }
         </style>
         <div class="center">
-            <h2>BaBu SAHAB</h2>
-            <p>123 Food Street, Culinary City, 400001</p>
-            <p>GSTIN: 27ABCDE1234F1Z5</p>
+            <h2>${restaurantName}</h2>
+            <p>${address}</p>
+            ${fssai ? `<p>FSSAI: ${fssai}</p>` : ''}
         </div>
         <hr>
         <p><strong>Order:</strong> ${order.sourceInfo}</p>
         <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-        <p><strong>Payment Mode:</strong> ${paymentMethod}</p>
+        <p><strong>Payment Mode:</strong> ${order.deliveryDetails?.paymentMethod || paymentMethod}</p>
+        ${order.deliveryDetails?.address ? `<p><strong>Address:</strong> ${order.deliveryDetails.address}</p>` : ''}
         <hr>
         <table class="items">
             <thead><tr><th>Item</th><th class="center">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead>
@@ -52,8 +77,8 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string) => {
                     <tr>
                         <td>${item.name}</td>
                         <td class="center">${item.quantity}</td>
-                        <td class="right">₹${(item.offlinePrice || item.onlinePrice).toFixed(2)}</td>
-                        <td class="right">₹${((item.offlinePrice || item.onlinePrice) * item.quantity).toFixed(2)}</td>
+                        <td class="right">₹${(Number(item.offlinePrice || item.onlinePrice) || 0).toFixed(2)}</td>
+                        <td class="right">₹${((Number(item.offlinePrice || item.onlinePrice) || 0) * item.quantity).toFixed(2)}</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -62,10 +87,9 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string) => {
         <table class="totals">
             <tbody>
                 <tr><td>Subtotal</td><td>₹${subtotal.toFixed(2)}</td></tr>
-                ${order.type === 'Offline' ? `
-                <tr><td>CGST (2.5%)</td><td>₹${cgst.toFixed(2)}</td></tr>
-                <tr><td>SGST (2.5%)</td><td>₹${sgst.toFixed(2)}</td></tr>
-                ` : ''}
+                <tr><td>CGST (${(taxRate/2)}%)</td><td>₹${cgst.toFixed(2)}</td></tr>
+                <tr><td>SGST (${(taxRate/2)}%)</td><td>₹${sgst.toFixed(2)}</td></tr>
+                ${deliveryCharge > 0 ? `<tr><td>Delivery Charge</td><td>₹${deliveryCharge.toFixed(2)}</td></tr>` : ''}
             </tbody>
         </table>
         <hr>
@@ -218,7 +242,14 @@ const PendingOrdersModal: React.FC<{
                                     )}
                                     {activeTab === 'Online' && (
                                         <button
-                                            onClick={() => onCompleteOrder(order.id)}
+                                            onClick={() => {
+                                                if (order.sourceInfo.includes('Customer:')) {
+                                                    // QR Orders usually considered settled or need bill, handle complete for now
+                                                     onCompleteOrder(order.id);
+                                                } else {
+                                                    onCompleteOrder(order.id);
+                                                }
+                                            }}
                                             className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs"
                                         >
                                             Complete
@@ -275,14 +306,27 @@ const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: 
     </div>
 );
 
-const PlatformCard: React.FC<{ name: string; logoUrl: string; }> = ({ name, logoUrl }) => (
-    <div className="bg-white p-4 rounded-lg flex flex-col items-center justify-center space-y-2 h-40 border border-gray-200 shadow-sm">
-        <img src={logoUrl} alt={`${name} logo`} className="h-16 w-16 object-contain" />
-        <span className="text-black font-semibold">{name}</span>
-    </div>
+const PlatformCard: React.FC<{ name: string; logoUrl: string; linkUrl: string }> = ({ name, logoUrl, linkUrl }) => (
+    <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block">
+        <div className="bg-white p-4 rounded-lg flex flex-col items-center justify-center space-y-2 h-40 border border-gray-200 shadow-sm transition-transform hover:scale-105 hover:shadow-lg cursor-pointer">
+            <img src={logoUrl} alt={`${name} logo`} className="h-16 w-16 object-contain" />
+            <span className="text-black font-semibold">{name}</span>
+            <span className="text-xs text-blue-600 underline">Open Partner Dashboard</span>
+        </div>
+    </a>
 );
 
-const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCompleteOrder: (orderId: number) => void; }> = ({ data, orders, onCompleteOrder }) => {
+interface DashboardProps {
+    data: DashboardData;
+    orders: OrderStatusItem[];
+    onCompleteOrder: (orderId: number) => void;
+    taxRate: number;
+    restaurantName: string;
+    address: string;
+    fssai: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
@@ -303,7 +347,7 @@ const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCo
         const orderToSettle = orders.find(o => o.id === orderId);
         if (orderToSettle) {
             onCompleteOrder(orderId);
-            const billContent = createBillContent(orderToSettle, paymentMethod);
+            const billContent = createBillContent(orderToSettle, paymentMethod, taxRate, restaurantName, address, fssai);
             triggerPrint(billContent);
             setSettlingOrder(null);
         } else {
@@ -356,8 +400,8 @@ const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCo
                 <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800">
                     <h3 className="text-lg font-semibold text-white mb-4">Online Platforms</h3>
                     <div className="grid grid-cols-2 gap-4">
-                        <PlatformCard name="Swiggy" logoUrl="https://upload.wikimedia.org/wikipedia/en/thumb/1/12/Swiggy_logo.svg/1200px-Swiggy_logo.svg.png" />
-                        <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" />
+                        <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />
+                        <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/business/login" />
                     </div>
                 </div>
             </div>

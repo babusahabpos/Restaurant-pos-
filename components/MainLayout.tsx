@@ -42,12 +42,13 @@ const Sidebar: React.FC<{
     currentPage: Page;
     setCurrentPage: (page: Page) => void;
     handleLogout: () => void;
-}> = ({ currentPage, setCurrentPage, handleLogout }) => {
+    restaurantName: string;
+}> = ({ currentPage, setCurrentPage, handleLogout, restaurantName }) => {
     return (
         <aside className="bg-black text-white w-64 space-y-6 py-7 px-2 h-full flex flex-col justify-between">
             <div>
                 <a href="#" className="flex items-center space-x-2 px-4">
-                    <span className="text-2xl font-extrabold text-white">BaBu SAHAB</span>
+                    <span className="text-2xl font-extrabold text-white break-words">{restaurantName || 'BaBu SAHAB'}</span>
                 </a>
 
                 <nav className="mt-10">
@@ -165,7 +166,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
             
             {/* Sidebar Container */}
             <div className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <Sidebar currentPage={currentPage} setCurrentPage={handleSetCurrentPage} handleLogout={handleLogout} />
+                <Sidebar 
+                    currentPage={currentPage} 
+                    setCurrentPage={handleSetCurrentPage} 
+                    handleLogout={handleLogout}
+                    restaurantName={loggedInUser.restaurantName}
+                />
             </div>
 
             <div className="flex-1 flex flex-col">

@@ -174,6 +174,9 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
             id: loggedInUser.id,
             restaurantName: loggedInUser.restaurantName,
             address: loggedInUser.address,
+            taxRate: loggedInUser.taxRate, 
+            deliveryCharge: loggedInUser.deliveryCharge, // NEW: Include delivery charge
+            isDeliveryEnabled: loggedInUser.isDeliveryEnabled, // NEW: Include status
             menu: menu,
         };
         const stringifiedData = JSON.stringify(dataToEncode);
@@ -257,10 +260,10 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
                             <div key={item.id} className="bg-gray-800 p-3 rounded-lg grid grid-cols-2 md:grid-cols-12 md:gap-4 items-center">
                                 <div className="col-span-2 md:col-span-5 font-medium text-white">{item.name}</div>
                                 <div className="text-right md:text-right md:col-span-2 text-sm text-gray-300">
-                                    <span className="md:hidden text-gray-500 text-xs">OFFLINE: </span>₹{item.offlinePrice.toFixed(2)}
+                                    <span className="md:hidden text-gray-500 text-xs">OFFLINE: </span>₹{(Number(item.offlinePrice) || 0).toFixed(2)}
                                 </div>
                                 <div className="text-right md:text-right md:col-span-2 text-sm text-gray-300">
-                                     <span className="md:hidden text-gray-500 text-xs">ONLINE: </span>₹{item.onlinePrice.toFixed(2)}
+                                     <span className="md:hidden text-gray-500 text-xs">ONLINE: </span>₹{(Number(item.onlinePrice) || 0).toFixed(2)}
                                 </div>
                                 <div className="md:col-span-1 flex justify-center items-center my-2 md:my-0">
                                      <label className="relative inline-flex items-center cursor-pointer">

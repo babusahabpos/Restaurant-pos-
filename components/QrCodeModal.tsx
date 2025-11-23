@@ -16,6 +16,9 @@ const UrlModal: React.FC<UrlModalProps> = ({ isOpen, onClose, menuUrl }) => {
     useEffect(() => {
         if (isOpen && menuUrl && qrCodeRef.current) {
             try {
+                if (typeof qrcode === 'undefined') {
+                    throw new Error("QR Generator library not loaded");
+                }
                 // Type 0 = auto-detect, 'L' = low error correction
                 const qr = qrcode(0, 'L');
                 qr.addData(menuUrl);
@@ -25,7 +28,7 @@ const UrlModal: React.FC<UrlModalProps> = ({ isOpen, onClose, menuUrl }) => {
             } catch (error) {
                 console.error("Failed to generate QR code:", error);
                 if (qrCodeRef.current) {
-                    qrCodeRef.current.innerHTML = '<p class="text-red-500">Could not generate QR code.</p>';
+                    qrCodeRef.current.innerHTML = '<p class="text-red-500 text-sm p-2">Could not generate QR code. Library missing.</p>';
                 }
             }
         }

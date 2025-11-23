@@ -32,8 +32,16 @@ export interface OrderStatusItem {
     status: 'Preparation' | 'Completed';
     items: OrderItem[];
     total: number;
-    sourceInfo: string; // e.g., "Swiggy #12345" or "Table: 5"
+    sourceInfo: string; // e.g., "Swiggy #12345" or "Table: 5" or "Delivery (Name)"
     timestamp: Date;
+    deliveryDetails?: {
+        type: 'Pickup' | 'Delivery';
+        customerName: string;
+        phone: string;
+        address?: string;
+        paymentMethod: string;
+        deliveryCharge: number;
+    };
 }
 
 export interface DashboardData {
@@ -91,6 +99,10 @@ export interface RegisteredUser {
     password: string; // Added password field
     restaurantName: string;
     address: string;
+    taxRate: number; // Tax rate percentage
+    deliveryCharge: number; // Delivery fee
+    isDeliveryEnabled: boolean; // Is delivery option active
+    fssai?: string; // FSSAI Number
     menu: MenuItem[];
     status: UserStatus;
     lastLogin: string;

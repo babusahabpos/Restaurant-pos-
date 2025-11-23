@@ -9,9 +9,20 @@ const CustomerOrderPage: React.FC = () => {
     
     const [cart, setCart] = useState<OrderItem[]>([]);
     const [view, setView] = useState<'menu' | 'cart' | 'checkout' | 'confirmation'>('menu');
+    
+    // Order Details
+    const [orderType, setOrderType] = useState<'Pickup' | 'Delivery'>('Pickup');
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+    const [address, setAddress] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash'); // Default Cash
     const [orderId, setOrderId] = useState('');
+
+    // OTP Simulation State
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [generatedOtp, setGeneratedOtp] = useState('');
+    const [otpVerified, setOtpVerified] = useState(false);
 
     useEffect(() => {
         const loadRestaurantData = () => {
@@ -28,7 +39,6 @@ const CustomerOrderPage: React.FC = () => {
             const encodedData = params.get('data');
             let restaurantData = null;
     
-            // Priority 1: Try reading from sessionStorage using the key
             if (sessionKey) {
                 try {
                     const sessionData = sessionStorage.getItem(sessionKey);
@@ -40,7 +50,6 @@ const CustomerOrderPage: React.FC = () => {
                 }
             }
     
-            // Priority 2: Fallback to reading from the 'data' URL parameter
             if (!restaurantData && encodedData) {
                 try {
                     const decodedData = atob(decodeURIComponent(encodedData));
@@ -53,8 +62,13 @@ const CustomerOrderPage: React.FC = () => {
                 }
             }
     
-            // Final check and state update
             if (restaurantData && restaurantData.id && restaurantData.restaurantName && Array.isArray(restaurantData.menu)) {
+                const sanitizedMenu = restaurantData.menu.map((item: any) => ({
+                    ...item,
+                    offlinePrice: Number(item.offlinePrice) || 0,
+                    onlinePrice: Number(item.onlinePrice) || 0
+                }));
+
                 const foundRestaurant: RegisteredUser = {
                     id: restaurantData.id,
                     name: 'Customer View User',
@@ -63,14 +77,17 @@ const CustomerOrderPage: React.FC = () => {
                     password: '',
                     restaurantName: restaurantData.restaurantName,
                     address: restaurantData.address || 'Address not available',
-                    menu: restaurantData.menu,
+                    taxRate: restaurantData.taxRate || 5, 
+                    deliveryCharge: restaurantData.deliveryCharge || 0,
+                    isDeliveryEnabled: restaurantData.isDeliveryEnabled !== undefined ? restaurantData.isDeliveryEnabled : true,
+                    menu: sanitizedMenu,
                     status: UserStatus.Approved,
                     lastLogin: '',
                     subscriptionEndDate: '',
                 };
                 setRestaurant(foundRestaurant);
-                setMenu(foundRestaurant.menu);
-                setError(null); // Clear any previous errors
+                setMenu(sanitizedMenu);
+                setError(null);
             } else if (!restaurantData) {
                  setError("Invalid restaurant link. Could not load menu data.");
             } else {
@@ -100,11 +117,36 @@ const CustomerOrderPage: React.FC = () => {
         }
     };
     
+    // Logic for Send/Verify OTP
+    const handleSendOtp = () => {
+        if (!/^\d{10}$/.test(customerPhone)) {
+            alert("Please enter a valid 10-digit mobile number first.");
+            return;
+        }
+        const simOtp = Math.floor(1000 + Math.random() * 9000).toString();
+        setGeneratedOtp(simOtp);
+        setOtpSent(true);
+        alert(`Use OTP: ${simOtp} to login/verify.`);
+    };
+
+    const handleVerifyOtp = () => {
+        if (otp === generatedOtp) {
+            setOtpVerified(true);
+            alert("Mobile Verified Successfully!");
+        } else {
+            alert("Invalid OTP. Please try again.");
+        }
+    };
+
+    // Calculation Logic
     const cartSubtotal = useMemo(() => {
-        return cart.reduce((total, item) => total + item.offlinePrice * item.quantity, 0);
+        return cart.reduce((total, item) => total + item.onlinePrice * item.quantity, 0); // Use onlinePrice for QR orders
     }, [cart]);
-    const tax = cartSubtotal * 0.05;
-    const cartTotal = cartSubtotal + tax;
+    
+    const taxRate = restaurant?.taxRate || 5;
+    const tax = cartSubtotal * (taxRate / 100);
+    const deliveryFee = (orderType === 'Delivery' && restaurant) ? restaurant.deliveryCharge : 0;
+    const cartTotal = cartSubtotal + tax + deliveryFee;
 
 
     const handlePlaceOrder = (e: React.FormEvent) => {
@@ -117,8 +159,12 @@ const CustomerOrderPage: React.FC = () => {
             alert("Your cart is empty.");
             return;
         }
-        if (!customerName || !/^\d{10}$/.test(customerPhone)) {
-            alert("Please enter your name and a valid 10-digit mobile number.");
+        if (!customerName || !otpVerified) {
+            alert("Please provide your name and verify your phone number using OTP.");
+            return;
+        }
+        if (orderType === 'Delivery' && !address.trim()) {
+            alert("Please provide a delivery address.");
             return;
         }
         
@@ -132,8 +178,16 @@ const CustomerOrderPage: React.FC = () => {
             status: 'Preparation',
             items: cart,
             total: cartTotal,
-            sourceInfo: `Customer: ${customerName} (${customerPhone})`,
-            timestamp: new Date()
+            sourceInfo: orderType === 'Delivery' ? `Delivery (${customerName})` : `Pickup (${customerName})`,
+            timestamp: new Date(),
+            deliveryDetails: {
+                type: orderType,
+                customerName,
+                phone: customerPhone,
+                address: orderType === 'Delivery' ? address : undefined,
+                paymentMethod,
+                deliveryCharge: deliveryFee
+            }
         };
 
         try {
@@ -161,22 +215,33 @@ const CustomerOrderPage: React.FC = () => {
                         <p className="font-bold text-lg text-white">{orderId}</p>
                     </div>
                      <div className="flex justify-between items-baseline">
+                        <p className="text-lg text-gray-400">Type:</p>
+                        <p className="font-bold text-lg text-lemon uppercase">{orderType}</p>
+                    </div>
+                     <div className="flex justify-between items-baseline">
                         <p className="text-lg text-gray-400">Name:</p>
                         <p className="font-bold text-lg text-white">{customerName}</p>
                     </div>
+                    {orderType === 'Delivery' && (
+                        <div>
+                             <p className="text-lg text-gray-400">Delivery Address:</p>
+                             <p className="text-sm text-gray-200 mt-1 bg-gray-800 p-2 rounded">{address}</p>
+                        </div>
+                    )}
                     <hr className="border-gray-600"/>
                     <h4 className="font-semibold text-white pt-2">Order Summary:</h4>
                     {cart.map(item => (
                         <div key={item.id} className="flex justify-between text-gray-300">
                             <span>{item.name} x {item.quantity}</span>
-                            <span>₹{(item.offlinePrice * item.quantity).toFixed(2)}</span>
+                            <span>₹{(item.onlinePrice * item.quantity).toFixed(2)}</span>
                         </div>
                     ))}
                     <hr className="border-gray-600"/>
                     <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
-                    <div className="flex justify-between text-gray-400"><span>Taxes (5%)</span><span>₹{tax.toFixed(2)}</span></div>
+                    <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>₹{tax.toFixed(2)}</span></div>
+                     {orderType === 'Delivery' && <div className="flex justify-between text-gray-400"><span>Delivery Charge</span><span>₹{deliveryFee.toFixed(2)}</span></div>}
                     <div className="flex justify-between text-white font-bold text-xl pt-2">
-                        <span>Total</span>
+                        <span>Total ({paymentMethod})</span>
                         <span>₹{cartTotal.toFixed(2)}</span>
                     </div>
                 </div>
@@ -187,6 +252,10 @@ const CustomerOrderPage: React.FC = () => {
                         setCart([]); 
                         setCustomerName(''); 
                         setCustomerPhone('');
+                        setOtpVerified(false);
+                        setOtpSent(false);
+                        setOtp('');
+                        setAddress('');
                         setOrderId('');
                     }} 
                     className="w-full mt-6 bg-lemon text-black font-bold py-3 rounded-lg text-lg"
@@ -198,8 +267,6 @@ const CustomerOrderPage: React.FC = () => {
     };
 
     const menuItemsByCategory = useMemo(() => {
-        // FIX: The initial value for `reduce` must be explicitly typed. Without this, TypeScript infers the accumulator (`acc`)
-        // as `{}`, which leads to the `items` variable in the component's render function being of type `unknown`.
         return menu.reduce<Record<string, MenuItem[]>>((acc, item) => {
             const category = item.category;
             if (!acc[category]) {
@@ -253,7 +320,7 @@ const CustomerOrderPage: React.FC = () => {
                                         <div key={item.id} className="bg-gray-900 rounded-lg p-4 flex justify-between items-center border border-gray-800">
                                             <div>
                                                 <h3 className="font-semibold text-white">{item.name}</h3>
-                                                <p className="text-gray-400">₹{item.offlinePrice.toFixed(2)}</p>
+                                                <p className="text-gray-400">₹{item.onlinePrice.toFixed(2)}</p>
                                             </div>
                                             <button onClick={() => addToCart(item)} className="bg-lemon text-black font-bold px-4 py-1.5 rounded-lg text-sm hover:bg-lemon-dark">ADD</button>
                                         </div>
@@ -275,7 +342,7 @@ const CustomerOrderPage: React.FC = () => {
                                     <div key={item.id} className="bg-gray-900 rounded-lg p-4 flex justify-between items-center border border-gray-800">
                                         <div>
                                             <h3 className="font-semibold text-white">{item.name}</h3>
-                                            <p className="text-lemon">₹{(item.offlinePrice * item.quantity).toFixed(2)}</p>
+                                            <p className="text-lemon">₹{(item.onlinePrice * item.quantity).toFixed(2)}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="bg-gray-800 w-8 h-8 rounded-full">-</button>
@@ -286,7 +353,10 @@ const CustomerOrderPage: React.FC = () => {
                                 ))}
                                 <div className="border-t border-gray-800 mt-4 pt-4 space-y-2">
                                     <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
-                                    <div className="flex justify-between text-gray-400"><span>Taxes (5%)</span><span>₹{tax.toFixed(2)}</span></div>
+                                    <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>₹{tax.toFixed(2)}</span></div>
+                                    {orderType === 'Delivery' && restaurant && restaurant.isDeliveryEnabled && (
+                                         <div className="flex justify-between text-gray-400"><span>Delivery Charge</span><span>₹{deliveryFee.toFixed(2)}</span></div>
+                                    )}
                                     <div className="flex justify-between text-white font-bold text-xl"><span>Total</span><span>₹{cartTotal.toFixed(2)}</span></div>
                                 </div>
                                 <button onClick={() => setView('checkout')} className="w-full mt-6 bg-lemon text-black font-bold py-3 rounded-lg text-lg">Proceed to Checkout</button>
@@ -298,15 +368,112 @@ const CustomerOrderPage: React.FC = () => {
                 {!error && restaurant && view === 'checkout' && (
                     <div>
                         <h2 className="text-3xl font-bold text-white mb-6">Checkout</h2>
+                        
+                        <div className="flex bg-gray-900 p-1 rounded-lg mb-6 border border-gray-800">
+                            <button 
+                                onClick={() => setOrderType('Pickup')} 
+                                className={`flex-1 py-3 rounded-md font-bold transition-all ${orderType === 'Pickup' ? 'bg-lemon text-black' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                Self Pickup
+                            </button>
+                            <button 
+                                onClick={() => setOrderType('Delivery')} 
+                                disabled={!restaurant.isDeliveryEnabled}
+                                className={`flex-1 py-3 rounded-md font-bold transition-all ${orderType === 'Delivery' ? 'bg-lemon text-black' : 'text-gray-400 hover:text-white'} ${!restaurant.isDeliveryEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {restaurant.isDeliveryEnabled ? 'Home Delivery' : 'Delivery Not Available'}
+                            </button>
+                        </div>
+
                         <form onSubmit={handlePlaceOrder} className="space-y-4 bg-gray-900 p-6 rounded-lg">
-                            <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Your Name" required className="w-full bg-gray-800 p-3 rounded-lg border border-gray-700"/>
-                            <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Mobile Number" required className="w-full bg-gray-800 p-3 rounded-lg border border-gray-700"/>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm text-gray-400 block mb-1">Your Name</label>
+                                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Full Name" required className="w-full bg-gray-800 text-white p-3 rounded-lg border border-gray-700"/>
+                                </div>
+                                
+                                <div>
+                                    <label className="text-sm text-gray-400 block mb-1">Mobile Number</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="tel" 
+                                            value={customerPhone} 
+                                            onChange={e => setCustomerPhone(e.target.value)} 
+                                            placeholder="10-digit Mobile Number" 
+                                            maxLength={10}
+                                            required 
+                                            disabled={otpVerified}
+                                            className="flex-grow bg-gray-800 text-white p-3 rounded-lg border border-gray-700 disabled:opacity-50"
+                                        />
+                                        {!otpVerified && (
+                                            <button type="button" onClick={handleSendOtp} className="bg-gray-700 text-white font-bold px-4 rounded-lg hover:bg-gray-600 whitespace-nowrap">
+                                                {otpSent ? 'Resend OTP' : 'Send OTP'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {otpSent && !otpVerified && (
+                                    <div className="flex gap-2 animate-fade-in">
+                                         <input 
+                                            type="text" 
+                                            value={otp} 
+                                            onChange={e => setOtp(e.target.value)} 
+                                            placeholder="Enter OTP" 
+                                            maxLength={4}
+                                            className="flex-grow bg-gray-800 text-white p-3 rounded-lg border border-gray-700"
+                                        />
+                                        <button type="button" onClick={handleVerifyOtp} className="bg-green-600 text-white font-bold px-4 rounded-lg hover:bg-green-700">
+                                            Verify
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {otpVerified && (
+                                    <p className="text-green-500 text-sm font-bold">✓ Mobile Verified</p>
+                                )}
+
+                                {orderType === 'Delivery' && (
+                                    <div className="animate-fade-in">
+                                        <label className="text-sm text-gray-400 block mb-1">Delivery Address</label>
+                                        <textarea 
+                                            value={address} 
+                                            onChange={e => setAddress(e.target.value)} 
+                                            placeholder="Full Address (House No, Street, Area, Pincode)" 
+                                            rows={3}
+                                            required 
+                                            className="w-full bg-gray-800 text-white p-3 rounded-lg border border-gray-700"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="pt-2">
+                                    <label className="text-sm text-gray-400 block mb-2">Payment Method</label>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {['Cash', 'UPI', 'Card'].map(method => (
+                                            <button
+                                                key={method}
+                                                type="button"
+                                                onClick={() => setPaymentMethod(method)}
+                                                className={`py-2 rounded-lg border ${paymentMethod === method ? 'bg-lemon text-black border-lemon' : 'bg-transparent text-gray-400 border-gray-700'}`}
+                                            >
+                                                {method}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
                              <div className="border-t border-gray-700 mt-4 pt-4 space-y-2">
                                 <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>₹{cartSubtotal.toFixed(2)}</span></div>
-                                <div className="flex justify-between text-gray-400"><span>Taxes (5%)</span><span>₹{tax.toFixed(2)}</span></div>
+                                <div className="flex justify-between text-gray-400"><span>Tax ({taxRate}%)</span><span>₹{tax.toFixed(2)}</span></div>
+                                {orderType === 'Delivery' && <div className="flex justify-between text-gray-400"><span>Delivery Charge</span><span>₹{deliveryFee.toFixed(2)}</span></div>}
                                 <div className="flex justify-between text-white font-bold text-xl"><span>Total</span><span>₹{cartTotal.toFixed(2)}</span></div>
                              </div>
-                             <button type="submit" className="w-full mt-4 bg-lemon text-black font-bold py-3 rounded-lg text-lg">Place Order</button>
+                             
+                             <button type="submit" disabled={!otpVerified} className="w-full mt-4 bg-lemon text-black font-bold py-3 rounded-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                 {otpVerified ? 'Place Order' : 'Verify Mobile to Continue'}
+                             </button>
                         </form>
                     </div>
                 )}
