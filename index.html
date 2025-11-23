@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BaBu SAHAB POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,6 +18,7 @@
         }
       }
     </script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script type="importmap">
 {
   "imports": {
@@ -29,8 +30,9 @@
 }
 </script>
 </head>
-  <body class="bg-white text-black">
+  <body class="bg-black text-white">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

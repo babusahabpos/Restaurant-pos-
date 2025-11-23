@@ -5,6 +5,7 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'billing', icon: 'billing' },
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
+    { name: 'qrMenu', icon: 'qrCode' },
     { name: 'inventory', icon: 'inventory' },
     { name: 'staff', icon: 'staff' },
     { name: 'reports', icon: 'reports' },
@@ -14,13 +15,13 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
 ];
 
 export const MOCK_MENU_ITEMS: MenuItem[] = [
-    { id: 1, name: 'Margherita Pizza', category: 'Pizza', offlinePrice: 250, onlinePrice: 275, image: 'https://picsum.photos/seed/pizza/100/100', inStock: true },
-    { id: 2, name: 'Paneer Tikka Pizza', category: 'Pizza', offlinePrice: 350, onlinePrice: 385, image: 'https://picsum.photos/seed/paneer/100/100', inStock: true },
-    { id: 3, name: 'Veg Burger', category: 'Burgers', offlinePrice: 120, onlinePrice: 135, image: 'https://picsum.photos/seed/burger/100/100', inStock: true },
-    { id: 4, name: 'French Fries', category: 'Sides', offlinePrice: 90, onlinePrice: 100, image: 'https://picsum.photos/seed/fries/100/100', inStock: false },
-    { id: 5, name: 'Coke', category: 'Beverages', offlinePrice: 40, onlinePrice: 45, image: 'https://picsum.photos/seed/coke/100/100', inStock: true },
-    { id: 6, name: 'Hakka Noodles', category: 'Chinese', offlinePrice: 180, onlinePrice: 200, image: 'https://picsum.photos/seed/noodles/100/100', inStock: true },
-    { id: 7, name: 'Manchurian', category: 'Chinese', offlinePrice: 160, onlinePrice: 175, image: 'https://picsum.photos/seed/manchurian/100/100', inStock: true },
+    { id: 1, name: 'Margherita Pizza', category: 'Pizza', offlinePrice: 250, onlinePrice: 275, inStock: true },
+    { id: 2, name: 'Paneer Tikka Pizza', category: 'Pizza', offlinePrice: 350, onlinePrice: 385, inStock: true },
+    { id: 3, name: 'Veg Burger', category: 'Burgers', offlinePrice: 120, onlinePrice: 135, inStock: true },
+    { id: 4, name: 'French Fries', category: 'Sides', offlinePrice: 90, onlinePrice: 100, inStock: false },
+    { id: 5, name: 'Coke', category: 'Beverages', offlinePrice: 40, onlinePrice: 45, inStock: true },
+    { id: 6, name: 'Hakka Noodles', category: 'Chinese', offlinePrice: 180, onlinePrice: 200, inStock: true },
+    { id: 7, name: 'Manchurian', category: 'Chinese', offlinePrice: 160, onlinePrice: 175, inStock: true },
 ];
 
 export const MOCK_INVENTORY_ITEMS: InventoryItem[] = [
@@ -42,9 +43,51 @@ const getPastDate = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 
 
 
 export const MOCK_USERS: RegisteredUser[] = [
-    { id: 1, name: 'Anil Kumar', email: 'user@example.com', phone: '9876543210', password: 'password', restaurantName: 'BaBu SAHAB', status: UserStatus.Approved, lastLogin: '2 hours ago', subscriptionEndDate: getFutureDate(30) },
-    { id: 2, name: 'Priya Singh', email: 'priya@pizzapalace.com', phone: '9876543211', password: 'password', restaurantName: 'Pizza Palace', status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: getFutureDate(5) },
-    { id: 3, name: 'Rajesh Gupta', email: 'rajesh@chaipoint.com', phone: '9876543212', password: 'password', restaurantName: 'Chai Point', status: UserStatus.Blocked, lastLogin: '1 month ago', subscriptionEndDate: getPastDate(10) },
+    { 
+        id: 1, 
+        name: 'Anil Kumar', 
+        email: 'user@example.com', 
+        phone: '9876543210', 
+        password: 'password', 
+        restaurantName: 'BaBu SAHAB', 
+        address: '123 Food Street, Culinary City, 400001',
+        menu: MOCK_MENU_ITEMS,
+        status: UserStatus.Approved, 
+        lastLogin: '2 hours ago', 
+        subscriptionEndDate: getFutureDate(30) 
+    },
+    { 
+        id: 2, 
+        name: 'Priya Singh', 
+        email: 'priya@pizzapalace.com', 
+        phone: '9876543211', 
+        password: 'password', 
+        restaurantName: 'Pizza Palace', 
+        address: '456 Pizza Avenue, Slice Town, 400002',
+        menu: [
+            { id: 101, name: 'Farmhouse Pizza', category: 'Pizza', offlinePrice: 400, onlinePrice: 440, inStock: true },
+            { id: 102, name: 'Garlic Bread', category: 'Sides', offlinePrice: 150, onlinePrice: 165, inStock: true },
+        ],
+        status: UserStatus.Pending, 
+        lastLogin: 'Never', 
+        subscriptionEndDate: getFutureDate(5) 
+    },
+    { 
+        id: 3, 
+        name: 'Rajesh Gupta', 
+        email: 'rajesh@chaipoint.com', 
+        phone: '9876543212', 
+        password: 'password', 
+        restaurantName: 'Chai Point',
+        address: '789 Tea Lane, Brew City, 400003',
+        menu: [
+             { id: 201, name: 'Masala Chai', category: 'Beverages', offlinePrice: 50, onlinePrice: 55, inStock: true },
+             { id: 202, name: 'Samosa', category: 'Snacks', offlinePrice: 20, onlinePrice: 25, inStock: true },
+        ],
+        status: UserStatus.Blocked, 
+        lastLogin: '1 month ago', 
+        subscriptionEndDate: getPastDate(10) 
+    },
 ];
 
 export const MOCK_TICKETS: SupportTicket[] = [

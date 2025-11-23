@@ -9,6 +9,7 @@ export type Page =
     'reports' | 
     'subscription' | 
     'help' | 
+    'qrMenu' |
     'settings';
 
 export interface MenuItem {
@@ -17,7 +18,6 @@ export interface MenuItem {
     category: string;
     offlinePrice: number;
     onlinePrice: number;
-    image: string;
     inStock: boolean;
 }
 
@@ -27,6 +27,7 @@ export interface OrderItem extends MenuItem {
 
 export interface OrderStatusItem {
     id: number;
+    restaurantId: number;
     type: 'Online' | 'Offline';
     status: 'Preparation' | 'Completed';
     items: OrderItem[];
@@ -89,6 +90,8 @@ export interface RegisteredUser {
     email: string;
     password: string; // Added password field
     restaurantName: string;
+    address: string;
+    menu: MenuItem[];
     status: UserStatus;
     lastLogin: string;
     subscriptionEndDate: string; // ISO Date String

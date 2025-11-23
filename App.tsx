@@ -10,6 +10,7 @@ import Inventory from './components/Inventory';
 import Staff from './components/Staff';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
+import QrMenu from './components/QrMenu';
 import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
 import AdminLayout from './components/admin/AdminLayout';
@@ -17,9 +18,9 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
-import { MOCK_USERS, MOCK_TICKETS } from './constants';
+import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage, OrderItem, MenuItem } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn';
@@ -34,20 +35,65 @@ function App() {
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_users') || JSON.stringify(MOCK_USERS)));
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
+    
+    useEffect(() => {
+        const handleStorageChange = (event: StorageEvent) => {
+            // Check for new individual orders
+            if (event.key?.startsWith('babuSahabPos_incomingOrder_') && event.newValue) {
+                try {
+                    const incomingOrder: OrderStatusItem = JSON.parse(event.newValue);
+                    // Re-hydrate date objects
+                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
+                    
+                    // Add the new order to the state
+                    setOrders(prevOrders => [...prevOrders, incomingOrder]);
+                    
+                    // Play notification sound
+                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                    if (audio) audio.play().catch(e => console.error("Audio notification failed:", e));
+
+                    // IMPORTANT: Remove the specific order key from localStorage to prevent re-processing
+                    localStorage.removeItem(event.key);
+
+                } catch (e) {
+                    console.error("Error processing incoming order from localStorage", e);
+                    // Also remove the key if parsing fails to avoid it being stuck
+                    if (event.key) {
+                        localStorage.removeItem(event.key);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
 
     // --- Persistence Effects ---
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
-
+    
     // --- Derived State & Logic ---
     useEffect(() => {
+        if (!loggedInUser) {
+            setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
+            return;
+        };
+
         const today = new Date();
         today.setHours(0,0,0,0);
-        const todaysOrders = orders.filter(o => o.timestamp >= today);
+        
+        const todaysUserOrders = orders.filter(o => 
+            o.restaurantId === loggedInUser.id &&
+            new Date(o.timestamp) >= today
+        );
 
-        const newDashboardData = todaysOrders.reduce((acc, order) => {
+        const newDashboardData = todaysUserOrders.reduce((acc, order) => {
             if (order.status === 'Completed') {
                 if (order.type === 'Online') {
                     acc.onlineSales += order.total;
@@ -61,7 +107,7 @@ function App() {
         }, { onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
 
         setDashboardData(newDashboardData);
-    }, [orders]);
+    }, [orders, loggedInUser]);
 
     // Subscription renewal alert logic
     useEffect(() => {
@@ -82,174 +128,247 @@ function App() {
                     newAlerts.push({
                         id: alertId,
                         userId: user.id,
-                        message: 'SUBSCRIPTION RENEWAL: Your plan is expiring soon. Please renew to avoid service interruption.'
+                        message: 'Subscription Renewal: Your plan is expiring soon. Please renew to avoid service interruption.'
                     });
                 }
             });
             return newAlerts;
         });
     }, [registeredUsers]);
-    
+
     // --- Handlers ---
+
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' => {
-        if (email.toLowerCase() === 'admin@example.com') {
+        if (email === 'admin@babushab.com' && pass === 'admin') {
             setAuthState('adminLoggedIn');
+            setLoggedInUser(null);
             return 'admin';
         }
-        const user = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+        
+        const user = registeredUsers.find(u => u.email === email && u.password === pass);
+
         if (user) {
-            if (user.status === UserStatus.Pending) return 'pending';
-            if (user.status === UserStatus.Blocked) return 'blocked';
-            if (user.status === UserStatus.Approved) {
-                setLoggedInUser(user);
-                setAuthState('loggedIn');
-                return 'ok';
+            switch (user.status) {
+                case UserStatus.Approved:
+                    setAuthState('loggedIn');
+                    setLoggedInUser(user);
+                    return 'ok';
+                case UserStatus.Pending:
+                    return 'pending';
+                case UserStatus.Blocked:
+                    return 'blocked';
+                case UserStatus.Rejected:
+                    return 'blocked'; // Treat rejected as blocked for login purposes
             }
         }
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate'>) => {
-        // New users get 30 days trial by default
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + 30);
-        
-        setRegisteredUsers(prev => [...prev, {
+    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>) => {
+        const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        const user: RegisteredUser = {
             ...newUser,
             id: Date.now(),
             status: UserStatus.Pending,
             lastLogin: 'Never',
-            subscriptionEndDate: trialEndDate.toISOString().split('T')[0]
-        }]);
-        setAuthState('login');
+            subscriptionEndDate: getFutureDate(30), // Default 30 day trial
+            address: 'Please update in settings',
+            menu: MOCK_MENU_ITEMS, // Start with a default menu
+        };
+        setRegisteredUsers(prev => [...prev, user]);
     };
 
-    const handleForgotPasswordRequest = (identifier: string) => {
+    const handleForgotPassword = (identifier: string): boolean => {
         const user = registeredUsers.find(u => u.email === identifier || u.phone === identifier);
-        if (!user) {
-            alert('No user found with that email or phone number.');
+        if (user) {
+            alert(`A password reset link has been sent to ${user.email}. (Simulation)`);
+            return true;
+        } else {
+            alert("User not found.");
             return false;
         }
-        const newTicket: SupportTicket = {
-            id: Date.now(),
-            userId: user.id,
-            userName: user.name,
-            subject: 'PASSWORD RESET REQUEST',
-            messages: [{ sender: 'user', text: `User ${user.name} (${user.email}) has requested a password reset.`, timestamp: new Date() }],
-            status: 'Open',
-            lastUpdate: new Date(),
-        };
-        setSupportTickets(prev => [newTicket, ...prev]);
-        alert('Password reset request sent. Admin will review your request and contact you.');
-        return true;
-    };
-
-    const handlePasswordChange = (userId: number, newPass: string) => {
-        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPass } : u));
-        alert('Password updated successfully!');
     };
     
-    const handleUpdateSubscription = (userId: number, newDate: string) => {
-        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionEndDate: newDate } : u));
-        alert('Subscription date updated successfully!');
-    };
-
-
     const handleLogout = () => {
-        setLoggedInUser(null);
         setAuthState('login');
+        setLoggedInUser(null);
     };
 
-    const handlePrintKOT = (newOrder: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp'>) => {
-        setOrders(prev => [{ ...newOrder, id: Date.now(), status: 'Preparation', timestamp: new Date() }, ...prev]);
+    const handleKOT = (newOrderData: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'>) => {
+        if (!loggedInUser) return;
+        const newOrder: OrderStatusItem = {
+            ...newOrderData,
+            id: Date.now(),
+            restaurantId: loggedInUser.id,
+            status: 'Preparation',
+            timestamp: new Date()
+        };
+        setOrders(prev => [...prev, newOrder]);
+        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+        if(audio) audio.play();
     };
-    
+
     const handleCompleteOrder = (orderId: number) => {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Completed' } : o));
+        setOrders(prevOrders => prevOrders.map(order => 
+            order.id === orderId ? { ...order, status: 'Completed' } : order
+        ));
     };
 
-    const handleUserApproval = (userId: number, decision: 'approve' | 'reject') => {
-        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u));
-    };
-    
-    const handleUserBlock = (userId: number, shouldBlock: boolean) => {
-         setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : u));
-    };
-
-    const handleSendMessage = (userId: number | 'all', message: string) => {
-        setAlerts(prev => [...prev, { id: Date.now(), userId, message }]);
-        alert('Message sent!');
-    };
-    
-    const handleDismissAlert = (alertId: number | string) => {
-        setAlerts(prev => prev.filter(a => a.id !== alertId));
-    };
-    
     const handleCreateTicket = (subject: string, message: string) => {
         if (!loggedInUser) return;
         const newTicket: SupportTicket = {
             id: Date.now(),
             userId: loggedInUser.id,
             userName: loggedInUser.name,
-            subject,
+            subject: subject,
             messages: [{ sender: 'user', text: message, timestamp: new Date() }],
             status: 'Open',
             lastUpdate: new Date(),
         };
-        setSupportTickets(prev => [newTicket, ...prev]);
+        setSupportTickets(prev => [...prev, newTicket]);
     };
 
-    const handleReplyTicket = (ticketId: number, message: string) => {
-        setSupportTickets(prev => prev.map(t => t.id === ticketId ? {
-            ...t,
-            status: 'Pending', // Pending user reply
-            lastUpdate: new Date(),
-            messages: [...t.messages, { sender: 'admin', text: message, timestamp: new Date() }]
-        } : t));
+    const handleUpdateMenu = (newMenu: MenuItem[]) => {
+        if (!loggedInUser) return;
+        setRegisteredUsers(prevUsers => 
+            prevUsers.map(user => 
+                user.id === loggedInUser.id ? { ...user, menu: newMenu } : user
+            )
+        );
     };
 
+    const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
+        if (!loggedInUser) return;
+        setRegisteredUsers(prev => prev.map(user => 
+            user.id === loggedInUser.id ? { ...user, ...updates } : user
+        ));
+        alert('Settings updated successfully!');
+    };
+    
+    const handleDismissAlert = (alertId: number | string) => {
+        setAlerts(prev => prev.filter(a => a.id !== alertId));
+    };
+
+    // --- Admin Handlers ---
+    const handleApproveRejectUser = (userId: number, decision: 'approve' | 'reject') => {
+        setRegisteredUsers(prev => prev.map(user => 
+            user.id === userId ? { ...user, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : user
+        ));
+        const user = registeredUsers.find(u => u.id === userId);
+        if (user) {
+            const message = decision === 'approve' ? `Your account has been approved. You can now log in.` : `Your account has been rejected.`;
+            handleAdminSendMessage(userId, message);
+        }
+    };
+
+    const handleBlockUser = (userId: number, shouldBlock: boolean) => {
+        setRegisteredUsers(prev => prev.map(user =>
+            user.id === userId ? { ...user, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : user
+        ));
+    };
+
+    const handleAdminSendMessage = (userId: number | 'all', message: string) => {
+        const newAlert = {
+            id: Date.now(),
+            userId,
+            message
+        };
+        setAlerts(prev => [...prev, newAlert]);
+        alert(`Message sent!`);
+    };
+    
+    const handlePasswordChange = (userId: number, newPass: string) => {
+        setRegisteredUsers(prev => prev.map(user => 
+            user.id === userId ? { ...user, password: newPass } : user
+        ));
+        alert('Password updated successfully!');
+    };
+    
+    const handleUpdateSubscription = (userId: number, newDate: string) => {
+        setRegisteredUsers(prev => prev.map(user =>
+            user.id === userId ? { ...user, subscriptionEndDate: newDate } : user
+        ));
+        alert('Subscription date updated!');
+    };
+    
+    const handleTicketReply = (ticketId: number, message: string) => {
+        setSupportTickets(prev => prev.map(ticket => {
+            if (ticket.id === ticketId) {
+                return {
+                    ...ticket,
+                    messages: [...ticket.messages, { sender: 'admin', text: message, timestamp: new Date() }],
+                    status: 'Pending',
+                    lastUpdate: new Date()
+                };
+            }
+            return ticket;
+        }));
+    };
+    
     const handleResolveTicket = (ticketId: number) => {
-        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 'Resolved' } : t));
+        setSupportTickets(prev => prev.map(ticket =>
+            ticket.id === ticketId ? { ...ticket, status: 'Resolved' } : ticket
+        ));
     };
-    
+
+
     // --- Render Logic ---
-    const userAlerts = loggedInUser ? alerts.filter(a => a.userId === loggedInUser.id || a.userId === 'all') : [];
 
-    const renderPage = () => {
-        switch (currentPage) {
-            case 'dashboard': return <Dashboard data={dashboardData} orders={orders} onCompleteOrder={handleCompleteOrder} />;
-            case 'billing': return <Billing onPrintKOT={handlePrintKOT} />;
-            case 'online': return <OnlineOrders onPrintKOT={handlePrintKOT} />;
-            case 'menu': return <Menu />;
-            case 'inventory': return <Inventory />;
-            case 'staff': return <Staff />;
-            case 'reports': return <Reports />;
-            case 'settings': return <Settings />;
-            case 'subscription': return <Subscription />;
-            case 'help': return <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={handleCreateTicket} />;
-            default: return <Dashboard data={dashboardData} orders={orders} onCompleteOrder={handleCompleteOrder} />;
-        }
-    };
-
-    const renderAdminPage = () => {
-        switch (currentAdminPage) {
-            case AdminPage.Dashboard: return <AdminDashboard users={registeredUsers} onApproveReject={handleUserApproval} />;
-            case AdminPage.UserManagement: return <UserManagement users={registeredUsers} onBlockUser={handleUserBlock} onSendMessage={handleSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription} />;
-            case AdminPage.SupportTickets: return <SupportTickets tickets={supportTickets} onReply={handleReplyTicket} onResolve={handleResolveTicket} />;
-            case AdminPage.SubscriptionRenewal: return <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />;
-            default: return <AdminDashboard users={registeredUsers} onApproveReject={handleUserApproval} />;
-        }
-    };
-
-    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPasswordRequest} />;
-    if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
-    if (authState === 'adminLoggedIn') return <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{renderAdminPage()}</AdminLayout>;
+    if (authState === 'login') {
+        return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} />;
+    }
+    if (authState === 'register') {
+        return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
+    }
     
-    return (
-        <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={userAlerts} onDismissAlert={handleDismissAlert}>
-            {renderPage()}
-        </MainLayout>
-    );
+    if (authState === 'adminLoggedIn') {
+        const adminPages = {
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription}/>,
+            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
+            [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
+        };
+
+        return (
+            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
+                {adminPages[currentAdminPage]}
+            </AdminLayout>
+        );
+    }
+
+    if (authState === 'loggedIn' && loggedInUser) {
+        const userOrders = orders.filter(o => o.restaurantId === loggedInUser.id);
+        
+        const pages = {
+            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} />,
+            billing: <Billing menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
+            online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
+            menu: <Menu menu={loggedInUser.menu} setMenu={handleUpdateMenu} />,
+            qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
+            inventory: <Inventory />,
+            staff: <Staff />,
+            reports: <Reports />,
+            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} />,
+            subscription: <Subscription />,
+            help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={handleCreateTicket} />,
+        };
+
+        return (
+            <MainLayout
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                handleLogout={handleLogout}
+                alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)}
+                onDismissAlert={handleDismissAlert}
+                loggedInUser={loggedInUser}
+            >
+                {pages[currentPage]}
+            </MainLayout>
+        );
+    }
+    
+    return <div>Something went wrong. Please refresh.</div>;
 }
 
 export default App;

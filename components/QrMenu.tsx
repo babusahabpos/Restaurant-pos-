@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { MenuItem } from '../types';
+import { MenuItem, RegisteredUser } from '../types';
+import QrCodeModal from './QrCodeModal';
 
-interface MenuProps {
+interface QrMenuProps {
     menu: MenuItem[];
     setMenu: (menu: MenuItem[]) => void;
+    loggedInUser: RegisteredUser;
 }
-
 
 const AddCategoryModal: React.FC<{
     onClose: () => void;
@@ -97,13 +98,17 @@ const MenuItemFormModal: React.FC<{
 };
 
 
-const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
+const QrMenu: React.FC<QrMenuProps> = ({ menu, setMenu, loggedInUser }) => {
+    const [activeTab, setActiveTab] = useState<'menu' | 'link'>('menu');
     const [categories, setCategories] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isItemModalOpen, setIsItemModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Partial<MenuItem> | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+    const [menuUrl, setMenuUrl] = useState('');
 
     useEffect(() => {
         const uniqueCategories = [...new Set(menu.map(item => item.category))];
@@ -161,6 +166,31 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
     const filteredCategories = categories.filter(category => {
         return category.toLowerCase().includes(searchTerm.toLowerCase());
     });
+
+    const handleGenerateUrl = () => {
+        const dataToEncode = {
+            id: loggedInUser.id,
+            restaurantName: loggedInUser.restaurantName,
+            address: loggedInUser.address,
+            menu: menu,
+        };
+        const stringifiedData = JSON.stringify(dataToEncode);
+        
+        const sessionKey = `babuSahabPos_menu_${loggedInUser.id}`;
+        try {
+            sessionStorage.setItem(sessionKey, stringifiedData);
+        } catch (e) {
+            console.error("Could not write to sessionStorage. QR link may be too long.", e);
+        }
+
+        const encodedData = encodeURIComponent(btoa(stringifiedData));
+
+        const url = `${window.location.origin}${window.location.pathname.replace('index.html', '')}#customer-order?key=${sessionKey}&data=${encodedData}`;
+
+        setMenuUrl(url);
+        setIsUrlModalOpen(true);
+    };
+
 
     const renderCategoryGrid = () => (
         <>
@@ -250,14 +280,34 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
 
     return (
         <>
+            {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} />}
             {isItemModalOpen && <MenuItemFormModal item={editingItem} onClose={handleCloseModals} onSave={handleSaveItem} categories={categories} />}
             {isCategoryModalOpen && <AddCategoryModal onClose={handleCloseModals} onSave={handleSaveCategory} />}
 
             <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
-                {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
+                 <div className="flex border-b border-gray-700 mb-6">
+                    <button onClick={() => setActiveTab('menu')} className={`py-2 px-4 ${activeTab === 'menu' ? 'border-b-2 border-lemon text-lemon' : 'text-gray-400'}`}>Menu Management</button>
+                    <button onClick={() => setActiveTab('link')} className={`py-2 px-4 ${activeTab === 'link' ? 'border-b-2 border-lemon text-lemon' : 'text-gray-400'}`}>Order Link & QR</button>
+                </div>
+                
+                {activeTab === 'menu' && (
+                    <div>
+                        {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
+                    </div>
+                )}
+
+                {activeTab === 'link' && (
+                    <div className="p-4">
+                        <h3 className="text-xl font-semibold text-white mb-4">Customer Order Link</h3>
+                        <p className="text-gray-400 mb-6 max-w-2xl">Generate a unique QR code and link for your customers. They can scan it to view your menu and place orders directly from their phones. Any changes you make in the 'Menu Management' tab will be reflected instantly.</p>
+                        <button onClick={handleGenerateUrl} className="bg-lemon text-black font-bold py-3 px-6 rounded-lg hover:bg-lemon-dark transition">
+                            Generate Link & QR Code
+                        </button>
+                    </div>
+                )}
             </div>
         </>
     );
 };
 
-export default Menu;
+export default QrMenu;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface IconProps {
@@ -45,4 +44,12 @@ export const EyeOpenIcon: React.FC<IconProps> = ({ className }) => (
 
 export const EyeClosedIcon: React.FC<IconProps> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9.9 4.24A9 9 0 0 1 12 3c7 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68"/><path d="M6.62 6.62A13.2 13.2 0 0 0 2 12s3 7 10 7a9 9 0 0 0 4.18-1.1"/><line x1="2" x2="22" y1="2" y2="22"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M10.75 10.75a3 3 0 0 0 4.24 4.24"/></svg>
+);
+
+export const QrCodeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"></rect><line x1="17.5" x2="17.5" y2="3.5" y1="3.5"></line><path d="M14 14h3.5a3.5 3.5 0 0 0 0-7H14v7Z"></path><rect x="3" y="14" width="7" height="7"></rect><path d="M17.5 20.5a3.5 3.5 0 0 0 0-7H14v7h3.5Z"></path></svg>
+);
+
+export const DotsVerticalIcon: React.FC<IconProps> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
 );

@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
-import { MOCK_MENU_ITEMS } from '../constants';
+import React, { useState, useMemo } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem } from '../types';
 
-const categories = ['All', ...new Set(MOCK_MENU_ITEMS.map(item => item.category))];
+interface OnlineOrdersProps {
+    onPrintKOT: (order: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'>) => void;
+    menuItems: MenuItem[];
+}
 
-const OnlineOrders: React.FC<{ onPrintKOT: (order: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp'>) => void }> = ({ onPrintKOT }) => {
+const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems }) => {
+    const categories = useMemo(() => ['All', ...new Set(menuItems.map(item => item.category))], [menuItems]);
+
     const [activeCategory, setActiveCategory] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
     const [platform, setPlatform] = useState<'Swiggy' | 'Zomato'>('Swiggy');
     const [orderId, setOrderId] = useState('');
 
-    const filteredMenuItems = MOCK_MENU_ITEMS.filter(item => 
+    const filteredMenuItems = menuItems.filter(item => 
         item.inStock &&
         (activeCategory === 'All' || item.category === activeCategory) &&
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -93,7 +97,7 @@ const OnlineOrders: React.FC<{ onPrintKOT: (order: Omit<OrderStatusItem, 'id' | 
         `;
         triggerPrint(kotContent);
 
-        const newOrderData: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp'> = {
+        const newOrderData: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'> = {
             type: 'Online',
             items: currentOrder,
             total,
@@ -135,7 +139,7 @@ const OnlineOrders: React.FC<{ onPrintKOT: (order: Omit<OrderStatusItem, 'id' | 
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-grow overflow-y-auto pr-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 flex-grow overflow-y-auto pr-2">
                     {filteredMenuItems.map(item => (
                         <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-3 rounded-lg text-left cursor-pointer hover:border-lemon transition border border-gray-800 flex flex-col justify-between h-28">
                            <p className="text-white font-semibold leading-tight">{item.name}</p>

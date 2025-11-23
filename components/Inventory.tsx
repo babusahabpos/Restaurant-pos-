@@ -88,7 +88,7 @@ const Inventory: React.FC = () => {
     return (
         <>
             {isModalOpen && <InventoryFormModal item={editingItem} onClose={handleCloseModal} onSave={handleSaveItem} />}
-            <div className="bg-black p-6 rounded-lg shadow-lg">
+            <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <h3 className="text-lg font-semibold text-white">Inventory Items</h3>
                     <button onClick={() => handleOpenModal()} className="w-full md:w-auto bg-lemon text-black font-bold py-2 px-4 rounded-lg hover:bg-lemon-dark transition">
@@ -97,7 +97,7 @@ const Inventory: React.FC = () => {
                 </div>
                  <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-400">
-                        <thead className="text-xs text-gray-300 uppercase bg-gray-900">
+                        <thead className="text-xs text-gray-300 uppercase bg-gray-800">
                             <tr>
                                 <th scope="col" className="px-6 py-3">Item Name</th>
                                 <th scope="col" className="px-6 py-3">Category</th>
@@ -109,7 +109,7 @@ const Inventory: React.FC = () => {
                         </thead>
                         <tbody>
                             {inventoryItems.map(item => (
-                                <tr key={item.id} className="bg-black border-b border-gray-800 hover:bg-gray-900">
+                                <tr key={item.id} className="bg-gray-900 border-b border-gray-800 hover:bg-gray-800/50">
                                     <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{item.name}</th>
                                     <td className="px-6 py-4">{item.category}</td>
                                     <td className="px-6 py-4">{item.quantity}</td>

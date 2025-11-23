@@ -91,8 +91,8 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
                 <div className="overflow-y-auto">
                     {orders.length > 0 ? (
                         <div className="overflow-x-auto">
-                             <table className="w-full min-w-[640px] text-sm text-left text-gray-400">
-                                <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
+                             <table className="w-full text-sm text-left text-gray-400">
+                                <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0 hidden md:table-header-group">
                                     <tr>
                                         <th scope="col" className="px-6 py-3">Order Info</th>
                                         <th scope="col" className="px-6 py-3">Time</th>
@@ -103,12 +103,13 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
                                 </thead>
                                 <tbody>
                                     {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                                        <tr key={order.id} className="bg-black border-b border-gray-800">
-                                            <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
-                                            <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
-                                            <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
-                                            <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
-                                            <td className="px-6 py-4">
+                                        <tr key={order.id} className="bg-black border-gray-800 block md:table-row mb-4 md:mb-0 rounded-lg md:rounded-none overflow-hidden shadow-lg md:shadow-none">
+                                            <td className="px-4 py-2 md:px-6 md:py-4 font-medium text-white block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Order Info</span>{order.sourceInfo}</td>
+                                            <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Time</span>{new Date(order.timestamp).toLocaleTimeString()}</td>
+                                            <td className="px-4 py-2 md:px-6 md:py-4 text-xs block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Items</span>{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
+                                            <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Total</span>₹{order.total.toFixed(2)}</td>
+                                            <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left">
+                                                <span className="float-left font-bold md:hidden">Status</span>
                                                 <span className={`${order.status === 'Completed' ? 'text-green-400' : 'text-yellow-400'}`}>
                                                     {order.status}
                                                 </span>
@@ -188,8 +189,8 @@ const PendingOrdersModal: React.FC<{
         }
         return (
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm text-left text-gray-400">
-                    <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0">
+                <table className="w-full text-sm text-left text-gray-400">
+                    <thead className="text-xs text-gray-300 uppercase bg-gray-900 sticky top-0 hidden md:table-header-group">
                         <tr>
                             <th scope="col" className="px-6 py-3">Order Info</th>
                             <th scope="col" className="px-6 py-3">Time</th>
@@ -200,12 +201,13 @@ const PendingOrdersModal: React.FC<{
                     </thead>
                     <tbody>
                         {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                            <tr key={order.id} className="bg-black border-b border-gray-800">
-                                <td className="px-6 py-4 font-medium text-white">{order.sourceInfo}</td>
-                                <td className="px-6 py-4">{new Date(order.timestamp).toLocaleTimeString()}</td>
-                                <td className="px-6 py-4 text-xs">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
-                                <td className="px-6 py-4">₹{order.total.toFixed(2)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                            <tr key={order.id} className="bg-black border-gray-800 block md:table-row mb-4 md:mb-0 rounded-lg md:rounded-none overflow-hidden shadow-lg md:shadow-none">
+                                <td className="px-4 py-2 md:px-6 md:py-4 font-medium text-white block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Order Info</span>{order.sourceInfo}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Time</span>{new Date(order.timestamp).toLocaleTimeString()}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 text-xs block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Items</span>{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Total</span>₹{order.total.toFixed(2)}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell text-right md:text-left">
+                                    <span className="float-left font-bold md:hidden">Actions</span>
                                     {activeTab === 'Offline' && (
                                         <button
                                             onClick={() => onInitiateSettle(order)}
@@ -274,9 +276,9 @@ const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: 
 );
 
 const PlatformCard: React.FC<{ name: string; logoUrl: string; }> = ({ name, logoUrl }) => (
-    <div className="bg-black p-4 rounded-lg flex flex-col items-center justify-center space-y-3 h-32 border border-gray-800">
-        <img src={logoUrl} alt={`${name} logo`} className="h-12 w-24 object-contain" />
-        <span className="text-white font-semibold">{name}</span>
+    <div className="bg-white p-4 rounded-lg flex flex-col items-center justify-center space-y-2 h-40 border border-gray-200 shadow-sm">
+        <img src={logoUrl} alt={`${name} logo`} className="h-16 w-16 object-contain" />
+        <span className="text-black font-semibold">{name}</span>
     </div>
 );
 
@@ -330,7 +332,7 @@ const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCo
 
             <div className="space-y-6">
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
                         <StatCard title="Today's Online Sales" value={`₹${data.onlineSales.toFixed(2)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
                     </div>
@@ -353,9 +355,9 @@ const Dashboard: React.FC<{ data: DashboardData; orders: OrderStatusItem[]; onCo
                 {/* Online Platforms */}
                 <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800">
                     <h3 className="text-lg font-semibold text-white mb-4">Online Platforms</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <PlatformCard name="Swiggy" logoUrl="https://upload.wikimedia.org/wikipedia/en/thumb/1/12/Swiggy_logo.svg/1200px-Swiggy_logo.svg.png" />
-                        <PlatformCard name="Zomato" logoUrl="https://upload.wikimedia.org/wikipedia/commons/7/75/Zomato_logo.png" />
+                        <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" />
                     </div>
                 </div>
             </div>

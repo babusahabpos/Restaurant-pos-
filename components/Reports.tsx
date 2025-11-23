@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } fro
 import { SALES_BREAKDOWN_DATA } from '../constants';
 
 const ReportCard: React.FC<{ title: string; value: string; }> = ({ title, value }) => (
-    <div className="bg-black p-6 rounded-lg shadow-lg">
+    <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
         <p className="text-gray-400 text-sm">{title}</p>
         <p className="text-3xl font-bold text-white mt-1">{value}</p>
     </div>
@@ -20,16 +20,16 @@ const itemWiseSales = [
 const Reports: React.FC = () => {
     return (
         <div className="space-y-6">
-             <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-black p-4 rounded-lg shadow-lg">
+             <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-gray-900 p-4 rounded-lg shadow-lg">
                 <div className="flex items-center gap-4">
-                    <select className="bg-gray-900 text-white p-2 rounded-lg border border-gray-800">
+                    <select className="bg-gray-800 text-white p-2 rounded-lg border border-gray-700">
                         <option>Last 7 Days</option>
                         <option>Today</option>
                         <option>This Month</option>
                     </select>
-                    <input type="date" className="bg-gray-900 text-white p-2 rounded-lg border border-gray-800" defaultValue="2025-06-20" />
+                    <input type="date" className="bg-gray-800 text-white p-2 rounded-lg border border-gray-700" defaultValue="2025-06-20" />
                     <span className="text-gray-500">to</span>
-                    <input type="date" className="bg-gray-900 text-white p-2 rounded-lg border border-gray-800" defaultValue="2025-06-26" />
+                    <input type="date" className="bg-gray-800 text-white p-2 rounded-lg border border-gray-700" defaultValue="2025-06-26" />
                 </div>
                 <button className="w-full md:w-auto bg-lemon text-black font-bold py-2 px-4 rounded-lg hover:bg-lemon-dark transition">
                     Generate Report
@@ -43,7 +43,7 @@ const Reports: React.FC = () => {
                 <ReportCard title="Online Sales" value="₹2000.00" />
             </div>
 
-            <div className="bg-black p-6 rounded-lg shadow-lg">
+            <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
                 <h3 className="text-lg font-semibold text-white mb-4">Sales Breakdown Chart</h3>
                  <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
@@ -57,11 +57,11 @@ const Reports: React.FC = () => {
                 </div>
             </div>
 
-             <div className="bg-black p-6 rounded-lg shadow-lg">
+             <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
                 <h3 className="text-lg font-semibold text-white mb-4">Item-wise Sales Report</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-400">
-                        <thead className="text-xs text-gray-300 uppercase bg-gray-900">
+                        <thead className="text-xs text-gray-300 uppercase bg-gray-800">
                             <tr>
                                 <th scope="col" className="px-6 py-3">Item Name</th>
                                 <th scope="col" className="px-6 py-3">Quantity Sold</th>
@@ -70,7 +70,7 @@ const Reports: React.FC = () => {
                         </thead>
                         <tbody>
                             {itemWiseSales.map(item => (
-                                <tr key={item.name} className="bg-black border-b border-gray-800 hover:bg-gray-900">
+                                <tr key={item.name} className="bg-gray-900 border-b border-gray-800 hover:bg-gray-800/50">
                                     <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{item.name}</th>
                                     <td className="px-6 py-4">{item.quantity}</td>
                                     <td className="px-6 py-4">₹{item.total.toFixed(2)}</td>

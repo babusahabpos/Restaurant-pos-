@@ -3,7 +3,7 @@ import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser } from '../types';
 
 interface RegisterProps {
-    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate'>) => void;
+    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -33,6 +33,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [agreed, setAgreed] = useState(false);
 
     const handleRegisterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -93,8 +94,31 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                             </div>
                         </div>
 
+                        <div className="flex items-start">
+                            <div className="flex items-center h-5">
+                                <input
+                                    id="subscription-agree"
+                                    name="subscription-agree"
+                                    type="checkbox"
+                                    checked={agreed}
+                                    onChange={(e) => setAgreed(e.target.checked)}
+                                    className="w-4 h-4 border-gray-600 rounded bg-gray-900 text-lemon focus:ring-lemon focus:ring-offset-black"
+                                    required
+                                />
+                            </div>
+                            <div className="ml-3 text-sm">
+                                <label htmlFor="subscription-agree" className="font-medium text-gray-400">
+                                    99 MONTHLY SUBSCRIPTION PLAN
+                                </label>
+                            </div>
+                        </div>
+
                         <div>
-                             <button type="submit" className="relative flex justify-center w-full px-4 py-3 text-sm font-bold text-black bg-lemon border border-transparent rounded-md group hover:bg-lemon-dark">
+                             <button 
+                                type="submit" 
+                                disabled={!agreed}
+                                className="relative flex justify-center w-full px-4 py-3 text-sm font-bold text-black bg-lemon border border-transparent rounded-md group hover:bg-lemon-dark disabled:bg-lemon/50 disabled:cursor-not-allowed"
+                            >
                                 Create Account
                             </button>
                         </div>
