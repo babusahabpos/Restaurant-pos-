@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser } from '../types';
 
 interface RegisterProps {
-    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>) => void;
+    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>, referralCode?: string) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -30,6 +31,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [referralCode, setReferralCode] = useState(''); // New State
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -48,7 +50,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
             return;
         }
         
-        onRegister({ restaurantName, name, phone, email, password });
+        onRegister({ restaurantName, name, phone, email, password }, referralCode);
         setShowSuccessModal(true);
     };
     
@@ -84,6 +86,14 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                     {showPassword ? <EyeClosedIcon className="w-5 h-5"/> : <EyeOpenIcon className="w-5 h-5"/>}
                                 </button>
                             </div>
+                            <input 
+                                name="referralCode" 
+                                type="text" 
+                                value={referralCode} 
+                                onChange={e => setReferralCode(e.target.value)} 
+                                className="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-900 border border-gray-700 rounded-md border-lemon/50" 
+                                placeholder="Referral Code (e.g. referbabusahab) - Optional"
+                            />
                         </div>
 
                          <div className="flex items-center justify-between">

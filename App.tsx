@@ -14,6 +14,8 @@ import Settings from './components/Settings';
 import QrMenu from './components/QrMenu';
 import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
+import SocialMedia from './components/SocialMedia';
+import Referral from './components/Referral'; // Import Referral
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -47,6 +49,8 @@ function App() {
                     deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30, // Default delivery charge
                     isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true, // Default delivery enabled
                     fssai: u.fssai !== undefined ? u.fssai : '', // Default empty FSSAI
+                    referralCode: u.referralCode ? u.referralCode : `refer${u.restaurantName.replace(/\s+/g, '').toLowerCase()}`,
+                    socialMedia: u.socialMedia || {},
                     menu: (Array.isArray(u.menu) && u.menu.length > 0) 
                         ? u.menu.map((m: any) => ({
                             ...m,
@@ -196,8 +200,38 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'taxRate' | 'fssai'>) => {
+    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        // Generate new referral code: 'refer' + restaurant name (lowercase, no spaces)
+        const generatedReferralCode = `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
+
+        let updatedUsers = [...registeredUsers];
+        let referrerCodeFound = '';
+
+        // Handle Referral Logic
+        if (referralCode) {
+            const referrerIndex = updatedUsers.findIndex(u => u.referralCode === referralCode);
+            if (referrerIndex !== -1) {
+                referrerCodeFound = referralCode;
+                // Extend referrer subscription by 30 days
+                const referrer = updatedUsers[referrerIndex];
+                const currentEndDate = new Date(referrer.subscriptionEndDate);
+                const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                
+                updatedUsers[referrerIndex] = {
+                    ...referrer,
+                    subscriptionEndDate: newEndDate
+                };
+                
+                // Add alert for referrer
+                setAlerts(prev => [...prev, {
+                    id: Date.now() + 1,
+                    userId: referrer.id,
+                    message: 'Congrats! You earned 1 Month Free Subscription for referring a new user!'
+                }]);
+            }
+        }
 
         const user: RegisteredUser = {
             ...newUser,
@@ -211,8 +245,13 @@ function App() {
             isDeliveryEnabled: true,
             fssai: '', // Default empty FSSAI
             menu: MOCK_MENU_ITEMS, // Start with a default menu
+            referralCode: generatedReferralCode,
+            referredBy: referrerCodeFound,
+            socialMedia: { autoPostEnabled: false },
         };
-        setRegisteredUsers(prev => [...prev, user]);
+        
+        updatedUsers.push(user);
+        setRegisteredUsers(updatedUsers);
     };
 
     const handleForgotPassword = (identifier: string): boolean => {
@@ -298,10 +337,19 @@ function App() {
 
     const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
         if (!loggedInUser) return;
+        
+        let finalUpdates = { ...updates };
+        
+        // If restaurant name is changing, auto-update the referral code
+        if (updates.restaurantName && updates.restaurantName !== loggedInUser.restaurantName) {
+             const newReferralCode = `refer${updates.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
+             finalUpdates.referralCode = newReferralCode;
+        }
+
         setRegisteredUsers(prev => prev.map(user => 
-            user.id === loggedInUser.id ? { ...user, ...updates } : user
+            user.id === loggedInUser.id ? { ...user, ...finalUpdates } : user
         ));
-        setLoggedInUser(prev => prev ? { ...prev, ...updates } : null);
+        setLoggedInUser(prev => prev ? { ...prev, ...finalUpdates } : null);
         alert('Settings updated successfully!');
     };
     
@@ -384,7 +432,7 @@ function App() {
     if (authState === 'adminLoggedIn') {
         const adminPages = {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription}/>,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handleAdminSendMessage} onUpdateSubscription={handleUpdateSubscription}/>,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };
@@ -426,6 +474,8 @@ function App() {
             inventory: <Inventory />,
             staff: <Staff />,
             reports: <Reports />,
+            social: <SocialMedia user={loggedInUser} />,
+            refer: <Referral user={loggedInUser} />, // Added Referral Page
             settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={handleCreateTicket} />,

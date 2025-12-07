@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { RegisteredUser } from '../types';
 
@@ -15,6 +16,9 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave }) => {
         deliveryCharge: user.deliveryCharge !== undefined ? user.deliveryCharge : 30,
         isDeliveryEnabled: user.isDeliveryEnabled !== undefined ? user.isDeliveryEnabled : true,
         fssai: user.fssai || '',
+        instagram: user.socialMedia?.instagram || '',
+        facebook: user.socialMedia?.facebook || '',
+        autoPostEnabled: user.socialMedia?.autoPostEnabled || false,
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -34,6 +38,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave }) => {
             ...formData,
             taxRate: Number(formData.taxRate),
             deliveryCharge: Number(formData.deliveryCharge),
+            socialMedia: {
+                instagram: formData.instagram,
+                facebook: formData.facebook,
+                autoPostEnabled: formData.autoPostEnabled,
+            }
         });
     };
 
@@ -66,6 +75,43 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave }) => {
                     </div>
                 </div>
                 
+                <hr className="border-gray-800" />
+                <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                        <label className="text-sm font-bold text-lemon block mb-2">Your Referral Code</label>
+                        <div className="flex items-center gap-2">
+                             <input type="text" readOnly value={user.referralCode || 'N/A'} className="w-full bg-black text-white p-3 rounded-lg border border-lemon/50 font-mono text-center" />
+                             <span className="text-xs text-gray-500">Share this code! If a new user registers with it, you get 1 Month Free Subscription.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr className="border-gray-800" />
+                <h4 className="text-lg font-bold text-white">Social Media & Auto-Posting</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="text-sm font-bold text-gray-400 block mb-2">Instagram Username/Link</label>
+                        <input type="text" name="instagram" value={formData.instagram} onChange={handleChange} className="w-full bg-gray-800 text-white p-3 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-lemon" placeholder="@myrestaurant" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-bold text-gray-400 block mb-2">Facebook Profile/Page Link</label>
+                        <input type="text" name="facebook" value={formData.facebook} onChange={handleChange} className="w-full bg-gray-800 text-white p-3 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-lemon" placeholder="facebook.com/myrestaurant" />
+                    </div>
+                     <div className="flex items-center mt-6">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                name="autoPostEnabled" 
+                                checked={formData.autoPostEnabled} 
+                                onChange={handleChange} 
+                                className="sr-only peer" 
+                            />
+                            <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-lemon rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-lemon"></div>
+                            <span className="ml-3 text-sm font-medium text-white">Enable Daily Automated Posts</span>
+                        </label>
+                    </div>
+                </div>
+
                 <hr className="border-gray-800" />
                 <h4 className="text-lg font-bold text-white">Delivery Settings</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

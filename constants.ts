@@ -1,3 +1,4 @@
+
 import { Page, MenuItem, InventoryItem, StaffMember, RegisteredUser, UserStatus, SupportTicket } from './types';
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
@@ -9,6 +10,8 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'inventory', icon: 'inventory' },
     { name: 'staff', icon: 'staff' },
     { name: 'reports', icon: 'reports' },
+    { name: 'social', icon: 'social' }, 
+    { name: 'refer', icon: 'refer' }, // Added Refer
     { name: 'subscription', icon: 'subscription' },
     { name: 'help', icon: 'help' },
     { name: 'settings', icon: 'settings' },
@@ -58,7 +61,9 @@ export const MOCK_USERS: RegisteredUser[] = [
         menu: MOCK_MENU_ITEMS,
         status: UserStatus.Approved, 
         lastLogin: '2 hours ago', 
-        subscriptionEndDate: getFutureDate(30) 
+        subscriptionEndDate: getFutureDate(30),
+        referralCode: 'referbabusahab',
+        socialMedia: { autoPostEnabled: true, instagram: '@babusahab', facebook: 'BaBu SAHAB Official' }
     },
     { 
         id: 2, 
@@ -78,7 +83,8 @@ export const MOCK_USERS: RegisteredUser[] = [
         ],
         status: UserStatus.Pending, 
         lastLogin: 'Never', 
-        subscriptionEndDate: getFutureDate(5) 
+        subscriptionEndDate: getFutureDate(5),
+        referralCode: 'referpizzapalace'
     },
     { 
         id: 3, 
@@ -98,7 +104,8 @@ export const MOCK_USERS: RegisteredUser[] = [
         ],
         status: UserStatus.Blocked, 
         lastLogin: '1 month ago', 
-        subscriptionEndDate: getPastDate(10) 
+        subscriptionEndDate: getPastDate(10),
+        referralCode: 'referchaipoint'
     },
 ];
 

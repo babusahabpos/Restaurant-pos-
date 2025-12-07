@@ -11,7 +11,9 @@ export type Page =
     'subscription' | 
     'help' | 
     'qrMenu' |
-    'settings';
+    'settings' |
+    'social' |
+    'refer'; // Added refer page
 
 export interface MenuItem {
     id: number;
@@ -33,8 +35,8 @@ export interface OrderStatusItem {
     status: 'Preparation' | 'Completed';
     items: OrderItem[];
     total: number;
-    discount?: number; // Added discount field
-    sourceInfo: string; // e.g., "Swiggy #12345" or "Table: 5" or "Delivery (Name)"
+    discount?: number;
+    sourceInfo: string;
     timestamp: Date;
     deliveryDetails?: {
         type: 'Pickup' | 'Delivery';
@@ -98,17 +100,26 @@ export interface RegisteredUser {
     name: string;
     phone: string;
     email: string;
-    password: string; // Added password field
+    password: string;
     restaurantName: string;
     address: string;
-    taxRate: number; // Tax rate percentage
-    deliveryCharge: number; // Delivery fee
-    isDeliveryEnabled: boolean; // Is delivery option active
-    fssai?: string; // FSSAI Number
+    taxRate: number;
+    deliveryCharge: number;
+    isDeliveryEnabled: boolean;
+    fssai?: string;
     menu: MenuItem[];
     status: UserStatus;
     lastLogin: string;
     subscriptionEndDate: string; // ISO Date String
+    
+    // New Fields
+    referralCode?: string;
+    referredBy?: string; // Code of the person who referred them
+    socialMedia?: {
+        instagram?: string;
+        facebook?: string;
+        autoPostEnabled?: boolean;
+    };
 }
 
 export interface TicketMessage {
@@ -129,6 +140,6 @@ export interface SupportTicket {
 
 export interface AdminAlert {
     id: number | string;
-    userId: number | 'all'; // Target a specific user or all users
+    userId: number | 'all';
     message: string;
 }

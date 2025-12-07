@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useState } from 'react';
 import { Page, AdminAlert, RegisteredUser } from '../types';
 import { NAV_ITEMS } from '../constants';
@@ -25,6 +26,8 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     help: Icons.HelpIcon,
     settings: Icons.SettingsIcon,
     qrCode: Icons.QrCodeIcon,
+    social: Icons.SocialIcon,
+    refer: Icons.ReferIcon, // Added Refer Icon
 };
 
 const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
@@ -69,7 +72,7 @@ const Sidebar: React.FC<{
                                 }`}
                             >
                                 {Icon && <Icon className="w-6 h-6" />}
-                                <span className="capitalize font-semibold">{item.name === 'qrMenu' ? 'QR Menu' : item.name}</span>
+                                <span className="capitalize font-semibold">{item.name === 'qrMenu' ? 'QR Menu' : item.name === 'refer' ? 'Refer & Earn' : item.name}</span>
                             </a>
                         );
                     })}
@@ -186,7 +189,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
 
                 {/* Desktop Header */}
                 <header className="hidden md:flex bg-black shadow-sm p-4 justify-between items-center text-white border-b border-gray-800">
-                    <h1 className="text-2xl font-bold capitalize">{currentPage === 'qrMenu' ? 'QR Menu' : currentPage}</h1>
+                    <h1 className="text-2xl font-bold capitalize">{currentPage === 'qrMenu' ? 'QR Menu' : currentPage === 'refer' ? 'Refer & Earn' : currentPage}</h1>
                     <div className="flex items-center space-x-4">
                         <button className="text-gray-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg></button>
                          <div className="relative">
