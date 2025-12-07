@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser } from '../types';
 
@@ -31,11 +31,22 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [referralCode, setReferralCode] = useState(''); // New State
+    const [referralCode, setReferralCode] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [agreed, setAgreed] = useState(false);
+    const [isReferralLocked, setIsReferralLocked] = useState(false);
+
+    // Effect to check for referral code in URL
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const refParam = params.get('ref');
+        if (refParam) {
+            setReferralCode(refParam);
+            setIsReferralLocked(true); // Visually indicate it came from a link
+        }
+    }, []);
 
     const handleRegisterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,14 +97,18 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                     {showPassword ? <EyeClosedIcon className="w-5 h-5"/> : <EyeOpenIcon className="w-5 h-5"/>}
                                 </button>
                             </div>
-                            <input 
-                                name="referralCode" 
-                                type="text" 
-                                value={referralCode} 
-                                onChange={e => setReferralCode(e.target.value)} 
-                                className="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-900 border border-gray-700 rounded-md border-lemon/50" 
-                                placeholder="Referral Code (e.g. referbabusahab) - Optional"
-                            />
+                            
+                            <div>
+                                {isReferralLocked && <label className="text-xs text-lemon ml-1">Referral Code Applied ✓</label>}
+                                <input 
+                                    name="referralCode" 
+                                    type="text" 
+                                    value={referralCode} 
+                                    onChange={e => setReferralCode(e.target.value)} 
+                                    className={`relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-900 border rounded-md ${isReferralLocked ? 'border-lemon ring-1 ring-lemon' : 'border-gray-700'}`}
+                                    placeholder="Referral Code (Optional)"
+                                />
+                            </div>
                         </div>
 
                          <div className="flex items-center justify-between">

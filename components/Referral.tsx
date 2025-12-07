@@ -18,17 +18,22 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
     };
 
     const handleShare = () => {
+        // Updated URL to include the ref query parameter
+        const shareUrl = `${window.location.origin}?ref=${user.referralCode}`;
+
         const shareData = {
             title: 'BaBu SAHAB POS - Join Now!',
             text: `Use my referral code ${user.referralCode} to join BaBu SAHAB POS and manage your restaurant efficiently!`,
-            url: window.location.origin
+            url: shareUrl
         };
 
         if (navigator.share) {
             navigator.share(shareData).catch(err => console.error('Error sharing', err));
         } else {
-            handleCopy();
-            alert('Sharing not supported on this device. Code copied to clipboard.');
+            // Fallback: Copy the full URL with ref code
+            navigator.clipboard.writeText(shareUrl);
+            setCopied(true);
+            alert('Sharing link copied to clipboard!');
         }
     };
 
@@ -62,7 +67,7 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
                         className="bg-lemon text-black px-8 py-3 rounded-lg font-bold hover:bg-lemon-dark transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                        Share with Friends
+                        Share Link
                     </button>
                 </div>
             </div>
@@ -70,13 +75,13 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gray-900 p-6 rounded-lg border border-gray-800 text-center">
                     <div className="w-12 h-12 bg-lemon rounded-full flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">1</div>
-                    <h4 className="text-white font-bold mb-2">Share Code</h4>
-                    <p className="text-gray-400 text-sm">Send your unique code to fellow restaurant owners.</p>
+                    <h4 className="text-white font-bold mb-2">Share Link</h4>
+                    <p className="text-gray-400 text-sm">Send your unique link to fellow restaurant owners.</p>
                 </div>
                 <div className="bg-gray-900 p-6 rounded-lg border border-gray-800 text-center">
                     <div className="w-12 h-12 bg-lemon rounded-full flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">2</div>
                     <h4 className="text-white font-bold mb-2">They Register</h4>
-                    <p className="text-gray-400 text-sm">They enter your code during their registration.</p>
+                    <p className="text-gray-400 text-sm">The code is automatically added when they sign up.</p>
                 </div>
                 <div className="bg-gray-900 p-6 rounded-lg border border-gray-800 text-center">
                     <div className="w-12 h-12 bg-lemon rounded-full flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">3</div>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { RegisteredUser, UserStatus } from '../../types';
 
@@ -123,6 +124,13 @@ const UserManagement: React.FC<{
         }
     };
 
+    // Helper to find name from code
+    const getReferrerName = (code: string | undefined) => {
+        if (!code) return '-';
+        const referrer = users.find(u => u.referralCode === code);
+        return referrer ? `${referrer.restaurantName} (${referrer.name})` : code;
+    };
+
     return (
         <>
         {messagingUser && <SendMessageModal user={messagingUser} onClose={() => setMessagingUser(null)} onSend={onSendMessage} />}
@@ -139,6 +147,7 @@ const UserManagement: React.FC<{
                         <tr>
                             <th scope="col" className="px-6 py-3">Restaurant</th>
                             <th scope="col" className="px-6 py-3">Owner</th>
+                            <th scope="col" className="px-6 py-3">Referred By</th>
                             <th scope="col" className="px-6 py-3">Subscription End</th>
                             <th scope="col" className="px-6 py-3">Status</th>
                             <th scope="col" className="px-6 py-3">Actions</th>
@@ -149,6 +158,7 @@ const UserManagement: React.FC<{
                             <tr key={user.id} className="bg-gray-900 border-b border-gray-800 hover:bg-gray-800/50">
                                 <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{user.restaurantName}</th>
                                 <td className="px-6 py-4">{user.name}</td>
+                                <td className="px-6 py-4 text-lemon">{getReferrerName(user.referredBy)}</td>
                                 <td className="px-6 py-4">{user.subscriptionEndDate}</td>
                                 <td className="px-6 py-4">{getStatusChip(user.status)}</td>
                                 <td className="px-6 py-4 space-x-2 whitespace-nowrap">
