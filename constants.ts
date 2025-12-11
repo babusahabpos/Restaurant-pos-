@@ -57,6 +57,7 @@ export const MOCK_USERS: RegisteredUser[] = [
         taxRate: 5,
         deliveryCharge: 40,
         isDeliveryEnabled: true,
+        isPrinterEnabled: true,
         fssai: '12345678901234',
         menu: MOCK_MENU_ITEMS,
         status: UserStatus.Approved, 
@@ -76,6 +77,7 @@ export const MOCK_USERS: RegisteredUser[] = [
         taxRate: 5,
         deliveryCharge: 30,
         isDeliveryEnabled: true,
+        isPrinterEnabled: true,
         fssai: '',
         menu: [
             { id: 101, name: 'Farmhouse Pizza', category: 'Pizza', offlinePrice: 400, onlinePrice: 440, inStock: true },
@@ -97,6 +99,7 @@ export const MOCK_USERS: RegisteredUser[] = [
         taxRate: 5,
         deliveryCharge: 0,
         isDeliveryEnabled: false,
+        isPrinterEnabled: false,
         fssai: '98765432109876',
         menu: [
              { id: 201, name: 'Masala Chai', category: 'Beverages', offlinePrice: 50, onlinePrice: 55, inStock: true },

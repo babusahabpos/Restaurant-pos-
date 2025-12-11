@@ -469,9 +469,10 @@ interface DashboardProps {
     fssai: string;
     menuItems: MenuItem[];
     onUpdateOrder: (updatedOrder: OrderStatusItem) => void;
+    isPrinterEnabled: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder, isPrinterEnabled }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
@@ -493,8 +494,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         const orderToSettle = orders.find(o => o.id === orderId);
         if (orderToSettle) {
             onCompleteOrder(orderId);
-            const billContent = createBillContent(orderToSettle, paymentMethod, taxRate, restaurantName, address, fssai);
-            triggerPrint(billContent);
+            if (isPrinterEnabled) {
+                const billContent = createBillContent(orderToSettle, paymentMethod, taxRate, restaurantName, address, fssai);
+                triggerPrint(billContent);
+            }
             setSettlingOrder(null);
         } else {
             console.error("Could not find order to settle with ID:", orderId);

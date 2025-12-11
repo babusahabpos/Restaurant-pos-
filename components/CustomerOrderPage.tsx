@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem, RegisteredUser, UserStatus } from '../types';
 
@@ -52,8 +53,12 @@ const CustomerOrderPage: React.FC = () => {
     
             if (!restaurantData && encodedData) {
                 try {
-                    const decodedData = atob(decodeURIComponent(encodedData));
-                    restaurantData = JSON.parse(decodedData);
+                    // Handle Unicode Decoding properly
+                    // The encodedData from params.get() is already URL-decoded (e.g. %3D becomes =)
+                    // So we treat it as Base64.
+                    const binaryString = atob(encodedData);
+                    const jsonString = decodeURIComponent(escape(binaryString));
+                    restaurantData = JSON.parse(jsonString);
                 } catch (e) {
                     console.error("Failed to parse restaurant data from URL", e);
                     setError("An error occurred while loading the menu. The link may be corrupted or too long.");
@@ -88,6 +93,10 @@ const CustomerOrderPage: React.FC = () => {
                 setRestaurant(foundRestaurant);
                 setMenu(sanitizedMenu);
                 setError(null);
+                
+                // Update Page Title
+                document.title = `${foundRestaurant.restaurantName} - Order Online`;
+
             } else if (!restaurantData) {
                  setError("Invalid restaurant link. Could not load menu data.");
             } else {
@@ -97,6 +106,10 @@ const CustomerOrderPage: React.FC = () => {
         };
     
         loadRestaurantData();
+
+        // Listen for hash changes to reload data if user scans a new QR code without refreshing
+        window.addEventListener('hashchange', loadRestaurantData);
+        return () => window.removeEventListener('hashchange', loadRestaurantData);
     }, []);
 
 

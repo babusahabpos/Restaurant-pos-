@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { MenuItem, RegisteredUser } from '../types';
 import QrCodeModal from './QrCodeModal';
@@ -188,9 +189,18 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
             console.error("Could not write to sessionStorage. QR link may be too long.", e);
         }
 
-        const encodedData = encodeURIComponent(btoa(stringifiedData));
+        // Handle Unicode (e.g. ₹) properly for base64 encoding
+        // btoa only supports Latin1 range characters.
+        const binaryString = unescape(encodeURIComponent(stringifiedData));
+        const encodedData = encodeURIComponent(btoa(binaryString));
 
-        const url = `${window.location.origin}${window.location.pathname.replace('index.html', '')}#customer-order?key=${sessionKey}&data=${encodedData}`;
+        let path = window.location.pathname.replace('index.html', '');
+        // Ensure trailing slash for consistent base URL if path isn't empty and doesn't end in slash
+        if (path && !path.endsWith('/')) {
+            path += '/';
+        }
+
+        const url = `${window.location.origin}${path}#customer-order?key=${sessionKey}&data=${encodedData}`;
 
         setMenuUrl(url);
         setIsUrlModalOpen(true);

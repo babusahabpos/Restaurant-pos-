@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 
 // Declare the qrcode function from the global script loaded in index.html
@@ -74,6 +75,14 @@ const UrlModal: React.FC<UrlModalProps> = ({ isOpen, onClose, menuUrl }) => {
                     >
                         {copied ? 'Copied!' : 'Copy'}
                     </button>
+                    <a 
+                        href={menuUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="ml-2 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600"
+                    >
+                        Open
+                    </a>
                 </div>
             </div>
         </div>

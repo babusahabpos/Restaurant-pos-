@@ -106,6 +106,7 @@ export interface RegisteredUser {
     taxRate: number;
     deliveryCharge: number;
     isDeliveryEnabled: boolean;
+    isPrinterEnabled?: boolean; // New field
     fssai?: string;
     menu: MenuItem[];
     status: UserStatus;

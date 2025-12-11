@@ -16,6 +16,7 @@ import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; // Import Referral
+import CustomerOrderPage from './components/CustomerOrderPage'; // Import CustomerOrderPage
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -26,8 +27,16 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage, OrderItem, MenuItem } from './types';
 
 function App() {
-    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn';
-    const [authState, setAuthState] = useState<AuthState>('login');
+    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
+    
+    // Initialize auth state based on URL hash
+    const [authState, setAuthState] = useState<AuthState>(() => {
+        if (window.location.hash.startsWith('#customer-order')) {
+            return 'customer';
+        }
+        return 'login';
+    });
+
     const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
@@ -48,6 +57,7 @@ function App() {
                     taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5, // Default to 5% if missing
                     deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30, // Default delivery charge
                     isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true, // Default delivery enabled
+                    isPrinterEnabled: u.isPrinterEnabled !== undefined ? u.isPrinterEnabled : true, // Default printer enabled
                     fssai: u.fssai !== undefined ? u.fssai : '', // Default empty FSSAI
                     referralCode: u.referralCode ? u.referralCode : `refer${u.restaurantName.replace(/\s+/g, '').toLowerCase()}`,
                     socialMedia: u.socialMedia || {},
@@ -71,6 +81,17 @@ function App() {
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
+    // Listen for hash changes to switch between customer and other views if necessary
+    useEffect(() => {
+        const handleHashChange = () => {
+            if (window.location.hash.startsWith('#customer-order')) {
+                setAuthState('customer');
+            }
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
     useEffect(() => {
         const handleStorageChange = (event: StorageEvent) => {
             // Check for new individual orders
@@ -200,7 +221,7 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => {
+    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'isPrinterEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         
         // Generate new referral code: 'refer' + restaurant name (lowercase, no spaces)
@@ -243,6 +264,7 @@ function App() {
             taxRate: 5, // Default tax rate
             deliveryCharge: 30, // Default delivery charge
             isDeliveryEnabled: true,
+            isPrinterEnabled: true, // Default printer enabled
             fssai: '', // Default empty FSSAI
             menu: MOCK_MENU_ITEMS, // Start with a default menu
             referralCode: generatedReferralCode,
@@ -422,6 +444,11 @@ function App() {
 
     // --- Render Logic ---
 
+    // Customer View
+    if (authState === 'customer') {
+        return <CustomerOrderPage />;
+    }
+
     if (authState === 'login') {
         return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} />;
     }
@@ -432,13 +459,13 @@ function App() {
     if (authState === 'adminLoggedIn') {
         const adminPages = {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handleAdminSendMessage} onUpdateSubscription={handleUpdateSubscription}/>,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription}/>,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };
 
         return (
-            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout}>
+            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
                 {adminPages[currentAdminPage]}
             </AdminLayout>
         );
@@ -461,12 +488,14 @@ function App() {
                 fssai={loggedInUser.fssai || ''}
                 menuItems={safeMenu}
                 onUpdateOrder={handleUpdateOrder}
+                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
             />,
             billing: <Billing 
                 menuItems={safeMenu} 
                 onPrintKOT={handleKOT} 
                 taxRate={loggedInUser.taxRate || 5} 
                 restaurantName={loggedInUser.restaurantName}
+                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
             />,
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
