@@ -66,6 +66,32 @@ const CustomerOrderPage: React.FC = () => {
                     return;
                 }
             }
+
+            // Expand Minified Data Structure (if present)
+            if (restaurantData && restaurantData.m && Array.isArray(restaurantData.m)) {
+                try {
+                    const expandedMenu = restaurantData.m.map((item: any[]) => ({
+                        id: item[0],
+                        name: item[1],
+                        category: item[2],
+                        offlinePrice: Number(item[3]) || 0,
+                        onlinePrice: Number(item[4]) || 0,
+                        inStock: item[5] === 1
+                    }));
+
+                    restaurantData = {
+                        id: restaurantData.i,
+                        restaurantName: restaurantData.n,
+                        address: restaurantData.a || 'Address not available',
+                        taxRate: restaurantData.t || 5,
+                        deliveryCharge: restaurantData.d || 0,
+                        isDeliveryEnabled: restaurantData.e === 1,
+                        menu: expandedMenu
+                    };
+                } catch (e) {
+                    console.error("Failed to expand minified data", e);
+                }
+            }
     
             if (restaurantData && restaurantData.id && restaurantData.restaurantName && Array.isArray(restaurantData.menu)) {
                 const sanitizedMenu = restaurantData.menu.map((item: any) => ({

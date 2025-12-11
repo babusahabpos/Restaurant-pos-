@@ -171,31 +171,45 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
     });
 
     const handleGenerateUrl = () => {
+        // Minify data to reduce URL length
+        // Structure: [id, name, cat, offPrice, onPrice, inStock(1/0)]
+        const simplifiedMenu = menu.map(m => [
+            m.id, 
+            m.name, 
+            m.category, 
+            m.offlinePrice, 
+            m.onlinePrice, 
+            m.inStock ? 1 : 0
+        ]);
+
+        // Key Map:
+        // i: id, n: restaurantName, a: address, t: taxRate, d: deliveryCharge, e: isDeliveryEnabled, m: menu
         const dataToEncode = {
-            id: loggedInUser.id,
-            restaurantName: loggedInUser.restaurantName,
-            address: loggedInUser.address,
-            taxRate: loggedInUser.taxRate, 
-            deliveryCharge: loggedInUser.deliveryCharge, // NEW: Include delivery charge
-            isDeliveryEnabled: loggedInUser.isDeliveryEnabled, // NEW: Include status
-            menu: menu,
+            i: loggedInUser.id,
+            n: loggedInUser.restaurantName,
+            a: loggedInUser.address,
+            t: loggedInUser.taxRate, 
+            d: loggedInUser.deliveryCharge,
+            e: loggedInUser.isDeliveryEnabled ? 1 : 0,
+            m: simplifiedMenu
         };
+
         const stringifiedData = JSON.stringify(dataToEncode);
         
-        const sessionKey = `babuSahabPos_menu_${loggedInUser.id}`;
+        // Use a unique session key
+        const sessionKey = `bs_m_${loggedInUser.id}`;
         try {
             sessionStorage.setItem(sessionKey, stringifiedData);
         } catch (e) {
-            console.error("Could not write to sessionStorage. QR link may be too long.", e);
+            console.error("Could not write to sessionStorage.", e);
         }
 
         // Handle Unicode (e.g. ₹) properly for base64 encoding
-        // btoa only supports Latin1 range characters.
         const binaryString = unescape(encodeURIComponent(stringifiedData));
         const encodedData = encodeURIComponent(btoa(binaryString));
 
         let path = window.location.pathname.replace('index.html', '');
-        // Ensure trailing slash for consistent base URL if path isn't empty and doesn't end in slash
+        // Ensure trailing slash for consistent base URL
         if (path && !path.endsWith('/')) {
             path += '/';
         }
