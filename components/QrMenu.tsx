@@ -183,11 +183,13 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
         ]);
 
         // Key Map:
-        // i: id, n: restaurantName, a: address, t: taxRate, d: deliveryCharge, e: isDeliveryEnabled, m: menu
+        // i: id, n: restaurantName, a: address, p: phone, f: fssai, t: taxRate, d: deliveryCharge, e: isDeliveryEnabled, m: menu
         const dataToEncode = {
             i: loggedInUser.id,
             n: loggedInUser.restaurantName,
             a: loggedInUser.address,
+            p: loggedInUser.phone,
+            f: loggedInUser.fssai,
             t: loggedInUser.taxRate, 
             d: loggedInUser.deliveryCharge,
             e: loggedInUser.isDeliveryEnabled ? 1 : 0,
