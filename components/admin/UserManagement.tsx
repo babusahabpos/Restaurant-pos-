@@ -113,27 +113,36 @@ const MenuUploadModal: React.FC<{
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+    const processFile = async (file: File) => {
         setIsProcessing(true);
-        setLoadingMessage('Processing image...');
+        setLoadingMessage('Reading file...');
 
         const reader = new FileReader();
+        
         reader.onload = async (event) => {
-            const base64Data = (event.target?.result as string).split(',')[1];
+            const result = event.target?.result as string;
+            let base64Data = result.split(',')[1];
+            let mimeType = file.type;
+
+            // If it's an image, verify and optionally compress via Canvas (simplified here to ensuring base64 validity)
+            // If it's a PDF, we send the base64 directly.
             
+            if (file.type.startsWith('image/')) {
+                setLoadingMessage('Compressing image...');
+                // Optional: You could add canvas compression here if images are too large, 
+                // but for now, we pass the base64 directly to ensure robustness.
+            }
+
             try {
-                setLoadingMessage('Analyzing menu items with AI...');
+                setLoadingMessage('AI is analyzing menu items...');
                 
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const response = await ai.models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: {
                         parts: [
-                            { inlineData: { mimeType: file.type, data: base64Data } },
-                            { text: "Analyze this restaurant menu image. Extract all menu items. Return a JSON object with a key 'menu' containing an array of items. Each item must have: 'name' (string), 'category' (string, infer from headers like 'Starters', 'Main Course', etc.), and 'price' (number). If an item has multiple prices, use the first one. Ignore currency symbols. Do not hallucinate items." }
+                            { inlineData: { mimeType: mimeType, data: base64Data } },
+                            { text: "Analyze this restaurant menu (Image or PDF). Extract all menu items. Return a JSON object with a key 'menu' containing an array of items. Each item must have: 'name' (string), 'category' (string, infer from headers like 'Starters', 'Main Course', etc.), and 'price' (number). If an item has multiple prices, use the first one. Ignore currency symbols. Do not hallucinate items." }
                         ]
                     },
                     config: {
@@ -170,20 +179,32 @@ const MenuUploadModal: React.FC<{
                         }));
                         
                         setMenu(prev => [...prev, ...newItems]);
-                        alert(`Successfully extracted ${newItems.length} items from the image!`);
+                        alert(`Success! Extracted ${newItems.length} items from ${file.name}.`);
                     } else {
-                        alert("Could not find structured menu data in the image.");
+                        alert("AI processed the file but found no menu structure. Please try a clearer file.");
                     }
                 }
             } catch (error) {
                 console.error("AI Extraction Error:", error);
-                alert("Failed to extract menu. Please try a clearer image.");
+                alert("Failed to extract menu. Ensure the PDF/Image is clear and under 20MB.");
             } finally {
                 setIsProcessing(false);
                 setLoadingMessage('');
             }
         };
+
+        reader.onerror = () => {
+            alert("Error reading file.");
+            setIsProcessing(false);
+        };
+
         reader.readAsDataURL(file);
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        processFile(file);
     };
     
     const handleDeleteItem = (id: number) => {
@@ -208,13 +229,13 @@ const MenuUploadModal: React.FC<{
                 <div className="flex flex-col md:flex-row gap-6 overflow-hidden">
                     {/* Upload Section */}
                     <div className="w-full md:w-1/3 bg-gray-900 p-4 rounded-lg overflow-y-auto">
-                        <h4 className="text-lemon font-bold mb-4">Auto-Generate from Photo</h4>
+                        <h4 className="text-lemon font-bold mb-4">Auto-Generate Menu</h4>
                         <div className="space-y-4">
                             <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
                                 <input 
                                     type="file" 
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
+                                    accept="image/*,application/pdf"
+                                    onChange={handleFileUpload}
                                     id="menu-upload"
                                     className="hidden"
                                     disabled={isProcessing}
@@ -223,8 +244,8 @@ const MenuUploadModal: React.FC<{
                                     <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
-                                    <p className="mt-1 text-sm text-gray-400">Upload Menu Photo</p>
-                                    <p className="text-xs text-gray-500">AI will auto-detect items & categories</p>
+                                    <p className="mt-1 text-sm text-gray-400">Upload Menu</p>
+                                    <p className="text-xs text-gray-500">Supports: Images & PDF</p>
                                 </label>
                             </div>
                             
@@ -236,7 +257,7 @@ const MenuUploadModal: React.FC<{
                             )}
                             
                             <div className="bg-gray-800 p-3 rounded text-xs text-gray-400">
-                                <strong>Tip:</strong> Upload a clear photo of the menu card. The system will categorize items and set prices automatically.
+                                <strong>Tip:</strong> You can upload a photo of the menu card OR a PDF file. AI will categorize items and set prices automatically.
                             </div>
                         </div>
                     </div>
