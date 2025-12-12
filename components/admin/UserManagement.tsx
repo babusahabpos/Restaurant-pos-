@@ -160,9 +160,21 @@ const MenuUploadModal: React.FC<{
 
     const processFile = async (file: File) => {
         setIsProcessing(true);
-        setLoadingMessage('Reading file...');
+        setLoadingMessage('Checking system...');
 
         try {
+            // --- API Key Check ---
+            // Ensure the user has selected an API key if running in an environment that supports it
+            if (typeof window !== 'undefined' && (window as any).aistudio) {
+                const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+                if (!hasKey) {
+                    setLoadingMessage('Please select your API Key...');
+                    await (window as any).aistudio.openSelectKey();
+                }
+            }
+            
+            setLoadingMessage('Processing file...');
+
             let base64Data = '';
             let mimeType = file.type;
 
@@ -219,6 +231,12 @@ const MenuUploadModal: React.FC<{
 
             setLoadingMessage('AI is analyzing menu items...');
             
+            // Check process.env.API_KEY specifically before initializing
+            if (!process.env.API_KEY) {
+                // If it's still missing, it might mean the environment hasn't updated yet or user cancelled
+                throw new Error("API Key not found. Please ensure you have selected a valid API Key.");
+            }
+
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
