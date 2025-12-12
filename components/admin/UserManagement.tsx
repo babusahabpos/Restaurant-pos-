@@ -113,6 +113,7 @@ const MenuUploadModal: React.FC<{
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
 
+    // Robust Image Compression
     const compressImage = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -122,8 +123,8 @@ const MenuUploadModal: React.FC<{
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1024;
-                    const MAX_HEIGHT = 1024;
+                    const MAX_WIDTH = 1600; // Increased for better legibility of menus
+                    const MAX_HEIGHT = 1600;
                     let width = img.width;
                     let height = img.height;
 
@@ -151,7 +152,7 @@ const MenuUploadModal: React.FC<{
                         reject(new Error("Canvas context is null"));
                     }
                 };
-                img.onerror = (error) => reject(error);
+                img.onerror = (error) => reject(new Error("Failed to load image for compression"));
             };
             reader.onerror = (error) => reject(error);
         });
@@ -163,25 +164,57 @@ const MenuUploadModal: React.FC<{
 
         try {
             let base64Data = '';
-            let mimeType = '';
+            let mimeType = file.type;
 
-            if (file.type === 'application/pdf') {
-                mimeType = 'application/pdf';
-                base64Data = await new Promise((resolve, reject) => {
+            // Helper to read raw base64 with reliable mime detection
+            const readRawFile = (f: File): Promise<{data: string, mime: string}> => {
+                return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = () => {
                         const result = reader.result as string;
-                        resolve(result.split(',')[1]);
+                        if (!result) { reject(new Error("File is empty")); return; }
+                        
+                        const parts = result.split(',');
+                        const meta = parts[0]; 
+                        const rawData = parts[1];
+                        // Extract mime from data url if possible, else use file.type or default
+                        const extractedMime = meta.match(/:(.*?);/)?.[1] || f.type || 'image/jpeg';
+                        
+                        resolve({ data: rawData, mime: extractedMime });
                     };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
+                    reader.onerror = () => reject(new Error("Failed to read file"));
+                    reader.readAsDataURL(f);
                 });
-            } else if (file.type.startsWith('image/')) {
-                setLoadingMessage('Compressing image for faster upload...');
-                mimeType = 'image/jpeg';
-                base64Data = await compressImage(file);
+            };
+
+            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            
+            if (isPDF) {
+                 const raw = await readRawFile(file);
+                 base64Data = raw.data;
+                 mimeType = 'application/pdf';
             } else {
-                throw new Error("Unsupported file type. Please upload an Image or PDF.");
+                // Assume Image strategy
+                try {
+                    setLoadingMessage('Optimizing image...');
+                    // Try compression first (best for bandwidth)
+                    // This works for standard web images (JPG, PNG, WEBP)
+                    base64Data = await compressImage(file);
+                    mimeType = 'image/jpeg'; // Compression result is always JPEG
+                } catch (e) {
+                    console.warn("Compression failed (likely HEIC or unsupported format), falling back to raw upload.", e);
+                    setLoadingMessage('Uploading original image...');
+                    
+                    // Fallback to raw file (Supports HEIC, etc.)
+                    const raw = await readRawFile(file);
+                    base64Data = raw.data;
+                    mimeType = raw.mime;
+
+                    // Size Check for raw upload (Gemini limit is generous, ensuring reasonable network usage)
+                    if (file.size > 15 * 1024 * 1024) {
+                        throw new Error("Image is too large (over 15MB) and could not be compressed. Please use a smaller image.");
+                    }
+                }
             }
 
             setLoadingMessage('AI is analyzing menu items...');
@@ -237,7 +270,7 @@ const MenuUploadModal: React.FC<{
         } catch (error: any) {
             console.error("AI Extraction Error:", error);
             const msg = error.message || "Unknown error";
-            alert(`Failed to extract menu. Error: ${msg}. Ensure the PDF/Image is clear.`);
+            alert(`Failed to extract menu. Error: ${msg}.`);
         } finally {
             setIsProcessing(false);
             setLoadingMessage('');
@@ -277,7 +310,7 @@ const MenuUploadModal: React.FC<{
                             <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
                                 <input 
                                     type="file" 
-                                    accept="image/*,application/pdf"
+                                    accept="image/*,application/pdf,.heic,.heif"
                                     onChange={handleFileUpload}
                                     id="menu-upload"
                                     className="hidden"
@@ -288,7 +321,7 @@ const MenuUploadModal: React.FC<{
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                     <p className="mt-1 text-sm text-gray-400">Upload Menu</p>
-                                    <p className="text-xs text-gray-500">Supports: Images & PDF</p>
+                                    <p className="text-xs text-gray-500">Supports: All Images & PDF</p>
                                 </label>
                             </div>
                             
