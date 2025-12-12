@@ -67,7 +67,8 @@ function App() {
                             // Force prices to be numbers to prevent .toFixed crashes
                             offlinePrice: Number(m.offlinePrice) || 0,
                             onlinePrice: Number(m.onlinePrice) || 0,
-                            inStock: m.inStock !== undefined ? m.inStock : true
+                            inStock: m.inStock !== undefined ? m.inStock : true,
+                            // Removed image handling as requested
                         })) 
                         : MOCK_MENU_ITEMS
                 }));
@@ -194,7 +195,7 @@ function App() {
 
     // --- Handlers ---
 
-    const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' => {
+    const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
         // Updated Admin Credentials
         if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') {
             setAuthState('adminLoggedIn');
@@ -216,6 +217,8 @@ function App() {
                     return 'blocked';
                 case UserStatus.Rejected:
                     return 'blocked'; // Treat rejected as blocked for login purposes
+                case UserStatus.Deleted:
+                    return 'deleted';
             }
         }
         return 'not_found';
@@ -293,6 +296,16 @@ function App() {
         }
     };
     
+    // Allow guests/users who can't login to contact admin
+    const handleGuestMessage = (email: string, message: string) => {
+        const newAlert: AdminAlert = {
+            id: Date.now(),
+            userId: 'all', // Show to admin
+            message: `[Guest Contact] From: ${email} - Message: ${message}`
+        };
+        setAlerts(prev => [...prev, newAlert]);
+    };
+    
     const handleLogout = () => {
         setAuthState('login');
         setLoggedInUser(null);
@@ -345,7 +358,8 @@ function App() {
         const sanitizedMenu = newMenu.map(item => ({
             ...item,
             offlinePrice: Number(item.offlinePrice) || 0,
-            onlinePrice: Number(item.onlinePrice) || 0
+            onlinePrice: Number(item.onlinePrice) || 0,
+            // Removed image mapping
         }));
 
         setRegisteredUsers(prevUsers => 
@@ -396,6 +410,13 @@ function App() {
             user.id === userId ? { ...user, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : user
         ));
     };
+    
+    // Soft delete user
+    const handleDeleteUser = (userId: number) => {
+        setRegisteredUsers(prev => prev.map(user =>
+            user.id === userId ? { ...user, status: UserStatus.Deleted } : user
+        ));
+    };
 
     const handleAdminSendMessage = (userId: number | 'all', message: string) => {
         const newAlert = {
@@ -419,6 +440,14 @@ function App() {
             user.id === userId ? { ...user, subscriptionEndDate: newDate } : user
         ));
         alert('Subscription date updated!');
+    };
+    
+    // New handler for Admin to update user menu (with photo uploads)
+    const handleAdminUpdateMenu = (userId: number, newMenu: MenuItem[]) => {
+        setRegisteredUsers(prev => prev.map(user => 
+            user.id === userId ? { ...user, menu: newMenu } : user
+        ));
+        alert('Menu updated successfully!');
     };
     
     const handleTicketReply = (ticketId: number, message: string) => {
@@ -450,7 +479,7 @@ function App() {
     }
 
     if (authState === 'login') {
-        return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} />;
+        return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} onContactAdmin={handleGuestMessage} />;
     }
     if (authState === 'register') {
         return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -459,7 +488,15 @@ function App() {
     if (authState === 'adminLoggedIn') {
         const adminPages = {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription}/>,
+            [AdminPage.UserManagement]: <UserManagement 
+                users={registeredUsers} 
+                onBlockUser={handleBlockUser} 
+                onSendMessage={handleAdminSendMessage} 
+                onPasswordChange={handlePasswordChange} 
+                onUpdateSubscription={handleUpdateSubscription}
+                onUpdateMenu={handleAdminUpdateMenu} 
+                onDeleteUser={handleDeleteUser} // Pass delete handler
+            />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };

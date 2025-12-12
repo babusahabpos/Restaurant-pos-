@@ -22,6 +22,7 @@ export interface MenuItem {
     offlinePrice: number;
     onlinePrice: number;
     inStock: boolean;
+    image?: string; // Base64 string for the image
 }
 
 export interface OrderItem extends MenuItem {
@@ -93,6 +94,7 @@ export enum UserStatus {
     Approved = 'Approved',
     Rejected = 'Rejected',
     Blocked = 'Blocked',
+    Deleted = 'Deleted',
 }
 
 export interface RegisteredUser {

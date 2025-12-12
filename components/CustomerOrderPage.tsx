@@ -99,7 +99,7 @@ const CustomerOrderPage: React.FC = () => {
                 const sanitizedMenu = restaurantData.menu.map((item: any) => ({
                     ...item,
                     offlinePrice: Number(item.offlinePrice) || 0,
-                    onlinePrice: Number(item.onlinePrice) || 0
+                    onlinePrice: Number(item.onlinePrice) || 0,
                 }));
 
                 const foundRestaurant: RegisteredUser = {
@@ -381,12 +381,16 @@ const CustomerOrderPage: React.FC = () => {
                                     <h2 className="text-2xl font-bold text-lemon capitalize mb-4 border-b border-gray-800 pb-2">{category}</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {(items as MenuItem[]).filter(item => item.inStock).map(item => (
-                                            <div key={item.id} className="bg-gray-900/60 rounded-xl p-4 flex justify-between items-center border border-gray-800 backdrop-blur-sm hover:border-lemon/50 transition-colors shadow-lg">
-                                                <div>
-                                                    <h3 className="font-semibold text-lg text-white">{item.name}</h3>
-                                                    <p className="text-gray-400 font-mono">₹{item.onlinePrice.toFixed(2)}</p>
+                                            <div key={item.id} className="bg-gray-900/60 rounded-xl p-3 flex gap-3 border border-gray-800 backdrop-blur-sm hover:border-lemon/50 transition-colors shadow-lg">
+                                                <div className="flex-grow flex flex-col justify-between">
+                                                    <div>
+                                                        <h3 className="font-semibold text-lg text-white leading-tight">{item.name}</h3>
+                                                        <p className="text-gray-400 font-mono text-sm mt-1">₹{item.onlinePrice.toFixed(2)}</p>
+                                                    </div>
+                                                    <div className="flex justify-end mt-2">
+                                                         <button onClick={() => addToCart(item)} className="bg-lemon text-black font-bold px-5 py-1.5 rounded-lg text-sm hover:bg-lemon-dark hover:scale-105 transition-all shadow-md">ADD</button>
+                                                    </div>
                                                 </div>
-                                                <button onClick={() => addToCart(item)} className="bg-lemon text-black font-bold px-5 py-2 rounded-lg text-sm hover:bg-lemon-dark hover:scale-105 transition-all shadow-md">ADD</button>
                                             </div>
                                         ))}
                                     </div>
