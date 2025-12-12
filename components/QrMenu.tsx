@@ -313,7 +313,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
         <>
             {isItemModalOpen && <MenuItemFormModal item={editingItem} onClose={handleCloseModals} onSave={handleSaveItem} categories={categories} />}
             {isCategoryModalOpen && <AddCategoryModal onClose={handleCloseModals} onSave={handleSaveCategory} />}
-            {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} />}
+            {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} restaurantName={loggedInUser.restaurantName} />}
 
             <div className="space-y-6">
                 <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
