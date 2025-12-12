@@ -145,8 +145,8 @@ const MenuUploadModal: React.FC<{
                     const ctx = canvas.getContext('2d');
                     if (ctx) {
                         ctx.drawImage(img, 0, 0, width, height);
-                        // Convert to JPEG with 0.7 quality
-                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        // Convert to JPEG with 0.8 quality for better text readbility
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                         resolve(dataUrl.split(',')[1]);
                     } else {
                         reject(new Error("Canvas context is null"));
@@ -163,8 +163,8 @@ const MenuUploadModal: React.FC<{
         setLoadingMessage('Checking system...');
 
         try {
-            // --- API Key Check ---
-            // Ensure the user has selected an API key if running in an environment that supports it
+            // --- API Key Check (Soft) ---
+            // If in AI Studio/IDX environment, try to prompt for key
             if (typeof window !== 'undefined' && (window as any).aistudio) {
                 const hasKey = await (window as any).aistudio.hasSelectedApiKey();
                 if (!hasKey) {
@@ -210,7 +210,6 @@ const MenuUploadModal: React.FC<{
                 try {
                     setLoadingMessage('Optimizing image...');
                     // Try compression first (best for bandwidth)
-                    // This works for standard web images (JPG, PNG, WEBP)
                     base64Data = await compressImage(file);
                     mimeType = 'image/jpeg'; // Compression result is always JPEG
                 } catch (e) {
@@ -231,13 +230,10 @@ const MenuUploadModal: React.FC<{
 
             setLoadingMessage('AI is analyzing menu items...');
             
-            // Check process.env.API_KEY specifically before initializing
-            if (!process.env.API_KEY) {
-                // If it's still missing, it might mean the environment hasn't updated yet or user cancelled
-                throw new Error("API Key not found. Please ensure you have selected a valid API Key.");
-            }
-
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            // Initialize with fallback to prevent immediate crash if env is missing
+            const apiKey = process.env.API_KEY || ''; 
+            const ai = new GoogleGenAI({ apiKey });
+            
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: {
@@ -287,8 +283,14 @@ const MenuUploadModal: React.FC<{
             }
         } catch (error: any) {
             console.error("AI Extraction Error:", error);
-            const msg = error.message || "Unknown error";
-            alert(`Failed to extract menu. Error: ${msg}.`);
+            let msg = error.message || "Unknown error";
+            
+            // Provide better error messages for common issues
+            if (msg.includes('API key') || msg.includes('403') || msg.includes('401')) {
+                msg = "Invalid or missing API Key. Please check your deployment environment variables.";
+            }
+            
+            alert(`Failed to extract menu. Error: ${msg}`);
         } finally {
             setIsProcessing(false);
             setLoadingMessage('');
