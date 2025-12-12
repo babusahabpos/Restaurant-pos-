@@ -113,92 +113,135 @@ const MenuUploadModal: React.FC<{
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
 
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1024;
+                    const MAX_HEIGHT = 1024;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Convert to JPEG with 0.7 quality
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        resolve(dataUrl.split(',')[1]);
+                    } else {
+                        reject(new Error("Canvas context is null"));
+                    }
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
     const processFile = async (file: File) => {
         setIsProcessing(true);
         setLoadingMessage('Reading file...');
 
-        const reader = new FileReader();
-        
-        reader.onload = async (event) => {
-            const result = event.target?.result as string;
-            let base64Data = result.split(',')[1];
-            let mimeType = file.type;
+        try {
+            let base64Data = '';
+            let mimeType = '';
 
-            // If it's an image, verify and optionally compress via Canvas (simplified here to ensuring base64 validity)
-            // If it's a PDF, we send the base64 directly.
-            
-            if (file.type.startsWith('image/')) {
-                setLoadingMessage('Compressing image...');
-                // Optional: You could add canvas compression here if images are too large, 
-                // but for now, we pass the base64 directly to ensure robustness.
+            if (file.type === 'application/pdf') {
+                mimeType = 'application/pdf';
+                base64Data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const result = reader.result as string;
+                        resolve(result.split(',')[1]);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            } else if (file.type.startsWith('image/')) {
+                setLoadingMessage('Compressing image for faster upload...');
+                mimeType = 'image/jpeg';
+                base64Data = await compressImage(file);
+            } else {
+                throw new Error("Unsupported file type. Please upload an Image or PDF.");
             }
 
-            try {
-                setLoadingMessage('AI is analyzing menu items...');
-                
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const response = await ai.models.generateContent({
-                    model: "gemini-2.5-flash",
-                    contents: {
-                        parts: [
-                            { inlineData: { mimeType: mimeType, data: base64Data } },
-                            { text: "Analyze this restaurant menu (Image or PDF). Extract all menu items. Return a JSON object with a key 'menu' containing an array of items. Each item must have: 'name' (string), 'category' (string, infer from headers like 'Starters', 'Main Course', etc.), and 'price' (number). If an item has multiple prices, use the first one. Ignore currency symbols. Do not hallucinate items." }
-                        ]
-                    },
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: Type.OBJECT,
-                            properties: {
-                                menu: {
-                                    type: Type.ARRAY,
-                                    items: {
-                                        type: Type.OBJECT,
-                                        properties: {
-                                            name: { type: Type.STRING },
-                                            category: { type: Type.STRING },
-                                            price: { type: Type.NUMBER }
-                                        }
+            setLoadingMessage('AI is analyzing menu items...');
+            
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: {
+                    parts: [
+                        { inlineData: { mimeType: mimeType, data: base64Data } },
+                        { text: "Analyze this restaurant menu (Image or PDF). Extract all menu items. Return a JSON object with a key 'menu' containing an array of items. Each item must have: 'name' (string), 'category' (string, infer from headers like 'Starters', 'Main Course', etc.), and 'price' (number). If an item has multiple prices, use the first one. Ignore currency symbols. Do not hallucinate items." }
+                    ]
+                },
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            menu: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        name: { type: Type.STRING },
+                                        category: { type: Type.STRING },
+                                        price: { type: Type.NUMBER }
                                     }
                                 }
                             }
                         }
                     }
-                });
-
-                if (response.text) {
-                    const data = JSON.parse(response.text);
-                    if (data.menu && Array.isArray(data.menu)) {
-                        const newItems: MenuItem[] = data.menu.map((item: any, index: number) => ({
-                            id: Date.now() + index,
-                            name: item.name,
-                            category: item.category || 'General',
-                            offlinePrice: item.price || 0,
-                            onlinePrice: item.price || 0,
-                            inStock: true
-                        }));
-                        
-                        setMenu(prev => [...prev, ...newItems]);
-                        alert(`Success! Extracted ${newItems.length} items from ${file.name}.`);
-                    } else {
-                        alert("AI processed the file but found no menu structure. Please try a clearer file.");
-                    }
                 }
-            } catch (error) {
-                console.error("AI Extraction Error:", error);
-                alert("Failed to extract menu. Ensure the PDF/Image is clear and under 20MB.");
-            } finally {
-                setIsProcessing(false);
-                setLoadingMessage('');
+            });
+
+            if (response.text) {
+                const data = JSON.parse(response.text);
+                if (data.menu && Array.isArray(data.menu)) {
+                    const newItems: MenuItem[] = data.menu.map((item: any, index: number) => ({
+                        id: Date.now() + index,
+                        name: item.name,
+                        category: item.category || 'General',
+                        offlinePrice: item.price || 0,
+                        onlinePrice: item.price || 0,
+                        inStock: true
+                    }));
+                    
+                    setMenu(prev => [...prev, ...newItems]);
+                    alert(`Success! Extracted ${newItems.length} items.`);
+                } else {
+                    alert("AI processed the file but found no menu structure. Please try a clearer file.");
+                }
             }
-        };
-
-        reader.onerror = () => {
-            alert("Error reading file.");
+        } catch (error: any) {
+            console.error("AI Extraction Error:", error);
+            const msg = error.message || "Unknown error";
+            alert(`Failed to extract menu. Error: ${msg}. Ensure the PDF/Image is clear.`);
+        } finally {
             setIsProcessing(false);
-        };
-
-        reader.readAsDataURL(file);
+            setLoadingMessage('');
+        }
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
