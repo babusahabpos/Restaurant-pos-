@@ -128,6 +128,7 @@ const MenuUploadModal: React.FC<{
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [userApiKey, setUserApiKey] = useState('');
+    const [filePreview, setFilePreview] = useState<string | null>(null);
 
     // Manual Entry State
     const [manualName, setManualName] = useState('');
@@ -200,7 +201,20 @@ const MenuUploadModal: React.FC<{
 
     const processFile = async (file: File) => {
         setIsProcessing(true);
-        setLoadingMessage('Checking system...');
+        setLoadingMessage('Loading image...');
+
+        // 1. Generate Preview immediately for Manual Reference
+        try {
+            const rawBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            setFilePreview(rawBase64);
+        } catch(e) {
+            console.error("Preview failed", e);
+        }
 
         try {
             // --- API Key Check ---
@@ -215,18 +229,24 @@ const MenuUploadModal: React.FC<{
             if (typeof window !== 'undefined' && (window as any).aistudio) {
                 const hasKey = await (window as any).aistudio.hasSelectedApiKey();
                 if (!hasKey) {
-                    setLoadingMessage('Please select your API Key...');
-                    await (window as any).aistudio.openSelectKey();
+                    try {
+                        setLoadingMessage('Please select your API Key...');
+                        await (window as any).aistudio.openSelectKey();
+                    } catch (e) {
+                        console.log("Key selection skipped");
+                    }
                 }
-                // Note: aistudio environment injects key differently, usually via process.env automatically after selection
-                // but we might need to rely on the reload or state update.
             }
             
-            // Check process.env one last time if it was populated by aistudio interaction
+            // Check process.env one last time
             if (!apiKey) apiKey = getApiKey();
 
             if (!apiKey) {
-                 throw new Error("Missing API Key. Please paste your Gemini API Key in the box above.");
+                 // GRACEFUL FALLBACK
+                 setIsProcessing(false);
+                 setLoadingMessage('');
+                 alert("No API Key detected. You can use the uploaded image as a reference to add items manually.");
+                 return;
             }
             
             setLoadingMessage('Processing file...');
@@ -339,10 +359,10 @@ const MenuUploadModal: React.FC<{
             let msg = error.message || "Unknown error";
             
             if (msg.includes('API key') || msg.includes('403') || msg.includes('401')) {
-                msg = "Invalid or missing API Key. Please paste a valid key in the input box.";
+                msg = "Invalid or missing API Key. You can still use the image reference to add items manually.";
             }
             
-            alert(`Failed to extract menu. Error: ${msg}`);
+            alert(`Failed to extract menu automatically. ${msg}`);
         } finally {
             setIsProcessing(false);
             setLoadingMessage('');
@@ -379,38 +399,58 @@ const MenuUploadModal: React.FC<{
                     <div className="w-full md:w-1/3 bg-gray-900 p-4 rounded-lg overflow-y-auto flex flex-col gap-6">
                         {/* Upload */}
                         <div>
-                            <h4 className="text-lemon font-bold mb-4">Auto-Generate (AI)</h4>
+                            <h4 className="text-lemon font-bold mb-4">Upload Menu Card</h4>
                             
                             {/* API Key Input */}
                             <div className="mb-4">
-                                <label className="text-xs text-gray-400 block mb-1">Gemini API Key (Optional)</label>
+                                <label className="text-xs text-gray-400 block mb-1">Gemini API Key (Optional for AI)</label>
                                 <input
                                     type="password"
                                     value={userApiKey}
                                     onChange={(e) => setUserApiKey(e.target.value)}
-                                    placeholder="Paste API Key here if upload fails"
+                                    placeholder="Paste key to auto-extract items"
                                     className="w-full bg-gray-700 text-white p-2 rounded text-xs border border-gray-600 focus:border-lemon outline-none"
                                 />
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-[10px] text-lemon hover:underline block mt-1 text-right">Get API Key</a>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
-                                    <input 
-                                        type="file" 
-                                        accept="image/*,application/pdf,.heic,.heif"
-                                        onChange={handleFileUpload}
-                                        id="menu-upload"
-                                        className="hidden"
-                                        disabled={isProcessing}
-                                    />
-                                    <label htmlFor="menu-upload" className="cursor-pointer block">
-                                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                        <p className="mt-1 text-sm text-gray-400">Upload Menu Photo/PDF</p>
-                                    </label>
-                                </div>
+                                {filePreview ? (
+                                    <div className="relative border border-gray-600 rounded-lg overflow-hidden group">
+                                        <img src={filePreview} alt="Menu Preview" className="w-full h-auto max-h-64 object-contain bg-black" />
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <input 
+                                                type="file" 
+                                                accept="image/*,application/pdf,.heic,.heif"
+                                                onChange={handleFileUpload}
+                                                id="menu-change"
+                                                className="hidden"
+                                                disabled={isProcessing}
+                                            />
+                                            <label htmlFor="menu-change" className="cursor-pointer bg-lemon text-black font-bold py-2 px-4 rounded text-sm hover:bg-lemon-dark">
+                                                Change Image
+                                            </label>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
+                                        <input 
+                                            type="file" 
+                                            accept="image/*,application/pdf,.heic,.heif"
+                                            onChange={handleFileUpload}
+                                            id="menu-upload"
+                                            className="hidden"
+                                            disabled={isProcessing}
+                                        />
+                                        <label htmlFor="menu-upload" className="cursor-pointer block">
+                                            <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                            <p className="mt-1 text-sm text-gray-400">Upload Photo</p>
+                                        </label>
+                                    </div>
+                                )}
+                                
                                 {isProcessing && (
                                     <div className="text-center">
                                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lemon"></div>
@@ -423,6 +463,7 @@ const MenuUploadModal: React.FC<{
                         {/* Manual Entry Fallback */}
                         <div className="border-t border-gray-700 pt-4">
                             <h4 className="text-lemon font-bold mb-3">Manual Entry</h4>
+                            <p className="text-xs text-gray-500 mb-3">Use the image above as reference.</p>
                             <div className="space-y-3">
                                 <input 
                                     value={manualName}
