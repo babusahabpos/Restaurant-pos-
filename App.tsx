@@ -338,14 +338,20 @@ function App() {
         ));
     };
 
-    const handleCreateTicket = (subject: string, message: string) => {
+    const handleCreateTicket = (subject: string, message: string, attachment?: string, attachmentType?: 'image' | 'pdf') => {
         if (!loggedInUser) return;
         const newTicket: SupportTicket = {
             id: Date.now(),
             userId: loggedInUser.id,
             userName: loggedInUser.name,
             subject: subject,
-            messages: [{ sender: 'user', text: message, timestamp: new Date() }],
+            messages: [{ 
+                sender: 'user', 
+                text: message, 
+                timestamp: new Date(),
+                attachment,
+                attachmentType
+            }],
             status: 'Open',
             lastUpdate: new Date(),
         };
@@ -411,11 +417,9 @@ function App() {
         ));
     };
     
-    // Soft delete user
+    // HARD DELETE User - Removes from list completely
     const handleDeleteUser = (userId: number) => {
-        setRegisteredUsers(prev => prev.map(user =>
-            user.id === userId ? { ...user, status: UserStatus.Deleted } : user
-        ));
+        setRegisteredUsers(prev => prev.filter(user => user.id !== userId));
     };
 
     const handleAdminSendMessage = (userId: number | 'all', message: string) => {
@@ -495,7 +499,7 @@ function App() {
                 onPasswordChange={handlePasswordChange} 
                 onUpdateSubscription={handleUpdateSubscription}
                 onUpdateMenu={handleAdminUpdateMenu} 
-                onDeleteUser={handleDeleteUser} // Pass delete handler
+                onDeleteUser={handleDeleteUser} // Pass hard delete handler
             />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
