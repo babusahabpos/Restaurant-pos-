@@ -33,7 +33,8 @@ export interface OrderStatusItem {
     id: number;
     restaurantId: number;
     type: 'Online' | 'Offline';
-    status: 'Preparation' | 'Completed';
+    // Added 'Placed' for new QR orders before they are accepted
+    status: 'Placed' | 'Preparation' | 'Completed';
     items: OrderItem[];
     total: number;
     discount?: number;
@@ -129,6 +130,8 @@ export interface TicketMessage {
     sender: 'user' | 'admin';
     text: string;
     timestamp: Date;
+    attachment?: string; // Base64 string for image/pdf
+    attachmentType?: 'image' | 'pdf';
 }
 
 export interface SupportTicket {

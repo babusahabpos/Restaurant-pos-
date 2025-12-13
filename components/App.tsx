@@ -338,14 +338,20 @@ function App() {
         ));
     };
 
-    const handleCreateTicket = (subject: string, message: string) => {
+    const handleCreateTicket = (subject: string, message: string, attachment?: string, attachmentType?: 'image' | 'pdf') => {
         if (!loggedInUser) return;
         const newTicket: SupportTicket = {
             id: Date.now(),
             userId: loggedInUser.id,
             userName: loggedInUser.name,
             subject: subject,
-            messages: [{ sender: 'user', text: message, timestamp: new Date() }],
+            messages: [{ 
+                sender: 'user', 
+                text: message, 
+                timestamp: new Date(),
+                attachment,
+                attachmentType
+            }],
             status: 'Open',
             lastUpdate: new Date(),
         };
@@ -526,7 +532,6 @@ function App() {
                 menuItems={safeMenu}
                 onUpdateOrder={handleUpdateOrder}
                 isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
-                onNavigateToQrMenu={() => setCurrentPage('qrMenu')}
             />,
             billing: <Billing 
                 menuItems={safeMenu} 

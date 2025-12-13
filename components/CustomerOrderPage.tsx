@@ -217,7 +217,8 @@ const CustomerOrderPage: React.FC = () => {
             id: Date.now(),
             restaurantId: restaurant.id,
             type: 'Online',
-            status: 'Preparation',
+            // Set status to Placed so it appears in the QR Orders section
+            status: 'Placed',
             items: cart,
             total: cartTotal,
             sourceInfo: orderType === 'Delivery' ? `Delivery (${customerName})` : `Pickup (${customerName})`,

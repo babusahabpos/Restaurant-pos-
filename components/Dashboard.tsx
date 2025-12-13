@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 
 const triggerPrint = (content: string) => {
@@ -459,6 +459,100 @@ const PlatformCard: React.FC<{ name: string; logoUrl: string; linkUrl: string }>
     </a>
 );
 
+// New Component for QR Orders
+const QrOrdersSection: React.FC<{ 
+    orders: OrderStatusItem[]; 
+    onAccept: (orderId: number) => void;
+    onPrint: (order: OrderStatusItem) => void;
+    onNavigateToQrMenu: () => void;
+}> = ({ orders, onAccept, onPrint, onNavigateToQrMenu }) => {
+    
+    // Blink Effect Logic using Audio
+    useEffect(() => {
+        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+        let interval: any;
+        
+        if (orders.length > 0) {
+            // Play sound once when component mounts or orders change and length > 0
+            if (audio) {
+                audio.play().catch(e => console.log("Audio play blocked", e));
+                // Loop sound every 5 seconds if not accepted
+                interval = setInterval(() => {
+                    audio.play().catch(e => console.log("Audio play blocked", e));
+                }, 5000);
+            }
+        }
+        return () => clearInterval(interval);
+    }, [orders.length]);
+
+    if (orders.length === 0) {
+        return (
+            <div className="bg-gray-900 border border-gray-800 p-6 rounded-lg shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <div className="bg-green-500/10 p-3 rounded-full">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-white">QR Order</h3>
+                        <p className="text-gray-400 text-sm">System is listening for incoming customer orders...</p>
+                    </div>
+                </div>
+                <button 
+                    onClick={onNavigateToQrMenu}
+                    className="flex items-center gap-2 text-lemon hover:text-white text-sm font-semibold border border-lemon/30 px-4 py-2 rounded-lg hover:bg-lemon/10 transition"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Get QR Code
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-red-900/20 border-2 border-red-500 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-2xl font-bold text-lemon flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                    QR Order ({orders.length})
+                </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {orders.map(order => (
+                    <div key={order.id} className="bg-black border border-gray-700 p-4 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className="font-bold text-white text-lg">{order.sourceInfo}</span>
+                            <span className="text-xs bg-gray-700 px-2 py-1 rounded">{new Date(order.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <ul className="text-sm text-gray-300 mb-3 space-y-1">
+                            {order.items.map((item, idx) => (
+                                <li key={idx}>{item.name} x {item.quantity}</li>
+                            ))}
+                        </ul>
+                         <p className="font-bold text-white mb-3 text-right">Total: ₹{order.total.toFixed(2)}</p>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => onAccept(order.id)}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded"
+                            >
+                                Accept Order
+                            </button>
+                             <button 
+                                onClick={() => { onPrint(order); onAccept(order.id); }}
+                                className="flex-1 bg-lemon hover:bg-lemon-dark text-black font-bold py-2 rounded"
+                            >
+                                Accept & Print
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 interface DashboardProps {
     data: DashboardData;
     orders: OrderStatusItem[];
@@ -470,15 +564,19 @@ interface DashboardProps {
     menuItems: MenuItem[];
     onUpdateOrder: (updatedOrder: OrderStatusItem) => void;
     isPrinterEnabled: boolean;
+    onNavigateToQrMenu: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder, isPrinterEnabled }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder, isPrinterEnabled, onNavigateToQrMenu }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
     const [editingOrder, setEditingOrder] = useState<OrderStatusItem | null>(null);
 
+    // Separating orders by status
+    const incomingQrOrders = orders.filter(o => o.type === 'Online' && o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
+    
     const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
     const pendingOfflineOrders = pendingOrders.filter(o => o.type === 'Offline');
     
@@ -504,6 +602,39 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
             setSettlingOrder(null);
         }
     };
+    
+    // New handlers for QR Section
+    const handleAcceptQrOrder = (orderId: number) => {
+        // We move it from 'Placed' to 'Preparation' (Pending)
+        const updatedOrder = orders.find(o => o.id === orderId);
+        if (updatedOrder) {
+            onUpdateOrder({ ...updatedOrder, status: 'Preparation' });
+        }
+    };
+
+    const handlePrintKot = (order: OrderStatusItem) => {
+        let kotContent = `
+            <style>
+                body { font-family: 'Courier New', monospace; font-size: 10pt; width: 80mm; margin: 0; padding: 5px; }
+                h3, p { text-align: center; margin: 2px 0; }
+                hr { border: none; border-top: 1px dashed black; }
+                table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                th, td { padding: 2px; text-align: left;}
+            </style>
+            <h3>ONLINE QR ORDER KOT</h3>
+            <p>Order Source: ${order.sourceInfo}</p>
+            <p>Date: ${new Date().toLocaleString()}</p>
+            <hr>
+            <table>
+                <thead><tr><th>Item</th><th>Qty</th></tr></thead>
+                <tbody>
+                    ${order.items.map(item => `<tr><td>${item.name}</td><td style="text-align:center;">${item.quantity}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+        triggerPrint(kotContent);
+    };
+
 
     return (
         <>
@@ -533,7 +664,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
             />}
 
             <div className="space-y-6">
-                {/* Stats Grid */}
+                
+                {/* Stats Grid - Moved to top */}
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
                         <StatCard title="Today's Online Sales" value={`₹${data.onlineSales.toFixed(2)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
@@ -553,6 +685,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                         />
                     </div>
                 </div>
+
+                {/* NEW QR ORDER SECTION - Moved Below Stats */}
+                <QrOrdersSection 
+                    orders={incomingQrOrders} 
+                    onAccept={handleAcceptQrOrder} 
+                    onPrint={handlePrintKot}
+                    onNavigateToQrMenu={onNavigateToQrMenu}
+                />
 
                 {/* Online Platforms */}
                 <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800">
