@@ -3,6 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { RegisteredUser, UserStatus, MenuItem } from '../../types';
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Helper to get API key safely from various environment configurations
+const getApiKey = () => {
+    // Try standard process.env (Next.js, Node, Webpack with DefinePlugin)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        return process.env.API_KEY;
+    }
+    // Try Vite standard (import.meta.env)
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+        // @ts-ignore
+        return import.meta.env.VITE_API_KEY;
+    }
+    return '';
+};
+
 const SendMessageModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
@@ -112,6 +127,31 @@ const MenuUploadModal: React.FC<{
     const [menu, setMenu] = useState<MenuItem[]>(user.menu || []);
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
+    const [userApiKey, setUserApiKey] = useState('');
+
+    // Manual Entry State
+    const [manualName, setManualName] = useState('');
+    const [manualCategory, setManualCategory] = useState('');
+    const [manualPrice, setManualPrice] = useState('');
+
+    const handleAddManualItem = () => {
+        if(!manualName || !manualPrice) {
+            alert("Name and Price are required.");
+            return;
+        }
+        const newItem: MenuItem = {
+            id: Date.now(),
+            name: manualName,
+            category: manualCategory || 'General',
+            offlinePrice: Number(manualPrice) || 0,
+            onlinePrice: Number(manualPrice) || 0,
+            inStock: true
+        };
+        setMenu(prev => [...prev, newItem]);
+        setManualName('');
+        setManualPrice('');
+        setManualCategory('');
+    };
 
     // Robust Image Compression
     const compressImage = (file: File): Promise<string> => {
@@ -123,7 +163,7 @@ const MenuUploadModal: React.FC<{
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1600; // Increased for better legibility of menus
+                    const MAX_WIDTH = 1600; 
                     const MAX_HEIGHT = 1600;
                     let width = img.width;
                     let height = img.height;
@@ -145,7 +185,7 @@ const MenuUploadModal: React.FC<{
                     const ctx = canvas.getContext('2d');
                     if (ctx) {
                         ctx.drawImage(img, 0, 0, width, height);
-                        // Convert to JPEG with 0.8 quality for better text readbility
+                        // Convert to JPEG with 0.8 quality
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                         resolve(dataUrl.split(',')[1]);
                     } else {
@@ -163,14 +203,30 @@ const MenuUploadModal: React.FC<{
         setLoadingMessage('Checking system...');
 
         try {
-            // --- API Key Check (Soft) ---
-            // If in AI Studio/IDX environment, try to prompt for key
+            // --- API Key Check ---
+            // 1. Try manual input first
+            let apiKey = userApiKey.trim();
+            // 2. Try environment variables if manual input is empty
+            if (!apiKey) {
+                apiKey = getApiKey();
+            }
+            
+            // 3. Try AI Studio context if available
             if (typeof window !== 'undefined' && (window as any).aistudio) {
                 const hasKey = await (window as any).aistudio.hasSelectedApiKey();
                 if (!hasKey) {
                     setLoadingMessage('Please select your API Key...');
                     await (window as any).aistudio.openSelectKey();
                 }
+                // Note: aistudio environment injects key differently, usually via process.env automatically after selection
+                // but we might need to rely on the reload or state update.
+            }
+            
+            // Check process.env one last time if it was populated by aistudio interaction
+            if (!apiKey) apiKey = getApiKey();
+
+            if (!apiKey) {
+                 throw new Error("Missing API Key. Please paste your Gemini API Key in the box above.");
             }
             
             setLoadingMessage('Processing file...');
@@ -221,7 +277,6 @@ const MenuUploadModal: React.FC<{
                     base64Data = raw.data;
                     mimeType = raw.mime;
 
-                    // Size Check for raw upload (Gemini limit is generous, ensuring reasonable network usage)
                     if (file.size > 15 * 1024 * 1024) {
                         throw new Error("Image is too large (over 15MB) and could not be compressed. Please use a smaller image.");
                     }
@@ -230,8 +285,6 @@ const MenuUploadModal: React.FC<{
 
             setLoadingMessage('AI is analyzing menu items...');
             
-            // Initialize with fallback to prevent immediate crash if env is missing
-            const apiKey = process.env.API_KEY || ''; 
             const ai = new GoogleGenAI({ apiKey });
             
             const response = await ai.models.generateContent({
@@ -285,9 +338,8 @@ const MenuUploadModal: React.FC<{
             console.error("AI Extraction Error:", error);
             let msg = error.message || "Unknown error";
             
-            // Provide better error messages for common issues
             if (msg.includes('API key') || msg.includes('403') || msg.includes('401')) {
-                msg = "Invalid or missing API Key. Please check your deployment environment variables.";
+                msg = "Invalid or missing API Key. Please paste a valid key in the input box.";
             }
             
             alert(`Failed to extract menu. Error: ${msg}`);
@@ -323,37 +375,80 @@ const MenuUploadModal: React.FC<{
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-6 overflow-hidden">
-                    {/* Upload Section */}
-                    <div className="w-full md:w-1/3 bg-gray-900 p-4 rounded-lg overflow-y-auto">
-                        <h4 className="text-lemon font-bold mb-4">Auto-Generate Menu</h4>
-                        <div className="space-y-4">
-                            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
-                                <input 
-                                    type="file" 
-                                    accept="image/*,application/pdf,.heic,.heif"
-                                    onChange={handleFileUpload}
-                                    id="menu-upload"
-                                    className="hidden"
-                                    disabled={isProcessing}
+                    {/* Input Section (Upload + Manual) */}
+                    <div className="w-full md:w-1/3 bg-gray-900 p-4 rounded-lg overflow-y-auto flex flex-col gap-6">
+                        {/* Upload */}
+                        <div>
+                            <h4 className="text-lemon font-bold mb-4">Auto-Generate (AI)</h4>
+                            
+                            {/* API Key Input */}
+                            <div className="mb-4">
+                                <label className="text-xs text-gray-400 block mb-1">Gemini API Key (Optional)</label>
+                                <input
+                                    type="password"
+                                    value={userApiKey}
+                                    onChange={(e) => setUserApiKey(e.target.value)}
+                                    placeholder="Paste API Key here if upload fails"
+                                    className="w-full bg-gray-700 text-white p-2 rounded text-xs border border-gray-600 focus:border-lemon outline-none"
                                 />
-                                <label htmlFor="menu-upload" className="cursor-pointer block">
-                                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <p className="mt-1 text-sm text-gray-400">Upload Menu</p>
-                                    <p className="text-xs text-gray-500">Supports: All Images & PDF</p>
-                                </label>
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-[10px] text-lemon hover:underline block mt-1 text-right">Get API Key</a>
                             </div>
-                            
-                            {isProcessing && (
-                                <div className="text-center">
-                                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lemon"></div>
-                                    <p className="text-lemon text-sm mt-2">{loadingMessage}</p>
+
+                            <div className="space-y-4">
+                                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-lemon transition-colors">
+                                    <input 
+                                        type="file" 
+                                        accept="image/*,application/pdf,.heic,.heif"
+                                        onChange={handleFileUpload}
+                                        id="menu-upload"
+                                        className="hidden"
+                                        disabled={isProcessing}
+                                    />
+                                    <label htmlFor="menu-upload" className="cursor-pointer block">
+                                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                        <p className="mt-1 text-sm text-gray-400">Upload Menu Photo/PDF</p>
+                                    </label>
                                 </div>
-                            )}
-                            
-                            <div className="bg-gray-800 p-3 rounded text-xs text-gray-400">
-                                <strong>Tip:</strong> You can upload a photo of the menu card OR a PDF file. AI will categorize items and set prices automatically.
+                                {isProcessing && (
+                                    <div className="text-center">
+                                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lemon"></div>
+                                        <p className="text-lemon text-sm mt-2">{loadingMessage}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Manual Entry Fallback */}
+                        <div className="border-t border-gray-700 pt-4">
+                            <h4 className="text-lemon font-bold mb-3">Manual Entry</h4>
+                            <div className="space-y-3">
+                                <input 
+                                    value={manualName}
+                                    onChange={e => setManualName(e.target.value)}
+                                    placeholder="Item Name" 
+                                    className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                                />
+                                <input 
+                                    value={manualCategory}
+                                    onChange={e => setManualCategory(e.target.value)}
+                                    placeholder="Category (e.g. Starter)" 
+                                    className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                                />
+                                <input 
+                                    value={manualPrice}
+                                    onChange={e => setManualPrice(e.target.value)}
+                                    type="number"
+                                    placeholder="Price" 
+                                    className="w-full bg-gray-800 text-white p-2 rounded text-sm border border-gray-700"
+                                />
+                                <button 
+                                    onClick={handleAddManualItem}
+                                    className="w-full bg-gray-700 hover:bg-white hover:text-black text-white font-bold py-2 rounded text-sm transition-colors"
+                                >
+                                    Add Item
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -414,7 +509,6 @@ const UserManagement: React.FC<{
         }
     };
 
-    // Helper to find name from code
     const getReferrerName = (code: string | undefined) => {
         if (!code) return '-';
         const referrer = users.find(u => u.referralCode === code);
