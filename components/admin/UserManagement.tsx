@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { RegisteredUser, UserStatus, MenuItem } from '../../types';
 import { GoogleGenAI, Type } from "@google/genai";
 
+declare var Tesseract: any;
+
 // Helper to get API key safely from various environment configurations
 const getApiKey = () => {
     // Try standard process.env (Next.js, Node, Webpack with DefinePlugin)
@@ -199,6 +201,61 @@ const MenuUploadModal: React.FC<{
         });
     };
 
+    // --- Fallback: Offline OCR Scanner ---
+    const processWithOCR = async (file: File) => {
+        setLoadingMessage('Basic Scan (No API Key)...');
+        
+        if (typeof Tesseract === 'undefined') {
+            throw new Error("Scanner library (Tesseract) not loaded. Please refresh the page.");
+        }
+        
+        try {
+            const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+                logger: (m: any) => {
+                    if(m.status === 'recognizing text') {
+                        setLoadingMessage(`Scanning... ${Math.round(m.progress * 100)}%`);
+                    }
+                }
+            });
+
+            const lines = text.split('\n');
+            const newItems: MenuItem[] = [];
+
+            lines.forEach((line: string, index: number) => {
+                // Heuristic: Look for lines that look like "Item Name ... 120"
+                const trimmed = line.trim();
+                // Regex: Starts with chars, ends with number. Allows dots/spaces/dashes in between.
+                const match = trimmed.match(/^(.+?)[\.\-\s]+(\d{2,5})(\.\d{2})?$/);
+
+                if (match) {
+                    const name = match[1].trim();
+                    const price = parseFloat(match[2]);
+                    
+                    // Simple validation to avoid scanning garbage
+                    if (name.length > 3 && price > 0 && !name.match(/^\d+$/)) {
+                        newItems.push({
+                            id: Date.now() + index,
+                            name: name.replace(/[^\w\s\(\)]/gi, ''), // Remove weird symbols
+                            category: 'General',
+                            offlinePrice: price,
+                            onlinePrice: price,
+                            inStock: true
+                        });
+                    }
+                }
+            });
+
+            if (newItems.length > 0) {
+                setMenu(prev => [...prev, ...newItems]);
+                alert(`Scanner found ${newItems.length} items! Since no API Key was used, categories are set to 'General'.`);
+            } else {
+                alert("Scanner couldn't find any clear 'Item Name ... Price' lines. Please try manual entry or use an API Key for better results.");
+            }
+        } catch (e: any) {
+            throw new Error("Scanner failed: " + e.message);
+        }
+    };
+
     const processFile = async (file: File) => {
         setIsProcessing(true);
         setLoadingMessage('Loading image...');
@@ -230,8 +287,9 @@ const MenuUploadModal: React.FC<{
                 const hasKey = await (window as any).aistudio.hasSelectedApiKey();
                 if (!hasKey) {
                     try {
-                        setLoadingMessage('Please select your API Key...');
-                        await (window as any).aistudio.openSelectKey();
+                        // Attempt to ask, but don't block if they cancel
+                        // setLoadingMessage('Please select your API Key...');
+                        // await (window as any).aistudio.openSelectKey();
                     } catch (e) {
                         console.log("Key selection skipped");
                     }
@@ -241,15 +299,16 @@ const MenuUploadModal: React.FC<{
             // Check process.env one last time
             if (!apiKey) apiKey = getApiKey();
 
+            // === FALLBACK TO OCR IF NO KEY ===
             if (!apiKey) {
-                 // GRACEFUL FALLBACK
+                 await processWithOCR(file);
                  setIsProcessing(false);
                  setLoadingMessage('');
-                 alert("No API Key detected. You can use the uploaded image as a reference to add items manually.");
                  return;
             }
             
-            setLoadingMessage('Processing file...');
+            // === START AI PROCESSING (If Key Exists) ===
+            setLoadingMessage('Processing file with AI...');
 
             let base64Data = '';
             let mimeType = file.type;
@@ -349,20 +408,18 @@ const MenuUploadModal: React.FC<{
                     }));
                     
                     setMenu(prev => [...prev, ...newItems]);
-                    alert(`Success! Extracted ${newItems.length} items.`);
+                    alert(`Success! Extracted ${newItems.length} items using AI.`);
                 } else {
                     alert("AI processed the file but found no menu structure. Please try a clearer file.");
                 }
             }
         } catch (error: any) {
-            console.error("AI Extraction Error:", error);
+            console.error("Extraction Error:", error);
             let msg = error.message || "Unknown error";
             
-            if (msg.includes('API key') || msg.includes('403') || msg.includes('401')) {
-                msg = "Invalid or missing API Key. You can still use the image reference to add items manually.";
-            }
-            
-            alert(`Failed to extract menu automatically. ${msg}`);
+            // If API fails, prompt for retry with OCR? 
+            // Currently just alerting.
+            alert(`Extraction Failed. Error: ${msg}. You can try the manual entry below.`);
         } finally {
             setIsProcessing(false);
             setLoadingMessage('');
@@ -400,15 +457,19 @@ const MenuUploadModal: React.FC<{
                         {/* Upload */}
                         <div>
                             <h4 className="text-lemon font-bold mb-4">Upload Menu Card</h4>
+                            <p className="text-xs text-gray-500 mb-2">
+                                <strong>AI Mode:</strong> Requires API Key. Categorizes items automatically.<br/>
+                                <strong>Basic Scan:</strong> No Key required. Extracts text & price directly.
+                            </p>
                             
                             {/* API Key Input */}
                             <div className="mb-4">
-                                <label className="text-xs text-gray-400 block mb-1">Gemini API Key (Optional for AI)</label>
+                                <label className="text-xs text-gray-400 block mb-1">Gemini API Key (Leave empty for Basic Scan)</label>
                                 <input
                                     type="password"
                                     value={userApiKey}
                                     onChange={(e) => setUserApiKey(e.target.value)}
-                                    placeholder="Paste key to auto-extract items"
+                                    placeholder="Paste key for AI features..."
                                     className="w-full bg-gray-700 text-white p-2 rounded text-xs border border-gray-600 focus:border-lemon outline-none"
                                 />
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-[10px] text-lemon hover:underline block mt-1 text-right">Get API Key</a>
