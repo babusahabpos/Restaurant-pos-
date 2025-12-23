@@ -177,17 +177,21 @@ const EditOrderModal: React.FC<{
 
     const updateQuantity = (id: number, quantity: number) => {
         if (quantity < 1) {
-            setEditedItems(editedItems.filter(item => item.id !== id));
+            removeFromOrder(id);
         } else {
             setEditedItems(editedItems.map(item => item.id === id ? { ...item, quantity } : item));
         }
+    };
+
+    const removeFromOrder = (id: number) => {
+        setEditedItems(editedItems.filter(item => item.id !== id));
     };
 
     const calculateTotal = () => {
         const subtotal = editedItems.reduce((acc, item) => acc + (Number(item[priceType]) || 0) * item.quantity, 0);
         const deliveryCharge = order.deliveryDetails?.deliveryCharge || 0;
         const tax = subtotal * (taxRate / 100);
-        return subtotal + tax + deliveryCharge - discount;
+        return Math.max(0, subtotal + tax + deliveryCharge - discount);
     };
 
     const handleSave = () => {
@@ -205,7 +209,7 @@ const EditOrderModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4">
-            <div className="bg-gray-900 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="bg-gray-900 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">Edit Order: {order.sourceInfo}</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
@@ -214,62 +218,66 @@ const EditOrderModal: React.FC<{
                 <div className="flex flex-col md:flex-row gap-6 overflow-hidden flex-1">
                     {/* Items List */}
                     <div className="flex-1 overflow-y-auto pr-2">
-                        <h4 className="text-lemon font-bold mb-2">Current Items</h4>
+                        <h4 className="text-lemon font-bold mb-2 uppercase text-xs">Current Items</h4>
                         {editedItems.map(item => (
-                            <div key={item.id} className="flex justify-between items-center bg-gray-800 p-2 rounded mb-2">
-                                <div>
-                                    <p className="text-white text-sm">{item.name}</p>
-                                    <p className="text-gray-400 text-xs">₹{item[priceType]}</p>
+                            <div key={item.id} className="flex justify-between items-center bg-gray-800 p-2 rounded mb-2 border border-white/5">
+                                <div className="flex-1 mr-2">
+                                    <p className="text-white text-xs font-bold uppercase">{item.name}</p>
+                                    <p className="text-gray-400 text-[10px]">₹{item[priceType]}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="bg-gray-700 w-6 h-6 rounded text-white">-</button>
-                                    <span className="text-white text-sm">{item.quantity}</span>
+                                    <span className="text-white text-xs font-bold">{item.quantity}</span>
                                     <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="bg-gray-700 w-6 h-6 rounded text-white">+</button>
+                                    <button onClick={() => removeFromOrder(item.id)} className="ml-2 text-red-500 hover:text-red-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
                                 </div>
                             </div>
                         ))}
                         
                          <div className="mt-4 pt-4 border-t border-gray-700">
                              <div className="flex justify-between items-center mb-2">
-                                 <label className="text-gray-400 text-sm">Discount (₹)</label>
+                                 <label className="text-gray-400 text-xs uppercase font-bold">Discount (₹)</label>
                                  <input 
                                     type="number" 
-                                    value={discount} 
+                                    value={discount || ''} 
                                     onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                                    className="bg-gray-800 text-white p-1 rounded w-24 text-right"
+                                    className="bg-gray-800 text-white p-1 rounded w-24 text-right text-xs font-bold outline-none border border-gray-700"
+                                    placeholder="0"
                                 />
                              </div>
                              <div className="flex justify-between items-center">
-                                 <span className="text-white font-bold">New Total:</span>
-                                 <span className="text-lemon font-bold">₹{calculateTotal().toFixed(2)}</span>
+                                 <span className="text-white font-bold uppercase text-xs">New Total:</span>
+                                 <span className="text-lemon font-black text-lg">₹{calculateTotal().toFixed(2)}</span>
                              </div>
                          </div>
                     </div>
 
                     {/* Add Items */}
-                    <div className="flex-1 flex flex-col">
-                         <h4 className="text-lemon font-bold mb-2">Add Items</h4>
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                         <h4 className="text-lemon font-bold mb-2 uppercase text-xs">Add Items</h4>
                          <input 
                             type="text" 
                             placeholder="Search menu..." 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="bg-gray-800 text-white p-2 rounded mb-2"
+                            className="bg-gray-800 text-white p-2 rounded mb-2 text-xs border border-gray-700 outline-none"
                         />
-                        <div className="overflow-y-auto flex-1">
+                        <div className="overflow-y-auto flex-1 bg-black/20 rounded">
                             {filteredMenu.map(item => (
-                                <div key={item.id} onClick={() => addToOrder(item)} className="cursor-pointer hover:bg-gray-800 p-2 rounded border-b border-gray-800 flex justify-between">
-                                    <span className="text-white text-sm">{item.name}</span>
-                                    <span className="text-gray-400 text-xs">₹{item[priceType]}</span>
+                                <div key={item.id} onClick={() => addToOrder(item)} className="cursor-pointer hover:bg-gray-800 p-2 rounded border-b border-white/5 flex justify-between items-center">
+                                    <span className="text-white text-xs uppercase font-medium">{item.name}</span>
+                                    <span className="text-lemon text-[10px] font-bold">₹{item[priceType]}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-4 flex justify-end gap-3">
-                    <button onClick={onClose} className="bg-gray-700 text-white px-4 py-2 rounded font-bold">Cancel</button>
-                    <button onClick={handleSave} className="bg-lemon text-black px-4 py-2 rounded font-bold">Save Changes</button>
+                <div className="mt-4 flex justify-end gap-3 pt-4 border-t border-gray-700">
+                    <button onClick={onClose} className="bg-gray-700 text-white px-6 py-2 rounded-lg font-bold text-xs uppercase">Cancel</button>
+                    <button onClick={handleSave} className="bg-lemon text-black px-6 py-2 rounded-lg font-black text-xs uppercase">Update Order</button>
                 </div>
             </div>
         </div>
@@ -285,35 +293,35 @@ const SettleBillModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
-            <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-800">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">Settle Bill</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
                 </div>
                 <div className="space-y-4">
-                    <div className="bg-gray-900 p-4 rounded-lg">
-                        <div className="flex justify-between text-gray-400">
+                    <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                        <div className="flex justify-between text-gray-400 text-xs font-bold uppercase">
                             <span>Order:</span>
-                            <span className="font-semibold text-white">{order.sourceInfo}</span>
+                            <span className="text-white">{order.sourceInfo}</span>
                         </div>
-                         <div className="flex justify-between text-gray-400 mt-2">
-                            <span>Total Amount:</span>
-                            <span className="font-bold text-2xl text-lemon">₹{order.total.toFixed(2)}</span>
+                         <div className="flex justify-between text-gray-400 mt-3 items-center">
+                            <span className="text-xs font-bold uppercase">Payable Amount:</span>
+                            <span className="font-black text-3xl text-lemon tracking-tighter">₹{order.total.toFixed(2)}</span>
                         </div>
                         {order.discount && order.discount > 0 && (
-                             <div className="flex justify-between text-green-400 mt-1 text-sm">
-                                <span>Discount Applied:</span>
+                             <div className="flex justify-between text-green-400 mt-2 text-[10px] font-bold uppercase">
+                                <span>Discount:</span>
                                 <span>-₹{order.discount.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
-                    <p className="text-center text-gray-400">Select Payment Method</p>
+                    <p className="text-center text-gray-500 text-[10px] font-black uppercase tracking-widest">Select Payment Method</p>
                     <div className="grid grid-cols-1 gap-3">
                         {paymentMethods.map(method => (
                              <button
                                 key={method}
                                 onClick={() => onSettle(order.id, method)}
-                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-bold py-3 px-4 rounded-lg transition-colors"
+                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-black py-4 px-4 rounded-xl transition-all active:scale-95 uppercase text-sm"
                             >
                                 {method}
                             </button>
@@ -340,7 +348,7 @@ const PendingOrdersModal: React.FC<{
     
     const renderOrderList = (orders: OrderStatusItem[]) => {
         if (orders.length === 0) {
-            return <p className="text-center py-10 text-gray-500">No pending {activeTab.toLowerCase()} orders.</p>;
+            return <p className="text-center py-20 text-gray-700 font-bold uppercase text-[10px] tracking-widest">No pending {activeTab.toLowerCase()} orders.</p>;
         }
         return (
             <div className="overflow-x-auto">
@@ -356,42 +364,37 @@ const PendingOrdersModal: React.FC<{
                     </thead>
                     <tbody>
                         {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                            <tr key={order.id} className="bg-black border-gray-800 block md:table-row mb-4 md:mb-0 rounded-lg md:rounded-none overflow-hidden shadow-lg md:shadow-none">
-                                <td className="px-4 py-2 md:px-6 md:py-4 font-medium text-white block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Order Info</span>{order.sourceInfo}</td>
-                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Time</span>{new Date(order.timestamp).toLocaleTimeString()}</td>
-                                <td className="px-4 py-2 md:px-6 md:py-4 text-xs block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Items</span>{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
-                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0"><span className="float-left font-bold md:hidden">Total</span>₹{order.total.toFixed(2)}</td>
+                            <tr key={order.id} className="bg-black border-gray-800 block md:table-row mb-4 md:mb-0 rounded-lg md:rounded-none overflow-hidden shadow-lg md:shadow-none border md:border-none">
+                                <td className="px-4 py-2 md:px-6 md:py-4 font-bold text-white block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0 uppercase text-xs"><span className="float-left font-bold md:hidden text-gray-500">Order:</span>{order.sourceInfo}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0 text-[10px]"><span className="float-left font-bold md:hidden text-gray-500">Time:</span>{new Date(order.timestamp).toLocaleTimeString()}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 text-[10px] block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0 italic"><span className="float-left font-bold md:hidden text-gray-500 font-normal not-italic">Items:</span>{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</td>
+                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell text-right md:text-left border-b border-gray-800 md:border-b-0 font-black text-lemon text-lg"><span className="float-left font-bold md:hidden text-gray-500 text-xs">Total:</span>₹{order.total.toFixed(0)}</td>
                                 <td className="px-4 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell text-right md:text-left space-x-2">
-                                    <span className="float-left font-bold md:hidden">Actions</span>
-                                    <button 
-                                        onClick={() => onEditOrder(order)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-xs"
-                                    >
-                                        Edit
-                                    </button>
+                                    <div className="flex justify-end gap-2">
+                                        <button 
+                                            onClick={() => onEditOrder(order)}
+                                            className="bg-blue-600/20 text-blue-400 border border-blue-600/50 font-black py-1.5 px-4 rounded text-[10px] uppercase"
+                                        >
+                                            Edit
+                                        </button>
 
-                                    {activeTab === 'Offline' && (
-                                        <button
-                                            onClick={() => onInitiateSettle(order)}
-                                            className="bg-lemon hover:bg-lemon-dark text-black font-bold py-1 px-3 rounded text-xs"
-                                        >
-                                            Generate Bill
-                                        </button>
-                                    )}
-                                    {activeTab === 'Online' && (
-                                        <button
-                                            onClick={() => {
-                                                if (order.sourceInfo.includes('Customer:')) {
-                                                     onCompleteOrder(order.id);
-                                                } else {
-                                                    onCompleteOrder(order.id);
-                                                }
-                                            }}
-                                            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-xs"
-                                        >
-                                            Complete
-                                        </button>
-                                    )}
+                                        {activeTab === 'Offline' && (
+                                            <button
+                                                onClick={() => onInitiateSettle(order)}
+                                                className="bg-lemon text-black font-black py-1.5 px-4 rounded text-[10px] uppercase"
+                                            >
+                                                Bill
+                                            </button>
+                                        )}
+                                        {activeTab === 'Online' && (
+                                            <button
+                                                onClick={() => onCompleteOrder(order.id)}
+                                                className="bg-green-600 text-white font-black py-1.5 px-4 rounded text-[10px] uppercase"
+                                            >
+                                                Done
+                                            </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -403,7 +406,7 @@ const PendingOrdersModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
-            <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="bg-black p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-800">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold text-white">Pending Orders</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
@@ -412,13 +415,13 @@ const PendingOrdersModal: React.FC<{
                 <div className="flex border-b border-gray-800 mb-4">
                     <button 
                         onClick={() => setActiveTab('Online')}
-                        className={`py-2 px-4 transition-colors duration-300 ${activeTab === 'Online' ? 'text-lemon border-b-2 border-lemon font-semibold' : 'text-gray-400 hover:text-white'}`}
+                        className={`py-2 px-6 transition-colors duration-300 uppercase text-xs font-black tracking-widest ${activeTab === 'Online' ? 'text-lemon border-b-2 border-lemon font-semibold' : 'text-gray-500 hover:text-white'}`}
                     >
                         Online ({onlineOrders.length})
                     </button>
                     <button 
                         onClick={() => setActiveTab('Offline')}
-                        className={`py-2 px-4 transition-colors duration-300 ${activeTab === 'Offline' ? 'text-lemon border-b-2 border-lemon font-semibold' : 'text-gray-400 hover:text-white'}`}
+                        className={`py-2 px-6 transition-colors duration-300 uppercase text-xs font-black tracking-widest ${activeTab === 'Offline' ? 'text-lemon border-b-2 border-lemon font-semibold' : 'text-gray-500 hover:text-white'}`}
                     >
                         Offline ({offlineOrders.length})
                     </button>
@@ -435,20 +438,20 @@ const PendingOrdersModal: React.FC<{
 const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: React.ReactNode }> = ({ title, value, subtext, icon }) => (
     <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800 flex justify-between items-center h-full">
         <div className="flex flex-col h-full justify-between">
-            <p className="text-gray-400 text-sm">{title}</p>
-            <p className="text-2xl font-bold text-white">{value}</p>
-            <p className="text-gray-400 text-xs mt-1">{subtext}</p>
+            <p className="text-gray-400 text-sm font-bold uppercase tracking-tighter">{title}</p>
+            <p className="text-2xl font-black text-white">{value}</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase mt-1">{subtext}</p>
         </div>
-        <div className="text-gray-500">{icon}</div>
+        <div className="text-gray-700">{icon}</div>
     </div>
 );
 
 const PlatformCard: React.FC<{ name: string; logoUrl: string; linkUrl: string }> = ({ name, logoUrl, linkUrl }) => (
     <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="block">
-        <div className="bg-white p-4 rounded-lg flex flex-col items-center justify-center space-y-2 h-40 border border-gray-200 shadow-sm transition-transform hover:scale-105 hover:shadow-lg cursor-pointer">
+        <div className="bg-white p-4 rounded-lg flex flex-col items-center justify-center space-y-2 h-40 border border-gray-200 shadow-sm transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer grayscale hover:grayscale-0">
             <img src={logoUrl} alt={`${name} logo`} className="h-16 w-16 object-contain" />
-            <span className="text-black font-semibold">{name}</span>
-            <span className="text-xs text-blue-600 underline">Open Partner Dashboard</span>
+            <span className="text-black font-black uppercase text-xs tracking-widest">{name}</span>
+            <span className="text-[10px] text-blue-600 font-bold uppercase underline">Partner Desk</span>
         </div>
     </a>
 );
@@ -484,16 +487,16 @@ const QrOrdersSection: React.FC<{
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-white">QR Order</h3>
-                        <p className="text-gray-400 text-sm">System is listening for incoming customer orders...</p>
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight">QR Order Listener</h3>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Listening for new customer orders...</p>
                     </div>
                 </div>
                 <button 
                     onClick={onNavigateToQrMenu}
-                    className="flex items-center gap-2 text-lemon hover:text-white text-sm font-semibold border border-lemon/30 px-4 py-2 rounded-lg hover:bg-lemon/10 transition"
+                    className="flex items-center gap-2 text-lemon hover:text-white text-[10px] font-black uppercase border border-lemon/30 px-6 py-3 rounded-xl hover:bg-lemon/10 transition shadow-lg"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    Get QR Code
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Show QR Code
                 </button>
             </div>
         );
@@ -502,7 +505,7 @@ const QrOrdersSection: React.FC<{
     return (
         <div className="bg-red-900/20 border-2 border-red-500 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold text-lemon flex items-center gap-2">
+                <h3 className="text-2xl font-black text-lemon flex items-center gap-2 uppercase tracking-tighter">
                     <span className="relative flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -512,27 +515,27 @@ const QrOrdersSection: React.FC<{
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders.map(order => (
-                    <div key={order.id} className="bg-black border border-gray-700 p-4 rounded-lg">
+                    <div key={order.id} className="bg-black border border-gray-700 p-4 rounded-xl shadow-2xl">
                         <div className="flex justify-between items-start mb-2">
-                            <span className="font-bold text-white text-lg">{order.sourceInfo}</span>
-                            <span className="text-xs bg-gray-700 px-2 py-1 rounded">{new Date(order.timestamp).toLocaleTimeString()}</span>
+                            <span className="font-black text-white text-lg uppercase tracking-tight">{order.sourceInfo}</span>
+                            <span className="text-[9px] font-black uppercase bg-gray-800 text-gray-400 px-2 py-1 rounded">{new Date(order.timestamp).toLocaleTimeString()}</span>
                         </div>
-                        <ul className="text-sm text-gray-300 mb-3 space-y-1">
+                        <ul className="text-[10px] font-bold text-gray-400 mb-3 space-y-1 uppercase italic">
                             {order.items.map((item, idx) => (
-                                <li key={idx}>{item.name} x {item.quantity}</li>
+                                <li key={idx} className="border-b border-white/5 pb-1">{item.name} x {item.quantity}</li>
                             ))}
                         </ul>
-                         <p className="font-bold text-white mb-3 text-right">Total: ₹{order.total.toFixed(2)}</p>
+                         <p className="font-black text-lemon mb-3 text-right text-xl tracking-tighter">TOTAL: ₹{order.total.toFixed(0)}</p>
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => onAccept(order.id)}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded"
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-3 rounded-lg text-[10px] uppercase shadow-lg"
                             >
-                                Accept Order
+                                Accept
                             </button>
                              <button 
                                 onClick={() => { onPrint(order); onAccept(order.id); }}
-                                className="flex-1 bg-lemon hover:bg-lemon-dark text-black font-bold py-2 rounded"
+                                className="flex-1 bg-lemon hover:bg-lemon-dark text-black font-black py-3 rounded-lg text-[10px] uppercase shadow-lg"
                             >
                                 Accept & Print
                             </button>
@@ -596,7 +599,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     const handleAcceptQrOrder = (orderId: number) => {
         const updatedOrder = orders.find(o => o.id === orderId);
         if (updatedOrder) {
-            // ACCEPTED QR ORDERS MOVE TO OFFLINE PREPARATION
             onUpdateOrder({ ...updatedOrder, status: 'Preparation', type: 'Offline' });
         }
     };
@@ -626,7 +628,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
 
     return (
-        <>
+        <div className="touch-none">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrders} onClose={() => setShowTodaysOrders(false)} />}
             
             {showPendingOrdersModal && <PendingOrdersModal 
@@ -654,28 +656,27 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
             <div className="space-y-6">
                 
-                {/* Unified Stats Grid - Fixed equal sizing */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Unified Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
-                        <StatCard title="Today's Online Sales" value={`₹${data.onlineSales.toFixed(2)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
+                        <StatCard title="Online Sales" value={`₹${data.onlineSales.toFixed(0)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
                     </div>
                     <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
-                        <StatCard title="Today's Offline Sales" value={`₹${data.offlineSales.toFixed(2)}`} subtext={`${data.offlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
+                        <StatCard title="Offline Sales" value={`₹${data.offlineSales.toFixed(0)}`} subtext={`${data.offlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
                     </div>
                     <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
-                        <StatCard title="Total Sales Today" value={`₹${(data.onlineSales + data.offlineSales).toFixed(2)}`} subtext={`${data.onlineOrders + data.offlineOrders} Total Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
+                        <StatCard title="Net Daily" value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} subtext="Combined Total" icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
                     </div>
                      <div className="cursor-pointer" onClick={() => setShowPendingOrdersModal(true)}>
                         <StatCard 
-                            title="Pending Orders" 
+                            title="Active KOTs" 
                             value={pendingOrders.length.toString()} 
-                            subtext={`Online: ${pendingOnlineOrders.length}, Offline: ${pendingOfflineOrders.length}`}
+                            subtext="Kitchen Pipeline"
                             icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} 
                         />
                     </div>
                 </div>
 
-                {/* QR Order Section - Labeled simply and positioned above Platforms */}
                 <QrOrdersSection 
                     orders={incomingQrOrders} 
                     onAccept={handleAcceptQrOrder} 
@@ -683,16 +684,15 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                     onNavigateToQrMenu={onNavigateToQrMenu}
                 />
 
-                {/* Online Platforms */}
-                <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800">
-                    <h3 className="text-lg font-semibold text-white mb-4">Online Platforms</h3>
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
+                    <h3 className="text-xs font-black text-gray-500 mb-4 uppercase tracking-widest">Platform Dispatch</h3>
                     <div className="grid grid-cols-2 gap-4">
                         <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />
                         <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/partners/onlineordering" />
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
