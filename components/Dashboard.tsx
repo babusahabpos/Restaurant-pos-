@@ -27,9 +27,6 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
     // Calculation Logic considering Discount
     if (order.type === 'Offline') {
         // Reverse calculation: Total = (Subtotal + Tax) - Discount
-        // If we assume the stored `total` is the final amount payable.
-        // We need to back-calculate Taxable Amount.
-        // TaxableAmount * (1 + TaxRate) = Total + Discount
         const totalIncludingTax = order.total + discount;
         subtotal = totalIncludingTax / (1 + taxRate / 100);
         taxAmount = totalIncludingTax - subtotal;
@@ -37,8 +34,6 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
         // Online Orders
         if (order.deliveryDetails) {
             deliveryCharge = order.deliveryDetails.deliveryCharge;
-            // Total = Items + Tax + Delivery - Discount
-            // Items + Tax = Total - Delivery + Discount
             const totalBeforeDelivery = order.total - deliveryCharge + discount;
             subtotal = totalBeforeDelivery / (1 + taxRate / 100);
             taxAmount = totalBeforeDelivery - subtotal;
@@ -387,7 +382,6 @@ const PendingOrdersModal: React.FC<{
                                         <button
                                             onClick={() => {
                                                 if (order.sourceInfo.includes('Customer:')) {
-                                                    // QR Orders usually considered settled or need bill, handle complete for now
                                                      onCompleteOrder(order.id);
                                                 } else {
                                                     onCompleteOrder(order.id);
@@ -440,7 +434,7 @@ const PendingOrdersModal: React.FC<{
 
 const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: React.ReactNode }> = ({ title, value, subtext, icon }) => (
     <div className="bg-black p-6 rounded-lg shadow-sm border border-gray-800 flex justify-between items-center h-full">
-        <div>
+        <div className="flex flex-col h-full justify-between">
             <p className="text-gray-400 text-sm">{title}</p>
             <p className="text-2xl font-bold text-white">{value}</p>
             <p className="text-gray-400 text-xs mt-1">{subtext}</p>
@@ -467,16 +461,13 @@ const QrOrdersSection: React.FC<{
     onNavigateToQrMenu: () => void;
 }> = ({ orders, onAccept, onPrint, onNavigateToQrMenu }) => {
     
-    // Blink Effect Logic using Audio
     useEffect(() => {
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         let interval: any;
         
         if (orders.length > 0) {
-            // Play sound once when component mounts or orders change and length > 0
             if (audio) {
                 audio.play().catch(e => console.log("Audio play blocked", e));
-                // Loop sound every 5 seconds if not accepted
                 interval = setInterval(() => {
                     audio.play().catch(e => console.log("Audio play blocked", e));
                 }, 5000);
@@ -573,8 +564,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
     const [editingOrder, setEditingOrder] = useState<OrderStatusItem | null>(null);
 
-    // Separating orders by status
-    const incomingQrOrders = orders.filter(o => o.type === 'Online' && o.status === 'Placed');
+    const incomingQrOrders = orders.filter(o => o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
     
     const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
@@ -603,12 +593,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         }
     };
     
-    // New handlers for QR Section
     const handleAcceptQrOrder = (orderId: number) => {
         const updatedOrder = orders.find(o => o.id === orderId);
         if (updatedOrder) {
-            // Updated Logic: Change status to 'Preparation' AND change type to 'Offline'
-            // This moves the order to the "Offline" tab in Pending Orders for settlement.
+            // ACCEPTED QR ORDERS MOVE TO OFFLINE PREPARATION
             onUpdateOrder({ ...updatedOrder, status: 'Preparation', type: 'Offline' });
         }
     };
@@ -666,18 +654,18 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
             <div className="space-y-6">
                 
-                {/* Stats Grid - Moved to top with Consistent Sizing */}
+                {/* Unified Stats Grid - Fixed equal sizing */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="cursor-pointer h-full" onClick={() => setShowTodaysOrders(true)}>
+                    <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
                         <StatCard title="Today's Online Sales" value={`₹${data.onlineSales.toFixed(2)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
                     </div>
-                    <div className="cursor-pointer h-full" onClick={() => setShowTodaysOrders(true)}>
+                    <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
                         <StatCard title="Today's Offline Sales" value={`₹${data.offlineSales.toFixed(2)}`} subtext={`${data.offlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
                     </div>
-                    <div className="cursor-pointer h-full" onClick={() => setShowTodaysOrders(true)}>
+                    <div className="cursor-pointer" onClick={() => setShowTodaysOrders(true)}>
                         <StatCard title="Total Sales Today" value={`₹${(data.onlineSales + data.offlineSales).toFixed(2)}`} subtext={`${data.onlineOrders + data.offlineOrders} Total Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
                     </div>
-                     <div className="cursor-pointer h-full" onClick={() => setShowPendingOrdersModal(true)}>
+                     <div className="cursor-pointer" onClick={() => setShowPendingOrdersModal(true)}>
                         <StatCard 
                             title="Pending Orders" 
                             value={pendingOrders.length.toString()} 
@@ -687,7 +675,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                     </div>
                 </div>
 
-                {/* NEW QR ORDER SECTION - Moved Below Stats */}
+                {/* QR Order Section - Labeled simply and positioned above Platforms */}
                 <QrOrdersSection 
                     orders={incomingQrOrders} 
                     onAccept={handleAcceptQrOrder} 

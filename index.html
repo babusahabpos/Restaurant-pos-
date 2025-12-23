@@ -4,7 +4,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Prevent user scaling to make it feel like a mobile app -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>BaBu SAHAB POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -24,6 +25,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Added Tesseract.js for Offline Menu Scanning -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+      /* Prevent text selection and long-press menus for a native app feel */
+      body {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      /* Re-enable selection for inputs only */
+      input, textarea {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

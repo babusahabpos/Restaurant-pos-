@@ -417,7 +417,7 @@ function App() {
         ));
     };
     
-    // HARD DELETE User - Removes from list completely
+    // HARD DELETE User - Removes from list completely as requested
     const handleDeleteUser = (userId: number) => {
         setRegisteredUsers(prev => prev.filter(user => user.id !== userId));
     };
