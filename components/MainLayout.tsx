@@ -44,17 +44,16 @@ const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string)
 const Sidebar: React.FC<{
     currentPage: Page;
     setCurrentPage: (page: Page) => void;
-    handleLogout: () => void;
     restaurantName: string;
-}> = ({ currentPage, setCurrentPage, handleLogout, restaurantName }) => {
+}> = ({ currentPage, setCurrentPage, restaurantName }) => {
     return (
-        <aside className="bg-black text-white w-64 space-y-6 py-7 px-2 h-full flex flex-col justify-between border-r border-gray-800">
+        <aside className="bg-black text-white w-64 space-y-6 py-7 px-2 h-full flex flex-col border-r border-gray-800">
             <div>
-                <a href="#" className="flex items-center space-x-2 px-4">
+                <a href="#" className="flex items-center space-x-2 px-4 mb-8">
                     <span className="text-2xl font-extrabold text-white break-words">{restaurantName || 'BaBu SAHAB'}</span>
                 </a>
 
-                <nav className="mt-10 overflow-y-auto max-h-[70vh] no-scrollbar">
+                <nav className="space-y-1 overflow-y-auto max-h-[80vh] no-scrollbar">
                     {NAV_ITEMS.map((item) => {
                         const Icon = iconMap[item.icon];
                         return (
@@ -65,7 +64,7 @@ const Sidebar: React.FC<{
                                     e.preventDefault();
                                     setCurrentPage(item.name);
                                 }}
-                                className={`flex items-center space-x-2 py-2.5 px-4 rounded transition duration-200 mb-1 ${
+                                className={`flex items-center space-x-2 py-2.5 px-4 rounded transition duration-200 ${
                                     currentPage === item.name
                                         ? 'bg-lemon text-black font-bold'
                                         : 'hover:bg-gray-800'
@@ -77,19 +76,6 @@ const Sidebar: React.FC<{
                         );
                     })}
                 </nav>
-            </div>
-            <div className="pt-4 border-t border-gray-800">
-                <a
-                    href="#"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        handleLogout();
-                    }}
-                    className="flex items-center space-x-2 py-2.5 px-4 rounded transition duration-200 hover:bg-gray-800 text-red-400"
-                >
-                    <Icons.LogoutIcon className="w-6 h-6" />
-                    <span>Logout</span>
-                </a>
             </div>
         </aside>
     );
@@ -156,7 +142,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                 <Sidebar 
                     currentPage={currentPage} 
                     setCurrentPage={handleSetCurrentPage} 
-                    handleLogout={handleLogout}
                     restaurantName={loggedInUser.restaurantName}
                 />
             </div>
@@ -168,7 +153,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                         <Sidebar 
                             currentPage={currentPage} 
                             setCurrentPage={handleSetCurrentPage} 
-                            handleLogout={handleLogout}
                             restaurantName={loggedInUser.restaurantName}
                         />
                     </div>

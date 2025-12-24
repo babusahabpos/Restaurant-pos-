@@ -36,8 +36,9 @@ const triggerKOTPrint = (orderData: any) => {
             p { margin: 2px 0; }
             hr { border: none; border-top: 1px dashed black; margin: 5px 0; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { padding: 4px 2px; text-align: left; }
-            .qty { text-align: center; width: 50px; }
+            th, td { padding: 6px 2px; text-align: left; border-bottom: 1px dashed #eee; }
+            .qty { text-align: center; width: 60px; font-weight: 900; font-size: 1.2em; }
+            .item-name { font-weight: 900; font-size: 1.1em; }
         </style>
         <div class="center">
             <h3>KITCHEN ORDER TICKET</h3>
@@ -51,14 +52,14 @@ const triggerKOTPrint = (orderData: any) => {
             <tbody>
                 ${orderData.items.map((i: any) => `
                     <tr>
-                        <td><strong>${i.name.toUpperCase()}</strong></td>
-                        <td class="qty"><strong>${i.quantity}</strong></td>
+                        <td class="item-name">${i.name.toUpperCase()}</td>
+                        <td class="qty">${i.quantity}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
         <hr>
-        <div class="center" style="margin-top: 10px;"><p>*** KITCHEN COPY ***</p></div>
+        <div class="center" style="margin-top: 15px;"><p>*** NO PRICE ON KOT ***</p><p>*** KITCHEN COPY ***</p></div>
     `;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -162,14 +163,12 @@ function App() {
 
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         
         const todaysUserOrders = orders.filter(o => {
             const orderDate = new Date(o.timestamp);
             return (
                 o.restaurantId === loggedInUser.id &&
-                orderDate >= startOfDay &&
-                orderDate < endOfDay
+                orderDate >= startOfDay
             );
         });
 
@@ -264,7 +263,6 @@ function App() {
         };
         setOrders(prev => [...prev, newOrder]);
         
-        // Auto-print KOT if enabled in settings (No prices in triggerKOTPrint)
         if (loggedInUser.isPrinterEnabled) {
             triggerKOTPrint(newOrderData);
         }
@@ -353,7 +351,7 @@ function App() {
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
             refer: <Referral user={loggedInUser} />,
-            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} />,
+            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} onLogout={handleLogout} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
         };
