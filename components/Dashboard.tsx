@@ -94,7 +94,10 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
             </tbody>
         </table>
         <hr>
-        <p class="center">Thank you for dining with us!</p>
+        <div class="center">
+            <p><strong>THANK YOU FOR VISITING!</strong></p>
+            <p>Have a great day!</p>
+        </div>
     `;
 };
 
@@ -147,7 +150,6 @@ const PendingOrdersModal: React.FC<{
                                             <p key={idx} className="text-[11px] text-white font-bold uppercase">• {i.name} <span className="text-lemon">x{i.quantity}</span></p>
                                         ))}
                                     </div>
-                                    {/* Amount removed from here for Kitchen view */}
                                 </div>
                                 <div className="flex gap-2 items-center">
                                     <button onClick={() => onPrintKOT(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-gray-800 text-lemon border border-lemon/20 text-[10px] font-black uppercase">Re-Print KOT</button>
@@ -252,7 +254,6 @@ const QrOrdersSection: React.FC<{
                             </div>
                         </div>
                         <div>
-                            {/* Price removed from QR Accept card too for privacy */}
                             <div className="flex gap-2">
                                 <button onClick={() => onAccept(order.id)} className="flex-1 bg-green-600 text-white font-black py-3 rounded-xl text-[10px] uppercase active:scale-95">Accept</button>
                                 <button onClick={() => { onPrint(order); onAccept(order.id); }} className="flex-1 bg-lemon text-black font-black py-3 rounded-xl text-[10px] uppercase active:scale-95">Print KOT</button>
@@ -344,7 +345,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
     const handlePrintKOT = (order: OrderStatusItem) => {
         if (!isPrinterEnabled) { alert('Printer disabled in settings'); return; }
-        // REMOVED ALL AMOUNTS FROM KOT HTML
         const kotContent = `
             <style>
                 body { font-family: 'Courier New', monospace; font-size: 11pt; width: 80mm; margin: 0; padding: 5px; color: black; }
@@ -381,6 +381,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
             </table>
             <hr>
             <div class="center" style="margin-top: 10px;">
+                <p>*** NO PRICE ON KOT ***</p>
                 <p>*** KITCHEN COPY ***</p>
             </div>
         `;
@@ -388,10 +389,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     };
 
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-8 animate-fade-in h-full overflow-y-auto no-scrollbar pb-10">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrdersProcessed} onClose={() => setShowTodaysOrders(false)} />}
             {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} onCompleteOrder={onCompleteOrder} onInitiateSettle={setSettlingOrder} onEditOrder={setEditingOrder} onPrintKOT={handlePrintKOT} />}
-            {/* ... other modals ... */}
+            
             {editingOrder && (
                 <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
                      <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-2xl flex flex-col border border-gray-700">
@@ -423,7 +424,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
             <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKOT} onNavigateToQrMenu={onNavigateToQrMenu} />
 
-            <div className="bg-black border border-gray-800 p-5 rounded-2xl">
+            <div className="bg-black border border-gray-800 p-5 rounded-2xl mb-10">
                 <h3 className="text-[11px] font-black text-lemon mb-6 uppercase tracking-[0.2em] text-center">Connected Delivery Platforms</h3>
                 <div className="grid grid-cols-2 gap-4">
                     <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />

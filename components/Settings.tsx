@@ -50,9 +50,10 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave, onLogout }) => {
     };
 
     return (
-        <div className="bg-gray-900 p-6 rounded-lg shadow-lg max-w-4xl mx-auto h-full overflow-y-auto no-scrollbar pb-20">
-            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-widest border-b border-gray-800 pb-4">Restaurant Settings</h3>
-            <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="bg-gray-900 p-6 rounded-lg shadow-lg max-w-4xl mx-auto h-full flex flex-col overflow-hidden">
+            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-widest border-b border-gray-800 pb-4 shrink-0">Restaurant Settings</h3>
+            
+            <form className="flex-1 overflow-y-auto no-scrollbar space-y-8 pr-2 pb-10" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="text-[10px] font-black text-gray-500 block mb-2 uppercase tracking-widest">Restaurant Name</label>
@@ -112,7 +113,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave, onLogout }) => {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-4 mt-8">
+                <div className="flex flex-col gap-4 mt-10">
                     <button type="submit" className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-lemon/10">
                         Save All Changes
                     </button>
@@ -127,7 +128,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onSave, onLogout }) => {
                     </button>
                 </div>
                 
-                <div className="text-center pt-4">
+                <div className="text-center pt-6">
                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-tighter">BaBu SAHAB POS v2.1.0</p>
                 </div>
             </form>

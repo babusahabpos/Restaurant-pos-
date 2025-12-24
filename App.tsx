@@ -59,7 +59,10 @@ const triggerKOTPrint = (orderData: any) => {
             </tbody>
         </table>
         <hr>
-        <div class="center" style="margin-top: 15px;"><p>*** NO PRICE ON KOT ***</p><p>*** KITCHEN COPY ***</p></div>
+        <div class="center" style="margin-top: 15px;">
+            <p>*** NO PRICE ON KOT ***</p>
+            <p>*** KITCHEN COPY ***</p>
+        </div>
     `;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
