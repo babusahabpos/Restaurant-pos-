@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem } from '../types';
 
@@ -119,7 +120,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
                             <div className="flex items-center gap-1.5">
                                 <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
                                 <span className="text-[11px] text-lemon font-black min-w-[15px] text-center">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
+                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
                             </div>
                             <p className="text-[11px] text-lemon font-black w-[20%] text-right tracking-tighter">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
                         </div>
@@ -136,7 +137,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
                         className="bg-lemon text-black font-black px-10 py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl"
                         disabled={currentOrder.length === 0 || !orderId.trim()}
                     >
-                        CONFIRM KOT
+                        GENERATE KOT
                     </button>
                 </div>
             </div>

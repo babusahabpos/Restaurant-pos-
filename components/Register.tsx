@@ -4,7 +4,8 @@ import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser } from '../types';
 
 interface RegisterProps {
-    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address'>, referralCode?: string) => void;
+    /* Fixed: Updated Omit type to match handleRegister in App.tsx and avoid missing property errors */
+    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'isPrinterEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => void;
     onNavigateToLogin: () => void;
 }
 

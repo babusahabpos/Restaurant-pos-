@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem } from '../types';
 
@@ -177,7 +178,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                         className="w-full bg-lemon text-black font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl"
                         disabled={currentOrder.length === 0}
                     >
-                        CONFIRM & SEND KOT
+                        GENERATE KOT
                     </button>
                 </div>
             </div>

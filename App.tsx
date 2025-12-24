@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -14,8 +15,8 @@ import QrMenu from './components/QrMenu';
 import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
 import SocialMedia from './components/SocialMedia';
-import Referral from './components/Referral';
-import CustomerOrderPage from './components/CustomerOrderPage';
+import Referral from './components/Referral'; 
+import CustomerOrderPage from './components/CustomerOrderPage'; 
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -110,7 +111,6 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
     
-    // --- Dashboard Per-Day Logic: STRICT DAILY FILTER ---
     useEffect(() => {
         if (!loggedInUser) {
             setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
@@ -118,15 +118,15 @@ function App() {
         };
 
         const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         
         const todaysUserOrders = orders.filter(o => {
-            const orderTime = new Date(o.timestamp).getTime();
+            const orderDate = new Date(o.timestamp);
             return (
                 o.restaurantId === loggedInUser.id &&
-                orderTime >= startOfToday &&
-                orderTime < endOfToday
+                orderDate >= startOfDay &&
+                orderDate < endOfDay
             );
         });
 
@@ -282,7 +282,19 @@ function App() {
         const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
 
         const pages = {
-            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={safeMenu} onUpdateOrder={handleUpdateOrder} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
+            dashboard: <Dashboard 
+                data={dashboardData} 
+                orders={userOrders} 
+                onCompleteOrder={handleCompleteOrder} 
+                taxRate={loggedInUser.taxRate || 5} 
+                restaurantName={loggedInUser.restaurantName}
+                address={loggedInUser.address}
+                fssai={loggedInUser.fssai || ''}
+                menuItems={safeMenu}
+                onUpdateOrder={handleUpdateOrder}
+                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
+                onNavigateToQrMenu={() => setCurrentPage('qrMenu')}
+            />,
             billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} />,
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 
@@ -295,7 +296,8 @@ const PendingOrdersModal: React.FC<{
     onCompleteOrder: (orderId: number) => void;
     onInitiateSettle: (order: OrderStatusItem) => void;
     onEditOrder: (order: OrderStatusItem) => void;
-}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder }) => {
+    onPrintKOT: (order: OrderStatusItem) => void;
+}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder, onPrintKOT }) => {
     const [activeTab, setActiveTab] = useState<'Online' | 'Offline'>('Online');
 
     const ordersToShow = activeTab === 'Online' ? onlineOrders : offlineOrders;
@@ -336,7 +338,8 @@ const PendingOrdersModal: React.FC<{
                                     <p className="text-lg font-black text-white mt-1">₹{order.total.toFixed(0)}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => onEditOrder(order)} className="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-600/50 text-[10px] font-black uppercase">Edit</button>
+                                    <button onClick={() => onPrintKOT(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-gray-700 text-lemon border border-lemon/20 text-[10px] font-black uppercase">Print KOT</button>
+                                    <button onClick={() => onEditOrder(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-600/50 text-[10px] font-black uppercase">Edit</button>
                                     {activeTab === 'Offline' ? (
                                         <button onClick={() => onInitiateSettle(order)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-lemon text-black text-[10px] font-black uppercase">Bill</button>
                                     ) : (
@@ -472,6 +475,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
     const incomingQrOrders = orders.filter(o => o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
+    const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
+    const pendingOfflineOrders = pendingOrders.filter(o => o.type === 'Offline');
     
     const todaysOrdersProcessed = orders.filter(o => {
       const d = new Date(o.timestamp); const t = new Date();
@@ -492,9 +497,34 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         if (order) onUpdateOrder({ ...order, status: 'Preparation', type: 'Offline' });
     };
 
+    const handlePrintKOT = (order: OrderStatusItem) => {
+        if (!isPrinterEnabled) { alert('Printer disabled in settings'); return; }
+        const kotContent = `
+            <style>body { font-family: 'Courier New', monospace; font-size: 10pt; width: 80mm; margin: 0; padding: 5px; }</style>
+            <div style="text-align:center;">
+                <h3>KITCHEN ORDER TICKET</h3>
+                <p><strong>${order.sourceInfo}</strong></p>
+                <p>${new Date().toLocaleString()}</p>
+            </div>
+            <hr style="border: none; border-top: 1px dashed black;">
+            <table style="width:100%;">
+                <thead><tr><th align="left">Item</th><th align="center">Qty</th></tr></thead>
+                <tbody>
+                    ${order.items.map(i => `<tr><td>${i.name}</td><td align="center">${i.quantity}</td></tr>`).join('')}
+                </tbody>
+            </table>
+            <hr style="border: none; border-top: 1px dashed black;">
+            <p style="text-align:center;">*** KOT GENERATED ***</p>
+        `;
+        triggerPrint(kotContent);
+    };
+
     return (
         <div className="space-y-8 animate-fade-in">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrdersProcessed} onClose={() => setShowTodaysOrders(false)} />}
+            {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} onCompleteOrder={onCompleteOrder} onInitiateSettle={setSettlingOrder} onEditOrder={setEditingOrder} onPrintKOT={handlePrintKOT} />}
+            {editingOrder && <EditOrderModal order={editingOrder} menuItems={menuItems} onClose={() => setEditingOrder(null)} onSave={onUpdateOrder} taxRate={taxRate} />}
+            {settlingOrder && <SettleBillModal order={settlingOrder} onClose={() => setSettlingOrder(null)} onSettle={handleSettleAndPrint} />}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
@@ -511,7 +541,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                 </div>
             </div>
 
-            <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={() => {}} onNavigateToQrMenu={onNavigateToQrMenu} />
+            <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKOT} onNavigateToQrMenu={onNavigateToQrMenu} />
 
             <div className="bg-black border border-gray-800 p-5 rounded-2xl">
                 <h3 className="text-[11px] font-black text-lemon mb-6 uppercase tracking-[0.2em] text-center">Connected Delivery Platforms</h3>
