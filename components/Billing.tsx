@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { MenuItem, OrderItem, OrderStatusItem } from '../types';
 
@@ -149,7 +148,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                                 <div className="flex items-center gap-1.5">
                                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
                                     <span className="text-[11px] text-lemon font-black min-w-[15px] text-center">{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
+                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
                                 </div>
                                 <p className="text-[11px] text-lemon font-black w-[20%] text-right tracking-tighter">₹{(item.offlinePrice * item.quantity).toFixed(0)}</p>
                             </div>
