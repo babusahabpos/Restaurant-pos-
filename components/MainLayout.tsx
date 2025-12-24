@@ -106,7 +106,7 @@ const BottomNavBar: React.FC<{
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 h-16 px-4 flex justify-around items-center md:hidden z-20">
+        <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 h-16 px-4 flex justify-around items-center md:hidden z-30">
             {navItems.map((item) => {
                 const isActive = currentPage === item.name;
                 const Icon = item.icon;
@@ -146,9 +146,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
         setCurrentPage(page);
         setMobileMenuOpen(false);
     };
-    
-    // Custom header height calculation
-    const isSpecialPage = currentPage === 'billing' || currentPage === 'online';
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
@@ -180,7 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
 
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 {/* Unified Header */}
-                <header className="h-14 flex items-center justify-between px-4 border-b border-gray-800 bg-black z-10">
+                <header className="h-14 flex items-center justify-between px-4 border-b border-gray-800 bg-black z-10 shrink-0">
                     <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
@@ -194,7 +191,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                     </div>
                 </header>
 
-                <main className={`flex-1 overflow-y-auto overflow-x-hidden no-scrollbar ${isSpecialPage ? 'p-0 h-full' : 'p-4 md:p-6 pb-20 md:pb-6'}`}>
+                <main className="flex-1 overflow-hidden relative pb-16 md:pb-0">
                     {children}
                 </main>
                 
