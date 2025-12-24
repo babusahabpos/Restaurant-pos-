@@ -53,6 +53,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
             sourceInfo: `${platform} #${orderId}`
         };
         onPrintKOT(newOrderData);
+        alert('Online KOT Logged!');
         setCurrentOrder([]);
         setOrderId('');
     };
@@ -60,15 +61,15 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
     const total = currentOrder.reduce((acc, item) => acc + (Number(item.onlinePrice) || 0) * item.quantity, 0);
 
     return (
-        <div className="flex flex-col h-full bg-black">
+        <div className="flex flex-col h-full bg-black overflow-hidden select-none">
             {/* TOP HALF: MENU */}
-            <div className="h-[45%] flex flex-col p-2 border-b border-gray-800 overflow-hidden">
+            <div className="h-[42%] flex flex-col p-2 border-b border-gray-800 overflow-hidden shrink-0">
                 <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center h-10">
                     {categories.map(category => (
                         <button 
                             key={category} 
                             onClick={() => setActiveCategory(category)}
-                            className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}
+                            className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-lemon border border-gray-700'}`}
                         >
                             {category}
                         </button>
@@ -76,7 +77,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-1">
                     {filteredMenuItems.map(item => (
-                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-xl text-center cursor-pointer border border-gray-800 active:bg-gray-700 active:scale-95 transition-all flex flex-col justify-center min-h-[60px] select-none shadow-lg shadow-black">
+                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-xl text-center cursor-pointer border border-gray-800 active:bg-gray-700 active:scale-95 transition-all flex flex-col justify-center min-h-[55px] shadow-lg shadow-black">
                            <p className="text-[9px] text-white font-bold leading-tight line-clamp-2 mb-1 uppercase tracking-tighter">{item.name}</p>
                            <p className="text-lemon text-[10px] font-black">₹{item.onlinePrice}</p>
                         </div>
@@ -84,13 +85,13 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
                 </div>
             </div>
 
-            {/* BOTTOM HALF: LOGGING */}
-            <div className="h-[55%] flex flex-col p-2 bg-gray-950 overflow-hidden shadow-[0_-8px_16px_rgba(0,0,0,0.5)]">
+            {/* BOTTOM HALF: ONLINE LOG & KOT */}
+            <div className="flex-1 flex flex-col p-2 bg-gray-950 overflow-hidden relative">
                 <div className="flex gap-2 mb-3 shrink-0">
                     <select 
                         value={platform}
                         onChange={e => setPlatform(e.target.value as 'Swiggy' | 'Zomato')}
-                        className="flex-1 bg-gray-900 text-white text-[11px] font-black p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase"
+                        className="flex-1 bg-gray-900 text-lemon text-[11px] font-black p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase"
                     >
                         <option>Swiggy</option>
                         <option>Zomato</option>
@@ -100,27 +101,26 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
                         placeholder="ORDER ID / TRAN #" 
                         value={orderId}
                         onChange={e => setOrderId(e.target.value)}
-                        className="flex-1 bg-gray-900 text-white text-[11px] font-bold p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase" 
+                        className="flex-1 bg-gray-900 text-lemon text-[11px] font-bold p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase" 
                     />
                 </div>
 
                 <div className="flex-1 overflow-y-auto mb-2 space-y-1 bg-black/40 rounded-2xl p-1 no-scrollbar">
                     {currentOrder.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-700 gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-20"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <span className="text-[10px] font-black uppercase tracking-widest">Select Online Items Above</span>
+                        <div className="h-full flex flex-col items-center justify-center text-lemon opacity-20 gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest">Select Items</span>
                         </div>
                     )}
                     {currentOrder.map(item => (
                         <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
                             <div className="w-[45%]">
-                                <p className="text-[10px] text-white font-bold truncate uppercase">{item.name}</p>
+                                <p className="text-[10px] text-lemon font-bold truncate uppercase">{item.name}</p>
                                 <p className="text-[9px] text-gray-500 font-mono">₹{item.onlinePrice}</p>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
-                                <span className="text-[11px] text-white font-black min-w-[15px] text-center">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
+                                <span className="text-[11px] text-lemon font-black min-w-[15px] text-center">{item.quantity}</span>
+                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
                             </div>
                             <p className="text-[11px] text-lemon font-black w-[20%] text-right tracking-tighter">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
                         </div>
@@ -129,15 +129,15 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
 
                 <div className="shrink-0 border-t border-gray-800 pt-3 flex items-center justify-between bg-gray-950">
                     <div className="flex flex-col">
-                        <span className="text-[9px] text-gray-500 uppercase font-black tracking-tight">Marketplace Total</span>
+                        <span className="text-[9px] text-lemon/60 uppercase font-black tracking-tight">Marketplace Total</span>
                         <span className="text-2xl text-lemon font-black tracking-tighter leading-none">₹{total.toFixed(0)}</span>
                     </div>
                     <button 
                         onClick={handleSendToKitchen} 
-                        className="bg-lemon text-black font-black px-10 py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl shadow-lemon/10"
+                        className="bg-lemon text-black font-black px-10 py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl"
                         disabled={currentOrder.length === 0 || !orderId.trim()}
                     >
-                        Confirm Online Log
+                        CONFIRM KOT
                     </button>
                 </div>
             </div>

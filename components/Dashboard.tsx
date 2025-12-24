@@ -113,7 +113,7 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
                             {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
                                 <div key={order.id} className="bg-black/50 border border-gray-800 p-4 rounded-xl flex justify-between items-center">
                                     <div>
-                                        <p className="text-xs font-black uppercase text-white">{order.sourceInfo}</p>
+                                        <p className="text-xs font-black uppercase text-lemon">{order.sourceInfo}</p>
                                         <p className="text-[10px] text-gray-500">{new Date(order.timestamp).toLocaleTimeString()}</p>
                                     </div>
                                     <div className="text-right">
@@ -124,7 +124,7 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
                             ))}
                         </div>
                     ) : (
-                        <p className="text-center py-20 text-gray-700 font-bold uppercase text-xs">No orders processed yet</p>
+                        <p className="text-center py-20 text-gray-700 font-bold uppercase text-xs text-lemon">No orders processed yet</p>
                     )}
                 </div>
             </div>
@@ -361,11 +361,11 @@ const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: 
             {icon}
         </div>
         <div className="flex flex-col justify-between h-full relative z-10">
-            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">{title}</p>
-            <p className="text-2xl font-black text-white tracking-tighter">{value}</p>
-            <p className="text-gray-600 text-[9px] font-bold uppercase mt-1">{subtext}</p>
+            <p className="text-[10px] text-lemon font-black uppercase tracking-widest">{title}</p>
+            <p className="text-2xl font-black text-lemon tracking-tighter">{value}</p>
+            <p className="text-lemon/60 text-[9px] font-bold uppercase mt-1">{subtext}</p>
         </div>
-        <div className="text-gray-800 relative z-10">{icon}</div>
+        <div className="text-lemon/30 relative z-10">{icon}</div>
     </div>
 );
 
@@ -399,12 +399,12 @@ const QrOrdersSection: React.FC<{
         return (
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-5">
-                    <div className="bg-green-500/10 p-4 rounded-full">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    <div className="bg-lemon/10 p-4 rounded-full">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-lemon"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
                     </div>
                     <div className="text-center sm:text-left">
-                        <h3 className="text-lg font-black text-white uppercase tracking-tight">QR Live Channel</h3>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Active & listening for customer orders</p>
+                        <h3 className="text-lg font-black text-lemon uppercase tracking-tight">QR Live Channel</h3>
+                        <p className="text-lemon/50 text-[10px] font-bold uppercase tracking-widest">Active & listening for customer orders</p>
                     </div>
                 </div>
                 <button onClick={onNavigateToQrMenu} className="w-full sm:w-auto bg-lemon text-black font-black uppercase text-[10px] px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95">
@@ -428,12 +428,12 @@ const QrOrdersSection: React.FC<{
                     <div key={order.id} className="bg-black p-5 rounded-2xl border border-gray-800 shadow-2xl flex flex-col justify-between">
                         <div>
                             <div className="flex justify-between items-start mb-3">
-                                <span className="font-black text-white text-xl uppercase tracking-tighter">{order.sourceInfo}</span>
-                                <span className="text-[9px] font-black bg-gray-800 text-gray-500 px-3 py-1 rounded-full">{new Date(order.timestamp).toLocaleTimeString()}</span>
+                                <span className="font-black text-lemon text-xl uppercase tracking-tighter">{order.sourceInfo}</span>
+                                <span className="text-[9px] font-black bg-gray-800 text-lemon px-3 py-1 rounded-full">{new Date(order.timestamp).toLocaleTimeString()}</span>
                             </div>
                             <div className="space-y-1 mb-4">
                                 {order.items.map((item, idx) => (
-                                    <p key={idx} className="text-[11px] font-bold text-gray-400 uppercase italic border-b border-white/5 pb-1">{item.name} x {item.quantity}</p>
+                                    <p key={idx} className="text-[11px] font-bold text-lemon/80 uppercase italic border-b border-white/5 pb-1">{item.name} x {item.quantity}</p>
                                 ))}
                             </div>
                         </div>
@@ -473,8 +473,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
     const incomingQrOrders = orders.filter(o => o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
-    const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
-    const pendingOfflineOrders = pendingOrders.filter(o => o.type === 'Offline');
+    
     const todaysOrdersProcessed = orders.filter(o => {
       const d = new Date(o.timestamp); const t = new Date();
       return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
@@ -494,44 +493,29 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         if (order) onUpdateOrder({ ...order, status: 'Preparation', type: 'Offline' });
     };
 
-    const handlePrintKot = (order: OrderStatusItem) => {
-        triggerPrint(`
-            <style>body { font-family: 'Courier New', monospace; font-size: 10pt; width: 80mm; margin: 0; padding: 5px; }
-            h3, p { text-align: center; margin: 2px 0; } hr { border: none; border-top: 1px dashed black; }
-            table { width: 100%; border-collapse: collapse; margin-top: 5px; } th, td { padding: 2px; text-align: left;}</style>
-            <h3>KITCHEN ORDER TICKET</h3><p>${order.sourceInfo}</p><p>${new Date().toLocaleString()}</p><hr>
-            <table><thead><tr><th>Item</th><th style="text-align:center;">Qty</th></tr></thead><tbody>
-            ${order.items.map(i => `<tr><td>${i.name}</td><td style="text-align:center;">${i.quantity}</td></tr>`).join('')}
-            </tbody></table>
-        `);
-    };
-
     return (
         <div className="space-y-8 animate-fade-in">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrdersProcessed} onClose={() => setShowTodaysOrders(false)} />}
-            {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} onCompleteOrder={onCompleteOrder} onInitiateSettle={setSettlingOrder} onEditOrder={setEditingOrder} />}
-            {editingOrder && <EditOrderModal order={editingOrder} menuItems={menuItems} onClose={() => setEditingOrder(null)} onSave={onUpdateOrder} taxRate={taxRate} />}
-            {settlingOrder && <SettleBillModal order={settlingOrder} onClose={() => setSettlingOrder(null)} onSettle={handleSettleAndPrint} />}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Online Sales" value={`₹${data.onlineSales.toFixed(0)}`} subtext={`${data.onlineOrders} Items`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
+                    <StatCard title="Online Sales" value={`₹${data.onlineSales.toFixed(0)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
                 </div>
                 <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Offline Sales" value={`₹${data.offlineSales.toFixed(0)}`} subtext={`${data.offlineOrders} Items`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
+                    <StatCard title="Offline Sales" value={`₹${data.offlineSales.toFixed(0)}`} subtext={`${data.offlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
                 </div>
                 <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Daily Revenue" value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} subtext="Grand Total" icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
+                    <StatCard title="Today's Cash" value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} subtext="Daily Total" icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
                 </div>
                  <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowPendingOrdersModal(true)}>
                     <StatCard title="Kitchen Pipe" value={pendingOrders.length.toString()} subtext="Active KOTs" icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} />
                 </div>
             </div>
 
-            <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKot} onNavigateToQrMenu={onNavigateToQrMenu} />
+            <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={() => {}} onNavigateToQrMenu={onNavigateToQrMenu} />
 
             <div className="bg-black border border-gray-800 p-5 rounded-2xl">
-                <h3 className="text-[10px] font-black text-gray-600 mb-6 uppercase tracking-[0.2em] text-center">Connected Delivery Platforms</h3>
+                <h3 className="text-[11px] font-black text-lemon mb-6 uppercase tracking-[0.2em] text-center">Connected Delivery Platforms</h3>
                 <div className="grid grid-cols-2 gap-4">
                     <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />
                     <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/partners/onlineordering" />
