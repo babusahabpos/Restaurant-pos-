@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <!-- Prevent user scaling to make it feel like a mobile app -->
+    <!-- Critical for Native App feel: Disable zooming completely -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>BaBu SAHAB POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,23 +23,46 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Added Tesseract.js for Offline Menu Scanning -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
-      /* Prevent text selection and long-press menus for a native app feel */
+      /* Global Mobile Native Fixes */
+      html, body {
+        height: 100%;
+        overflow: hidden; /* Prevent body scroll, components will handle internal scroll */
+        position: fixed;
+        width: 100%;
+        -webkit-text-size-adjust: 100%;
+        touch-action: manipulation;
+      }
+      
+      #root {
+        height: 100%;
+        overflow: hidden;
+      }
+
       body {
         -webkit-touch-callout: none;
         -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
         user-select: none;
-        touch-action: manipulation;
+        background-color: black;
       }
-      /* Re-enable selection for inputs only */
+
       input, textarea {
         -webkit-user-select: text;
         user-select: text;
+      }
+
+      /* Custom scrollbar for better mobile look */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      /* Animation for incoming orders */
+      @keyframes blink-red {
+        0%, 100% { background-color: rgba(255, 0, 0, 0.1); border-color: #ef4444; }
+        50% { background-color: rgba(255, 0, 0, 0.3); border-color: #f87171; }
+      }
+      .animate-alert-border {
+        animation: blink-red 1.5s infinite;
       }
     </style>
   <script type="importmap">

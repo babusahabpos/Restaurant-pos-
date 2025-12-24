@@ -51,7 +51,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
     };
     
     const resetOrder = () => {
-        if (window.confirm('Reset order?')) {
+        if (window.confirm('Reset current order?')) {
             setCurrentOrder([]);
             setTableNumber('');
             setCustomerName('');
@@ -70,7 +70,6 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
             sourceInfo: orderSource === 'Dine-in' ? `Table: ${tableNumber}` : `Takeaway (${customerName || 'N/A'})`
         };
         onPrintKOT(newOrderData);
-        alert('Sent to kitchen!');
         setCurrentOrder([]);
         setTableNumber('');
         setCustomerName('');
@@ -83,23 +82,23 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
     const total = Math.max(0, subtotal + tax - discount);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-100px)] overflow-hidden bg-black -m-4 md:-m-8 touch-none">
+        <div className="flex flex-col h-full bg-black">
             {/* TOP HALF: MENU */}
-            <div className="h-[45%] flex flex-col p-3 border-b border-gray-800 overflow-hidden">
-                <div className="flex gap-2 mb-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+            <div className="h-[45%] flex flex-col p-2 border-b border-gray-800 overflow-hidden">
+                <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center h-10">
                     {categories.map(category => (
                         <button 
                             key={category} 
                             onClick={() => setActiveCategory(category)}
-                            className={`px-4 py-2 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center min-w-[60px] h-8 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/20' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}
+                            className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}
                         >
                             {category}
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 overflow-y-auto pr-1 flex-1">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-1">
                     {filteredMenuItems.map(item => (
-                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-lg text-center cursor-pointer border border-gray-800 active:bg-gray-800 active:scale-95 transition-all flex flex-col justify-center min-h-[65px] select-none">
+                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-xl text-center cursor-pointer border border-gray-800 active:bg-gray-700 active:scale-95 transition-all flex flex-col justify-center min-h-[60px] select-none shadow-lg shadow-black">
                            <p className="text-[9px] text-white font-bold leading-tight line-clamp-2 mb-1 uppercase tracking-tighter">{item.name}</p>
                            <p className="text-lemon text-[10px] font-black">₹{item.offlinePrice}</p>
                         </div>
@@ -108,68 +107,79 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
             </div>
 
             {/* BOTTOM HALF: BILL */}
-            <div className="h-[55%] flex flex-col p-3 bg-gray-950 overflow-hidden shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex gap-2">
-                        <button onClick={() => setOrderSource('Takeaway')} className={`px-4 py-1.5 text-[10px] font-black rounded uppercase ${orderSource === 'Takeaway' ? 'bg-lemon text-black' : 'bg-gray-800 text-white border border-gray-700'}`}>Takeaway</button>
-                        <button onClick={() => setOrderSource('Dine-in')} className={`px-4 py-1.5 text-[10px] font-black rounded uppercase ${orderSource === 'Dine-in' ? 'bg-lemon text-black' : 'bg-gray-800 text-white border border-gray-700'}`}>Dine-in</button>
+            <div className="h-[55%] flex flex-col p-2 bg-gray-950 overflow-hidden relative shadow-[0_-8px_16px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                    <div className="flex gap-1">
+                        <button onClick={() => setOrderSource('Takeaway')} className={`px-4 py-1.5 text-[10px] font-black rounded-lg uppercase ${orderSource === 'Takeaway' ? 'bg-lemon text-black' : 'bg-gray-800 text-gray-400'}`}>Takeaway</button>
+                        <button onClick={() => setOrderSource('Dine-in')} className={`px-4 py-1.5 text-[10px] font-black rounded-lg uppercase ${orderSource === 'Dine-in' ? 'bg-lemon text-black' : 'bg-gray-800 text-gray-400'}`}>Dine-in</button>
                     </div>
-                    <button onClick={resetOrder} className="text-[10px] text-red-500 font-black uppercase px-2 py-1">Clear</button>
+                    <button onClick={resetOrder} className="text-[10px] text-red-500 font-black uppercase px-2">Reset</button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                    {orderSource === 'Dine-in' ? (
-                        <input type="text" value={tableNumber} onChange={e => setTableNumber(e.target.value)} placeholder="Tbl #" className="w-full bg-gray-900 text-white text-xs p-2 rounded border border-gray-800 focus:border-lemon outline-none" />
-                    ) : (
-                        <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Name" className="w-full bg-gray-900 text-white text-xs p-2 rounded border border-gray-800 focus:border-lemon outline-none" />
-                    )}
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full bg-gray-900 text-white text-xs p-2 rounded border border-gray-800 focus:border-lemon outline-none" />
+                <div className="grid grid-cols-2 gap-2 mb-2 shrink-0">
+                    <input 
+                        type="text" 
+                        value={orderSource === 'Dine-in' ? tableNumber : customerName} 
+                        onChange={e => orderSource === 'Dine-in' ? setTableNumber(e.target.value) : setCustomerName(e.target.value)} 
+                        placeholder={orderSource === 'Dine-in' ? "Table Number" : "Customer Name"} 
+                        className="w-full bg-gray-900 text-white text-[11px] p-2 rounded-lg border border-gray-800 focus:border-lemon outline-none font-bold" 
+                    />
+                    <input 
+                        type="tel" 
+                        value={customerPhone} 
+                        onChange={e => setCustomerPhone(e.target.value)} 
+                        placeholder="Mobile Number" 
+                        className="w-full bg-gray-900 text-white text-[11px] p-2 rounded-lg border border-gray-800 focus:border-lemon outline-none font-bold" 
+                    />
                 </div>
 
-                <div className="flex-1 overflow-y-auto mb-2 space-y-1 bg-black/20 rounded p-1">
-                    {currentOrder.length === 0 && <p className="text-gray-700 text-center py-10 text-[10px] font-bold uppercase tracking-widest">Order is empty</p>}
-                    {currentOrder.map(item => (
-                        <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded border border-white/5">
-                            <div className="w-[45%]">
-                                <p className="text-[10px] text-white font-bold truncate uppercase">{item.name}</p>
-                                <p className="text-[9px] text-gray-500">₹{item.offlinePrice} / unit</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
-                                <span className="text-[11px] text-white font-bold min-w-[20px] text-center">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
-                            </div>
-                            <p className="text-[11px] text-lemon font-black w-[25%] text-right">₹{(item.offlinePrice * item.quantity).toFixed(0)}</p>
+                <div className="flex-1 overflow-y-auto mb-2 space-y-1 bg-black/40 rounded-xl p-1 no-scrollbar">
+                    {currentOrder.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-700 gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-20"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.56-7.43H5.12"/></svg>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Select Items from Menu</span>
                         </div>
-                    ))}
+                    ) : (
+                        currentOrder.map(item => (
+                            <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
+                                <div className="w-[40%]">
+                                    <p className="text-[10px] text-white font-bold truncate uppercase">{item.name}</p>
+                                    <p className="text-[9px] text-gray-500 font-mono">₹{item.offlinePrice}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
+                                    <span className="text-[11px] text-white font-black min-w-[15px] text-center">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
+                                </div>
+                                <p className="text-[11px] text-lemon font-black w-[20%] text-right tracking-tighter">₹{(item.offlinePrice * item.quantity).toFixed(0)}</p>
+                            </div>
+                        ))
+                    )}
                 </div>
 
-                <div className="flex flex-col gap-2 border-t border-gray-800 pt-2">
+                <div className="shrink-0 flex flex-col gap-2 border-t border-gray-800 pt-2 bg-gray-950">
                     <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 flex items-center gap-2">
-                            <span className="text-[10px] text-gray-500 font-bold uppercase">Discount</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-gray-500 font-black uppercase">Discount</span>
                             <input 
                                 type="number" 
                                 value={discount || ''} 
                                 onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                                placeholder="₹ 0" 
-                                className="w-20 bg-gray-900 text-white text-[11px] font-bold p-1 rounded border border-gray-800 text-right focus:border-lemon outline-none"
+                                placeholder="0" 
+                                className="w-14 bg-gray-900 text-white text-[11px] font-black p-1.5 rounded-lg border border-gray-800 text-right focus:border-lemon outline-none"
                             />
                         </div>
                         <div className="flex flex-col items-end">
-                            <div className="flex gap-4 text-[9px] text-gray-500 font-bold uppercase">
-                                <span>Sub: ₹{subtotal.toFixed(0)}</span>
-                                <span>Tax: ₹{tax.toFixed(0)}</span>
-                            </div>
-                            <div className="text-xl text-lemon font-black tracking-tighter">TOTAL: ₹{total.toFixed(2)}</div>
+                            <div className="text-[20px] text-lemon font-black tracking-tighter leading-none">TOTAL: ₹{total.toFixed(0)}</div>
+                            <div className="text-[9px] text-gray-500 font-black uppercase mt-1">Tax Included (${taxRate}%)</div>
                         </div>
                     </div>
                     <button 
                         onClick={handleSendToKitchen} 
-                        className="w-full bg-lemon text-black font-black py-3 rounded-xl text-xs active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale uppercase"
+                        className="w-full bg-lemon text-black font-black py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl shadow-lemon/10"
                         disabled={currentOrder.length === 0}
                     >
-                        Confirm & Send to Kitchen
+                        Send to Kitchen & Save
                     </button>
                 </div>
             </div>

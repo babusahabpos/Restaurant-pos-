@@ -53,7 +53,6 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
             sourceInfo: `${platform} #${orderId}`
         };
         onPrintKOT(newOrderData);
-        alert('Online order logged!');
         setCurrentOrder([]);
         setOrderId('');
     };
@@ -61,23 +60,23 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
     const total = currentOrder.reduce((acc, item) => acc + (Number(item.onlinePrice) || 0) * item.quantity, 0);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-100px)] overflow-hidden bg-black -m-4 md:-m-8 touch-none">
+        <div className="flex flex-col h-full bg-black">
             {/* TOP HALF: MENU */}
-            <div className="h-[45%] flex flex-col p-3 border-b border-gray-800 overflow-hidden">
-                <div className="flex gap-2 mb-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+            <div className="h-[45%] flex flex-col p-2 border-b border-gray-800 overflow-hidden">
+                <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center h-10">
                     {categories.map(category => (
                         <button 
                             key={category} 
                             onClick={() => setActiveCategory(category)}
-                            className={`px-4 py-2 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center min-w-[60px] h-8 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/20' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}
+                            className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}
                         >
                             {category}
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 overflow-y-auto pr-1 flex-1">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-1">
                     {filteredMenuItems.map(item => (
-                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-lg text-center cursor-pointer border border-gray-800 active:bg-gray-800 active:scale-95 transition-all flex flex-col justify-center min-h-[65px] select-none">
+                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-xl text-center cursor-pointer border border-gray-800 active:bg-gray-700 active:scale-95 transition-all flex flex-col justify-center min-h-[60px] select-none shadow-lg shadow-black">
                            <p className="text-[9px] text-white font-bold leading-tight line-clamp-2 mb-1 uppercase tracking-tighter">{item.name}</p>
                            <p className="text-lemon text-[10px] font-black">₹{item.onlinePrice}</p>
                         </div>
@@ -86,54 +85,59 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
             </div>
 
             {/* BOTTOM HALF: LOGGING */}
-            <div className="h-[55%] flex flex-col p-3 bg-gray-950 overflow-hidden shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
-                <div className="flex gap-2 mb-3">
+            <div className="h-[55%] flex flex-col p-2 bg-gray-950 overflow-hidden shadow-[0_-8px_16px_rgba(0,0,0,0.5)]">
+                <div className="flex gap-2 mb-3 shrink-0">
                     <select 
                         value={platform}
                         onChange={e => setPlatform(e.target.value as 'Swiggy' | 'Zomato')}
-                        className="flex-1 bg-gray-900 text-white text-[11px] font-black p-2 rounded border border-gray-800 outline-none focus:border-lemon uppercase"
+                        className="flex-1 bg-gray-900 text-white text-[11px] font-black p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase"
                     >
                         <option>Swiggy</option>
                         <option>Zomato</option>
                     </select>
                     <input 
                         type="text" 
-                        placeholder="ORDER ID / TRANSACTION #" 
+                        placeholder="ORDER ID / TRAN #" 
                         value={orderId}
                         onChange={e => setOrderId(e.target.value)}
-                        className="flex-1 bg-gray-900 text-white text-[11px] font-bold p-2 rounded border border-gray-800 outline-none focus:border-lemon" 
+                        className="flex-1 bg-gray-900 text-white text-[11px] font-bold p-2.5 rounded-xl border border-gray-800 outline-none focus:border-lemon uppercase" 
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto mb-2 space-y-1 bg-black/20 rounded p-1">
-                    {currentOrder.length === 0 && <p className="text-gray-700 text-center py-10 text-[10px] font-bold uppercase tracking-widest">Select items to log</p>}
+                <div className="flex-1 overflow-y-auto mb-2 space-y-1 bg-black/40 rounded-2xl p-1 no-scrollbar">
+                    {currentOrder.length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-700 gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-20"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Select Online Items Above</span>
+                        </div>
+                    )}
                     {currentOrder.map(item => (
-                        <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded border border-white/5">
+                        <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
                             <div className="w-[45%]">
                                 <p className="text-[10px] text-white font-bold truncate uppercase">{item.name}</p>
-                                <p className="text-[9px] text-gray-500">₹{item.onlinePrice} / unit</p>
+                                <p className="text-[9px] text-gray-500 font-mono">₹{item.onlinePrice}</p>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
-                                <span className="text-[11px] text-white font-bold min-w-[20px] text-center">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
+                            <div className="flex items-center gap-1.5">
+                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">-</button>
+                                <span className="text-[11px] text-white font-black min-w-[15px] text-center">{item.quantity}</span>
+                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black transition-colors">+</button>
                             </div>
-                            <p className="text-[11px] text-lemon font-black w-[25%] text-right">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
+                            <p className="text-[11px] text-lemon font-black w-[20%] text-right tracking-tighter">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
                         </div>
                     ))}
                 </div>
 
-                <div className="border-t border-gray-800 pt-2 flex items-center justify-between">
+                <div className="shrink-0 border-t border-gray-800 pt-3 flex items-center justify-between bg-gray-950">
                     <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-500 uppercase font-black tracking-tight">Logged Total</span>
-                        <span className="text-2xl text-lemon font-black tracking-tighter">₹{total.toFixed(2)}</span>
+                        <span className="text-[9px] text-gray-500 uppercase font-black tracking-tight">Marketplace Total</span>
+                        <span className="text-2xl text-lemon font-black tracking-tighter leading-none">₹{total.toFixed(0)}</span>
                     </div>
                     <button 
                         onClick={handleSendToKitchen} 
-                        className="bg-lemon text-black font-black px-6 py-4 rounded-xl text-xs active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale uppercase"
+                        className="bg-lemon text-black font-black px-10 py-4 rounded-2xl text-[11px] uppercase tracking-widest active:scale-[0.97] transition-all disabled:opacity-20 disabled:grayscale shadow-xl shadow-lemon/10"
                         disabled={currentOrder.length === 0 || !orderId.trim()}
                     >
-                        Save Online Log
+                        Confirm Online Log
                     </button>
                 </div>
             </div>
