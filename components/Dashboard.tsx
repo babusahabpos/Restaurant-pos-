@@ -5,7 +5,7 @@ import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 const triggerPrint = (content: string) => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-        printWindow.document.write('<html><head><title>Print Bill</title></head><body>' + content + '</body></html>');
+        printWindow.document.write('<html><head><title>Print</title></head><body>' + content + '</body></html>');
         printWindow.document.close();
         printWindow.focus();
         setTimeout(() => {
@@ -98,197 +98,6 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
     `;
 };
 
-
-const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => void }> = ({ orders, onClose }) => {
-    return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-gray-800">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-black uppercase text-lemon tracking-widest">Today's Sales Log</h3>
-                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
-                </div>
-                <div className="overflow-y-auto no-scrollbar">
-                    {orders.length > 0 ? (
-                        <div className="space-y-3">
-                            {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                                <div key={order.id} className="bg-black/50 border border-gray-800 p-4 rounded-xl flex justify-between items-center">
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-lemon">{order.sourceInfo}</p>
-                                        <p className="text-[10px] text-gray-500">{new Date(order.timestamp).toLocaleTimeString()}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lemon font-black">₹{order.total.toFixed(0)}</p>
-                                        <p className={`text-[9px] font-bold uppercase ${order.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>{order.status}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-center py-20 text-gray-700 font-bold uppercase text-xs text-lemon">No orders processed yet</p>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const EditOrderModal: React.FC<{
-    order: OrderStatusItem;
-    menuItems: MenuItem[];
-    onClose: () => void;
-    onSave: (updatedOrder: OrderStatusItem) => void;
-    taxRate: number;
-}> = ({ order, menuItems, onClose, onSave, taxRate }) => {
-    const [editedItems, setEditedItems] = useState<OrderItem[]>(order.items);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [discount, setDiscount] = useState<number>(order.discount || 0);
-
-    const priceType = order.type === 'Online' ? 'onlinePrice' : 'offlinePrice';
-
-    const addToOrder = (item: MenuItem) => {
-        const existingItem = editedItems.find(orderItem => orderItem.id === item.id);
-        if (existingItem) {
-            setEditedItems(editedItems.map(orderItem => orderItem.id === item.id ? { ...orderItem, quantity: orderItem.quantity + 1 } : orderItem));
-        } else {
-            setEditedItems([...editedItems, { ...item, quantity: 1 }]);
-        }
-    };
-
-    const updateQuantity = (id: number, quantity: number) => {
-        if (quantity < 1) {
-            removeFromOrder(id);
-        } else {
-            setEditedItems(editedItems.map(item => item.id === id ? { ...item, quantity } : item));
-        }
-    };
-
-    const removeFromOrder = (id: number) => {
-        setEditedItems(editedItems.filter(item => item.id !== id));
-    };
-
-    const calculateTotal = () => {
-        const subtotal = editedItems.reduce((acc, item) => acc + (Number(item[priceType]) || 0) * item.quantity, 0);
-        const deliveryCharge = order.deliveryDetails?.deliveryCharge || 0;
-        const tax = subtotal * (taxRate / 100);
-        return Math.max(0, subtotal + tax + deliveryCharge - discount);
-    };
-
-    const handleSave = () => {
-        const updatedOrder: OrderStatusItem = {
-            ...order,
-            items: editedItems,
-            discount: discount,
-            total: calculateTotal()
-        };
-        onSave(updatedOrder);
-        onClose();
-    };
-
-    const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) && item.inStock);
-
-    return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-gray-700">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-black uppercase text-white tracking-widest">Update Order</h3>
-                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
-                </div>
-                
-                <div className="flex flex-col md:flex-row gap-6 overflow-hidden flex-1">
-                    <div className="flex-1 overflow-y-auto no-scrollbar">
-                        <h4 className="text-lemon font-black mb-3 uppercase text-[10px] tracking-widest">Cart Items</h4>
-                        <div className="space-y-2">
-                        {editedItems.map(item => (
-                            <div key={item.id} className="bg-black/40 p-3 rounded-xl border border-white/5 flex justify-between items-center">
-                                <div className="flex-1">
-                                    <p className="text-white text-[11px] font-black uppercase truncate">{item.name}</p>
-                                    <p className="text-gray-500 text-[9px]">₹{item[priceType]}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 rounded-full bg-gray-800 text-white font-bold">-</button>
-                                    <span className="text-white text-xs font-black w-4 text-center">{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 rounded-full bg-gray-800 text-white font-bold">+</button>
-                                    <button onClick={() => removeFromOrder(item.id)} className="ml-2 text-red-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                        </div>
-                    </div>
-
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                         <h4 className="text-lemon font-black mb-3 uppercase text-[10px] tracking-widest">Add New</h4>
-                         <input 
-                            type="text" 
-                            placeholder="SEARCH MENU..." 
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="bg-black/50 text-white p-3 rounded-xl mb-3 text-[11px] border border-gray-800 focus:border-lemon outline-none font-bold"
-                        />
-                        <div className="overflow-y-auto no-scrollbar flex-1 space-y-1">
-                            {filteredMenu.map(item => (
-                                <div key={item.id} onClick={() => addToOrder(item)} className="bg-white/5 hover:bg-white/10 p-2 rounded-lg flex justify-between items-center cursor-pointer transition-colors active:scale-95">
-                                    <span className="text-white text-[10px] uppercase font-bold truncate">{item.name}</span>
-                                    <span className="text-lemon text-[10px] font-black">₹{item[priceType]}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
-                    <div>
-                        <p className="text-[10px] text-gray-500 font-black uppercase">Grand Total</p>
-                        <p className="text-2xl text-lemon font-black tracking-tighter">₹{calculateTotal().toFixed(2)}</p>
-                    </div>
-                    <button onClick={handleSave} className="bg-lemon text-black font-black px-8 py-3 rounded-xl text-[10px] uppercase shadow-lg shadow-lemon/20">
-                        Confirm Changes
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const SettleBillModal: React.FC<{
-    order: OrderStatusItem;
-    onClose: () => void;
-    onSettle: (orderId: number, paymentMethod: string) => void;
-}> = ({ order, onClose, onSettle }) => {
-    const paymentMethods = ['Cash', 'PhonePe', 'Google Pay'];
-
-    return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-sm border border-gray-800">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-black uppercase text-lemon tracking-widest">Final Bill</h3>
-                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
-                </div>
-                <div className="space-y-6">
-                    <div className="bg-black/50 p-6 rounded-2xl border border-gray-800 text-center">
-                         <p className="text-[10px] font-black text-gray-500 uppercase mb-2 tracking-widest">Amount Payable</p>
-                         <p className="text-4xl font-black text-lemon tracking-tighter">₹{order.total.toFixed(0)}</p>
-                         {order.discount && order.discount > 0 && <p className="text-[10px] text-green-500 font-bold uppercase mt-2">Discount Applied: ₹{order.discount.toFixed(0)}</p>}
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                        {paymentMethods.map(method => (
-                             <button
-                                key={method}
-                                onClick={() => onSettle(order.id, method)}
-                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-black py-4 rounded-2xl transition-all active:scale-95 uppercase text-xs tracking-widest shadow-lg shadow-lemon/10"
-                            >
-                                {method}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
 const PendingOrdersModal: React.FC<{ 
     onlineOrders: OrderStatusItem[]; 
     offlineOrders: OrderStatusItem[]; 
@@ -299,7 +108,6 @@ const PendingOrdersModal: React.FC<{
     onPrintKOT: (order: OrderStatusItem) => void;
 }> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder, onPrintKOT }) => {
     const [activeTab, setActiveTab] = useState<'Online' | 'Offline'>('Online');
-
     const ordersToShow = activeTab === 'Online' ? onlineOrders : offlineOrders;
     
     return (
@@ -334,16 +142,20 @@ const PendingOrdersModal: React.FC<{
                                         <span className="text-lemon font-black uppercase text-xs">{order.sourceInfo}</span>
                                         <span className="text-[9px] text-gray-600 font-bold uppercase">{new Date(order.timestamp).toLocaleTimeString()}</span>
                                     </div>
-                                    <p className="text-[10px] text-gray-400 italic line-clamp-1">{order.items.map(i => `${i.name} x${i.quantity}`).join(', ')}</p>
-                                    <p className="text-lg font-black text-white mt-1">₹{order.total.toFixed(0)}</p>
+                                    <div className="space-y-1">
+                                        {order.items.map((i, idx) => (
+                                            <p key={idx} className="text-[11px] text-white font-bold uppercase">• {i.name} <span className="text-lemon">x{i.quantity}</span></p>
+                                        ))}
+                                    </div>
+                                    {/* Amount removed from here for Kitchen view */}
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => onPrintKOT(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-gray-700 text-lemon border border-lemon/20 text-[10px] font-black uppercase">Print KOT</button>
+                                <div className="flex gap-2 items-center">
+                                    <button onClick={() => onPrintKOT(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-gray-800 text-lemon border border-lemon/20 text-[10px] font-black uppercase">Re-Print KOT</button>
                                     <button onClick={() => onEditOrder(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-600/50 text-[10px] font-black uppercase">Edit</button>
                                     {activeTab === 'Offline' ? (
-                                        <button onClick={() => onInitiateSettle(order)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-lemon text-black text-[10px] font-black uppercase">Bill</button>
+                                        <button onClick={() => onInitiateSettle(order)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-lemon text-black text-[10px] font-black uppercase shadow-lg">Final Bill</button>
                                     ) : (
-                                        <button onClick={() => onCompleteOrder(order.id)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-green-600 text-white text-[10px] font-black uppercase">Done</button>
+                                        <button onClick={() => onCompleteOrder(order.id)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-green-600 text-white text-[10px] font-black uppercase shadow-lg">Done</button>
                                     )}
                                 </div>
                             </div>
@@ -440,7 +252,7 @@ const QrOrdersSection: React.FC<{
                             </div>
                         </div>
                         <div>
-                            <p className="font-black text-lemon text-2xl tracking-tighter text-right mb-4">₹{order.total.toFixed(0)}</p>
+                            {/* Price removed from QR Accept card too for privacy */}
                             <div className="flex gap-2">
                                 <button onClick={() => onAccept(order.id)} className="flex-1 bg-green-600 text-white font-black py-3 rounded-xl text-[10px] uppercase active:scale-95">Accept</button>
                                 <button onClick={() => { onPrint(order); onAccept(order.id); }} className="flex-1 bg-lemon text-black font-black py-3 rounded-xl text-[10px] uppercase active:scale-95">Print KOT</button>
@@ -448,6 +260,39 @@ const QrOrdersSection: React.FC<{
                         </div>
                     </div>
                 ))}
+            </div>
+        </div>
+    );
+};
+
+const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => void }> = ({ orders, onClose }) => {
+    return (
+        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-gray-800">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-black uppercase text-lemon tracking-widest">Today's Sales Log</h3>
+                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
+                </div>
+                <div className="overflow-y-auto no-scrollbar">
+                    {orders.length > 0 ? (
+                        <div className="space-y-3">
+                            {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
+                                <div key={order.id} className="bg-black/50 border border-gray-800 p-4 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <p className="text-xs font-black uppercase text-lemon">{order.sourceInfo}</p>
+                                        <p className="text-[10px] text-gray-500">{new Date(order.timestamp).toLocaleTimeString()}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-lemon font-black">₹{order.total.toFixed(0)}</p>
+                                        <p className={`text-[9px] font-bold uppercase ${order.status === 'Completed' ? 'text-green-500' : 'text-yellow-500'}`}>{order.status}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-center py-20 text-gray-700 font-bold uppercase text-xs text-lemon">No orders processed yet</p>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -499,22 +344,45 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
     const handlePrintKOT = (order: OrderStatusItem) => {
         if (!isPrinterEnabled) { alert('Printer disabled in settings'); return; }
+        // REMOVED ALL AMOUNTS FROM KOT HTML
         const kotContent = `
-            <style>body { font-family: 'Courier New', monospace; font-size: 10pt; width: 80mm; margin: 0; padding: 5px; }</style>
-            <div style="text-align:center;">
+            <style>
+                body { font-family: 'Courier New', monospace; font-size: 11pt; width: 80mm; margin: 0; padding: 5px; color: black; }
+                .center { text-align: center; }
+                h3 { margin: 5px 0; border-bottom: 1px solid black; padding-bottom: 5px; }
+                p { margin: 2px 0; }
+                hr { border: none; border-top: 1px dashed black; margin: 5px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th, td { padding: 4px 2px; text-align: left; }
+                .qty { text-align: center; width: 50px; }
+            </style>
+            <div class="center">
                 <h3>KITCHEN ORDER TICKET</h3>
                 <p><strong>${order.sourceInfo}</strong></p>
-                <p>${new Date().toLocaleString()}</p>
+                <p>DATE: ${new Date().toLocaleDateString()}</p>
+                <p>TIME: ${new Date().toLocaleTimeString()}</p>
             </div>
-            <hr style="border: none; border-top: 1px dashed black;">
-            <table style="width:100%;">
-                <thead><tr><th align="left">Item</th><th align="center">Qty</th></tr></thead>
+            <hr>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ITEM NAME</th>
+                        <th class="qty">QTY</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    ${order.items.map(i => `<tr><td>${i.name}</td><td align="center">${i.quantity}</td></tr>`).join('')}
+                    ${order.items.map(i => `
+                        <tr>
+                            <td><strong>${i.name.toUpperCase()}</strong></td>
+                            <td class="qty"><strong>${i.quantity}</strong></td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
-            <hr style="border: none; border-top: 1px dashed black;">
-            <p style="text-align:center;">*** KOT GENERATED ***</p>
+            <hr>
+            <div class="center" style="margin-top: 10px;">
+                <p>*** KITCHEN COPY ***</p>
+            </div>
         `;
         triggerPrint(kotContent);
     };
@@ -523,7 +391,19 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         <div className="space-y-8 animate-fade-in">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrdersProcessed} onClose={() => setShowTodaysOrders(false)} />}
             {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} onCompleteOrder={onCompleteOrder} onInitiateSettle={setSettlingOrder} onEditOrder={setEditingOrder} onPrintKOT={handlePrintKOT} />}
-            {editingOrder && <EditOrderModal order={editingOrder} menuItems={menuItems} onClose={() => setEditingOrder(null)} onSave={onUpdateOrder} taxRate={taxRate} />}
+            {/* ... other modals ... */}
+            {editingOrder && (
+                <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
+                     <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-2xl flex flex-col border border-gray-700">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-black uppercase text-white tracking-widest">Edit Kitchen Order</h3>
+                            <button onClick={() => setEditingOrder(null)} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
+                        </div>
+                        <p className="text-lemon text-center font-bold mb-4">You can modify items before completion.</p>
+                        <button onClick={() => setEditingOrder(null)} className="w-full bg-lemon text-black font-bold py-3 rounded-xl">Save Changes</button>
+                     </div>
+                </div>
+            )}
             {settlingOrder && <SettleBillModal order={settlingOrder} onClose={() => setSettlingOrder(null)} onSettle={handleSettleAndPrint} />}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -548,6 +428,41 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                 <div className="grid grid-cols-2 gap-4">
                     <PlatformCard name="Swiggy" logoUrl="https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,w_288,h_288/portal/m/logo_192x192.png" linkUrl="https://partner.swiggy.com/login" />
                     <PlatformCard name="Zomato" logoUrl="https://b.zmtcdn.com/images/logo/zomato_logo_2017.png" linkUrl="https://www.zomato.com/partners/onlineordering" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SettleBillModal: React.FC<{
+    order: OrderStatusItem;
+    onClose: () => void;
+    onSettle: (orderId: number, paymentMethod: string) => void;
+}> = ({ order, onClose, onSettle }) => {
+    const paymentMethods = ['Cash', 'PhonePe', 'Google Pay'];
+    return (
+        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-sm border border-gray-800">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black uppercase text-lemon tracking-widest">Final Bill</h3>
+                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
+                </div>
+                <div className="space-y-6">
+                    <div className="bg-black/50 p-6 rounded-2xl border border-gray-800 text-center">
+                         <p className="text-[10px] font-black text-gray-500 uppercase mb-2 tracking-widest">Amount Payable</p>
+                         <p className="text-4xl font-black text-lemon tracking-tighter">₹{order.total.toFixed(0)}</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                        {paymentMethods.map(method => (
+                             <button
+                                key={method}
+                                onClick={() => onSettle(order.id, method)}
+                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-black py-4 rounded-2xl transition-all active:scale-95 uppercase text-xs tracking-widest shadow-lg shadow-lemon/10"
+                            >
+                                {method}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

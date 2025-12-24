@@ -26,6 +26,49 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage, OrderItem, MenuItem } from './types';
 
+// Helper for pure KOT Printing (No Amounts)
+const triggerKOTPrint = (orderData: any) => {
+    const kotContent = `
+        <style>
+            body { font-family: 'Courier New', monospace; font-size: 11pt; width: 80mm; margin: 0; padding: 5px; color: black; }
+            .center { text-align: center; }
+            h3 { margin: 5px 0; border-bottom: 1px solid black; padding-bottom: 5px; }
+            p { margin: 2px 0; }
+            hr { border: none; border-top: 1px dashed black; margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 4px 2px; text-align: left; }
+            .qty { text-align: center; width: 50px; }
+        </style>
+        <div class="center">
+            <h3>KITCHEN ORDER TICKET</h3>
+            <p><strong>${orderData.sourceInfo}</strong></p>
+            <p>DATE: ${new Date().toLocaleDateString()}</p>
+            <p>TIME: ${new Date().toLocaleTimeString()}</p>
+        </div>
+        <hr>
+        <table>
+            <thead><tr><th>ITEM NAME</th><th class="qty">QTY</th></tr></thead>
+            <tbody>
+                ${orderData.items.map((i: any) => `
+                    <tr>
+                        <td><strong>${i.name.toUpperCase()}</strong></td>
+                        <td class="qty"><strong>${i.quantity}</strong></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <hr>
+        <div class="center" style="margin-top: 10px;"><p>*** KITCHEN COPY ***</p></div>
+    `;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write('<html><head><title>KOT</title></head><body>' + kotContent + '</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+    }
+};
+
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
@@ -220,6 +263,12 @@ function App() {
             timestamp: new Date()
         };
         setOrders(prev => [...prev, newOrder]);
+        
+        // Auto-print KOT if enabled in settings (No prices in triggerKOTPrint)
+        if (loggedInUser.isPrinterEnabled) {
+            triggerKOTPrint(newOrderData);
+        }
+
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if(audio) audio.play();
     };
