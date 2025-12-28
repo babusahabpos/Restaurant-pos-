@@ -17,14 +17,16 @@ import HelpAndSupport from './components/HelpAndSupport';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
+import StaffRequirements from './components/StaffRequirements';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
+import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage, OrderItem, MenuItem } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, MenuItem } from './types';
 
 // Helper for pure KOT Printing (No Amounts)
 const triggerKOTPrint = (orderData: any) => {
@@ -77,9 +79,7 @@ function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
     const [authState, setAuthState] = useState<AuthState>(() => {
-        if (window.location.hash.startsWith('#customer-order')) {
-            return 'customer';
-        }
+        if (window.location.hash.startsWith('#customer-order')) return 'customer';
         return 'login';
     });
 
@@ -94,41 +94,28 @@ function App() {
         try {
             const storedUsers = localStorage.getItem('babuSahabPos_users');
             if (storedUsers) {
-                const parsedUsers = JSON.parse(storedUsers);
-                return parsedUsers.map((u: any) => ({
+                return JSON.parse(storedUsers).map((u: any) => ({
                     ...u,
                     taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5,
                     deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30,
                     isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true,
                     isPrinterEnabled: u.isPrinterEnabled !== undefined ? u.isPrinterEnabled : true,
-                    fssai: u.fssai !== undefined ? u.fssai : '',
-                    referralCode: u.referralCode ? u.referralCode : `refer${u.restaurantName.replace(/\s+/g, '').toLowerCase()}`,
-                    socialMedia: u.socialMedia || {},
-                    menu: (Array.isArray(u.menu) && u.menu.length > 0) 
-                        ? u.menu.map((m: any) => ({
-                            ...m,
-                            offlinePrice: Number(m.offlinePrice) || 0,
-                            onlinePrice: Number(m.onlinePrice) || 0,
-                            inStock: m.inStock !== undefined ? m.inStock : true,
-                        })) 
-                        : MOCK_MENU_ITEMS
+                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu : MOCK_MENU_ITEMS
                 }));
             }
-        } catch (error) {
-            console.error("Error loading users", error);
-        }
+        } catch (error) {}
         return JSON.parse(JSON.stringify(MOCK_USERS));
     });
 
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
+    // Staff Hub State
+    const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]'));
+
     useEffect(() => {
-        const handleHashChange = () => {
-            if (window.location.hash.startsWith('#customer-order')) {
-                setAuthState('customer');
-            }
-        };
+        const handleHashChange = () => { if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
@@ -141,10 +128,9 @@ function App() {
                     incomingOrder.timestamp = new Date(incomingOrder.timestamp);
                     setOrders(prevOrders => [...prevOrders, incomingOrder]);
                     const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                    if (audio) audio.play().catch(e => console.error("Audio notification failed:", e));
+                    if (audio) audio.play().catch(() => {});
                     localStorage.removeItem(event.key);
                 } catch (e) {
-                    console.error("Error processing incoming order", e);
                     if (event.key) localStorage.removeItem(event.key);
                 }
             }
@@ -157,160 +143,66 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
     
     useEffect(() => {
-        if (!loggedInUser) {
-            setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-            return;
-        };
-
+        if (!loggedInUser) { setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 }); return; };
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        const todaysUserOrders = orders.filter(o => {
-            const orderDate = new Date(o.timestamp);
-            return (
-                o.restaurantId === loggedInUser.id &&
-                orderDate >= startOfDay
-            );
-        });
-
+        const todaysUserOrders = orders.filter(o => o.restaurantId === loggedInUser.id && new Date(o.timestamp) >= startOfDay);
         const newDashboardData = todaysUserOrders.reduce((acc, order) => {
             if (order.status === 'Completed') {
-                if (order.type === 'Online') {
-                    acc.onlineSales += order.total;
-                    acc.onlineOrders += 1;
-                } else {
-                    acc.offlineSales += order.total;
-                    acc.offlineOrders += 1;
-                }
+                if (order.type === 'Online') { acc.onlineSales += order.total; acc.onlineOrders += 1; } 
+                else { acc.offlineSales += order.total; acc.offlineOrders += 1; }
             }
             return acc;
         }, { onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-
         setDashboardData(newDashboardData);
     }, [orders, loggedInUser]);
 
-    const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
-        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') {
-            setAuthState('adminLoggedIn');
-            setLoggedInUser(null);
-            return 'admin';
-        }
+    const handleLogin = (email: string, pass: string): any => {
+        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
         if (user) {
-            switch (user.status) {
-                case UserStatus.Approved:
-                    setAuthState('loggedIn');
-                    setLoggedInUser(user);
-                    return 'ok';
-                case UserStatus.Pending: return 'pending';
-                case UserStatus.Blocked: return 'blocked';
-                case UserStatus.Rejected: return 'blocked';
-                case UserStatus.Deleted: return 'deleted';
-            }
+            if (user.status === UserStatus.Approved) { setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; }
+            return user.status.toLowerCase();
         }
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'isPrinterEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => {
+    const handleRegister = (newUser: any, referralCode?: string) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        const generatedReferralCode = `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
-        let updatedUsers = [...registeredUsers];
-        let referrerCodeFound = '';
-        if (referralCode) {
-            const referrerIndex = updatedUsers.findIndex(u => u.referralCode === referralCode);
-            if (referrerIndex !== -1) {
-                referrerCodeFound = referralCode;
-                const referrer = updatedUsers[referrerIndex];
-                const currentEndDate = new Date(referrer.subscriptionEndDate);
-                const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                updatedUsers[referrerIndex] = { ...referrer, subscriptionEndDate: newEndDate };
-                setAlerts(prev => [...prev, { id: Date.now() + 1, userId: referrer.id, message: 'Congrats! You earned 1 Month Free Subscription for referring a new user!' }]);
-            }
-        }
-        const user: RegisteredUser = {
-            ...newUser,
-            id: Date.now(),
-            status: UserStatus.Pending,
-            lastLogin: 'Never',
-            subscriptionEndDate: getFutureDate(30),
-            address: 'Please update in settings',
-            taxRate: 5,
-            deliveryCharge: 30,
-            isDeliveryEnabled: true,
-            isPrinterEnabled: true,
-            fssai: '',
-            menu: MOCK_MENU_ITEMS,
-            referralCode: generatedReferralCode,
-            referredBy: referrerCodeFound,
-            socialMedia: { autoPostEnabled: false },
-        };
-        updatedUsers.push(user);
-        setRegisteredUsers(updatedUsers);
+        const user: RegisteredUser = { ...newUser, id: Date.now(), status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: getFutureDate(30), address: 'Update in settings', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, menu: MOCK_MENU_ITEMS, referralCode: `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`, socialMedia: { autoPostEnabled: false } };
+        setRegisteredUsers(prev => [...prev, user]);
     };
 
-    const handleLogout = () => {
-        setAuthState('login');
-        setLoggedInUser(null);
-    };
+    const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
 
-    const handleKOT = (newOrderData: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'>) => {
+    const handleKOT = (newOrderData: any) => {
         if (!loggedInUser) return;
-        const newOrder: OrderStatusItem = {
-            ...newOrderData,
-            id: Date.now(),
-            restaurantId: loggedInUser.id,
-            status: 'Preparation',
-            timestamp: new Date()
-        };
+        const newOrder: OrderStatusItem = { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() };
         setOrders(prev => [...prev, newOrder]);
-        
-        if (loggedInUser.isPrinterEnabled) {
-            triggerKOTPrint(newOrderData);
-        }
-
+        if (loggedInUser.isPrinterEnabled) triggerKOTPrint(newOrderData);
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if(audio) audio.play();
     };
 
-    const handleCompleteOrder = (orderId: number) => {
-        setOrders(prevOrders => prevOrders.map(order => 
-            order.id === orderId ? { ...order, status: 'Completed' } : order
-        ));
-    };
-
-    const handleUpdateOrder = (updatedOrder: OrderStatusItem) => {
-        setOrders(prevOrders => prevOrders.map(order => 
-            order.id === updatedOrder.id ? updatedOrder : order
-        ));
-    };
-
-    const handleUpdateMenu = (newMenu: MenuItem[]) => {
+    const handleStaffRequirementSubmit = (req: string, salary: string) => {
         if (!loggedInUser) return;
-        const sanitizedMenu = newMenu.map(item => ({
-            ...item,
-            offlinePrice: Number(item.offlinePrice) || 0,
-            onlinePrice: Number(item.onlinePrice) || 0,
-        }));
-        setRegisteredUsers(prevUsers => prevUsers.map(user => user.id === loggedInUser.id ? { ...user, menu: sanitizedMenu } : user));
-        setLoggedInUser(prev => prev ? { ...prev, menu: sanitizedMenu } : null);
+        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary: salary, timestamp: new Date(), isRead: false };
+        setStaffRequests(prev => [...prev, newReq]);
+        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+        if (audio) audio.play().catch(() => {});
     };
 
-    const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
-        if (!loggedInUser) return;
-        let finalUpdates = { ...updates };
-        if (updates.restaurantName && updates.restaurantName !== loggedInUser.restaurantName) {
-             const newReferralCode = `refer${updates.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
-             finalUpdates.referralCode = newReferralCode;
-        }
-        setRegisteredUsers(prev => prev.map(user => user.id === loggedInUser.id ? { ...user, ...finalUpdates } : user));
-        setLoggedInUser(prev => prev ? { ...prev, ...finalUpdates } : null);
-        alert('Settings updated successfully!');
+    const handleAddStaffPost = (post: any) => {
+        const newPost: StaffJobPost = { ...post, id: Date.now(), timestamp: new Date() };
+        setJobPosts(prev => [...prev, newPost]);
     };
 
-    const handleDismissAlert = (alertId: number | string) => {
-        setAlerts(prev => prev.filter(a => a.id !== alertId));
+    const handleTicketReply = (ticketId: number, message: string) => {
+        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, messages: [...t.messages, { sender: 'admin', text: message, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t));
     };
 
     if (authState === 'customer') return <CustomerOrderPage />;
@@ -319,12 +211,19 @@ function App() {
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={() => {}} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
-            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} />,
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
+            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
+            [AdminPage.StaffRequirements]: <AdminStaffRequirements 
+                requests={staffRequests} 
+                jobPosts={jobPosts} 
+                onAddPost={handleAddStaffPost} 
+                onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))}
+                onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))}
+            />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
-        return <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffRequests.filter(r => !r.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
@@ -332,34 +231,23 @@ function App() {
         const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
 
         const pages = {
-            dashboard: <Dashboard 
-                data={dashboardData} 
-                orders={userOrders} 
-                onCompleteOrder={handleCompleteOrder} 
-                taxRate={loggedInUser.taxRate || 5} 
-                restaurantName={loggedInUser.restaurantName}
-                address={loggedInUser.address}
-                fssai={loggedInUser.fssai || ''}
-                menuItems={safeMenu}
-                onUpdateOrder={handleUpdateOrder}
-                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
-                onNavigateToQrMenu={() => setCurrentPage('qrMenu')}
-            />,
+            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? {...o, status: 'Completed'} : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={safeMenu} onUpdateOrder={(upd) => setOrders(prev => prev.map(o => o.id === upd.id ? upd : o))} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
             billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} />,
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
-            menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
-            qrMenu: <QrMenu menu={safeMenu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
+            menu: <Menu menu={safeMenu} setMenu={(m) => { setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u)); setLoggedInUser(prev => prev ? {...prev, menu: m} : null); }} />,
+            qrMenu: <QrMenu menu={safeMenu} setMenu={() => {}} loggedInUser={loggedInUser} />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={handleStaffRequirementSubmit} />,
             inventory: <Inventory />,
             staff: <Staff />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
             refer: <Referral user={loggedInUser} />,
-            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} onLogout={handleLogout} />,
+            settings: <Settings user={loggedInUser} onSave={(upd) => { setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, ...upd} : u)); setLoggedInUser(prev => prev ? {...prev, ...upd} : null); }} onLogout={handleLogout} />,
             subscription: <Subscription />,
-            help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
+            help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(sub, text) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, subject: sub, messages: [{ sender: 'user', text, timestamp: new Date() }], status: 'Open', lastUpdate: new Date() }])} />,
         };
 
-        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={handleDismissAlert} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
+        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
     
     return <div>Something went wrong. Please refresh.</div>;

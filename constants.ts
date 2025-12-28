@@ -7,11 +7,12 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
+    { name: 'staffRequirements', icon: 'staff' }, // Added Staff Hub
     { name: 'inventory', icon: 'inventory' },
     { name: 'staff', icon: 'staff' },
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 
-    { name: 'refer', icon: 'refer' }, // Added Refer
+    { name: 'refer', icon: 'refer' }, 
     { name: 'subscription', icon: 'subscription' },
     { name: 'help', icon: 'help' },
     { name: 'settings', icon: 'settings' },
@@ -65,50 +66,6 @@ export const MOCK_USERS: RegisteredUser[] = [
         subscriptionEndDate: getFutureDate(30),
         referralCode: 'referbabusahab',
         socialMedia: { autoPostEnabled: true, instagram: '@babusahab', facebook: 'BaBu SAHAB Official' }
-    },
-    { 
-        id: 2, 
-        name: 'Priya Singh', 
-        email: 'priya@pizzapalace.com', 
-        phone: '9876543211', 
-        password: 'password', 
-        restaurantName: 'Pizza Palace', 
-        address: '456 Pizza Avenue, Slice Town, 400002',
-        taxRate: 5,
-        deliveryCharge: 30,
-        isDeliveryEnabled: true,
-        isPrinterEnabled: true,
-        fssai: '',
-        menu: [
-            { id: 101, name: 'Farmhouse Pizza', category: 'Pizza', offlinePrice: 400, onlinePrice: 440, inStock: true },
-            { id: 102, name: 'Garlic Bread', category: 'Sides', offlinePrice: 150, onlinePrice: 165, inStock: true },
-        ],
-        status: UserStatus.Pending, 
-        lastLogin: 'Never', 
-        subscriptionEndDate: getFutureDate(5),
-        referralCode: 'referpizzapalace'
-    },
-    { 
-        id: 3, 
-        name: 'Rajesh Gupta', 
-        email: 'rajesh@chaipoint.com', 
-        phone: '9876543212', 
-        password: 'password', 
-        restaurantName: 'Chai Point',
-        address: '789 Tea Lane, Brew City, 400003',
-        taxRate: 5,
-        deliveryCharge: 0,
-        isDeliveryEnabled: false,
-        isPrinterEnabled: false,
-        fssai: '98765432109876',
-        menu: [
-             { id: 201, name: 'Masala Chai', category: 'Beverages', offlinePrice: 50, onlinePrice: 55, inStock: true },
-             { id: 202, name: 'Samosa', category: 'Snacks', offlinePrice: 20, onlinePrice: 25, inStock: true },
-        ],
-        status: UserStatus.Blocked, 
-        lastLogin: '1 month ago', 
-        subscriptionEndDate: getPastDate(10),
-        referralCode: 'referchaipoint'
     },
 ];
 

@@ -13,7 +13,8 @@ export type Page =
     'qrMenu' |
     'settings' |
     'social' |
-    'refer'; // Added refer page
+    'staffRequirements' |
+    'refer'; 
 
 export interface MenuItem {
     id: number;
@@ -22,7 +23,7 @@ export interface MenuItem {
     offlinePrice: number;
     onlinePrice: number;
     inStock: boolean;
-    image?: string; // Base64 string for the image
+    image?: string; 
 }
 
 export interface OrderItem extends MenuItem {
@@ -33,7 +34,6 @@ export interface OrderStatusItem {
     id: number;
     restaurantId: number;
     type: 'Online' | 'Offline';
-    // Added 'Placed' for new QR orders before they are accepted
     status: 'Placed' | 'Preparation' | 'Completed';
     items: OrderItem[];
     total: number;
@@ -83,11 +83,34 @@ export interface StaffLogEntry {
     timestamp: Date;
 }
 
+// New Interface for Staff Post by Admin
+export interface StaffJobPost {
+    id: number;
+    staffName: string;
+    category: string;
+    phone: string;
+    location: string;
+    cvDetails: string;
+    timestamp: Date;
+}
+
+// New Interface for Requirement Request by User
+export interface StaffRequirementRequest {
+    id: number;
+    userId: number;
+    restaurantName: string;
+    requirement: string;
+    salary: string;
+    timestamp: Date;
+    isRead: boolean;
+}
+
 export enum AdminPage {
     Dashboard = 'Admin Dashboard',
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
+    StaffRequirements = 'Staff Management',
 }
 
 export enum UserStatus {
@@ -109,16 +132,15 @@ export interface RegisteredUser {
     taxRate: number;
     deliveryCharge: number;
     isDeliveryEnabled: boolean;
-    isPrinterEnabled?: boolean; // New field
+    isPrinterEnabled?: boolean;
     fssai?: string;
     menu: MenuItem[];
     status: UserStatus;
     lastLogin: string;
-    subscriptionEndDate: string; // ISO Date String
+    subscriptionEndDate: string; 
     
-    // New Fields
     referralCode?: string;
-    referredBy?: string; // Code of the person who referred them
+    referredBy?: string; 
     socialMedia?: {
         instagram?: string;
         facebook?: string;
@@ -130,7 +152,7 @@ export interface TicketMessage {
     sender: 'user' | 'admin';
     text: string;
     timestamp: Date;
-    attachment?: string; // Base64 string for image/pdf
+    attachment?: string; 
     attachmentType?: 'image' | 'pdf';
 }
 

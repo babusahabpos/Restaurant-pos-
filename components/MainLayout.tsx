@@ -28,6 +28,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     qrCode: Icons.QrCodeIcon,
     social: Icons.SocialIcon,
     refer: Icons.ReferIcon,
+    staffRequirements: Icons.StaffIcon,
 };
 
 const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
@@ -39,7 +40,6 @@ const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string)
         </button>
     </div>
 );
-
 
 const Sidebar: React.FC<{
     currentPage: Page;
@@ -55,7 +55,7 @@ const Sidebar: React.FC<{
 
                 <nav className="space-y-1 overflow-y-auto max-h-[80vh] no-scrollbar">
                     {NAV_ITEMS.map((item) => {
-                        const Icon = iconMap[item.icon];
+                        const Icon = iconMap[item.icon] || Icons.DashboardIcon;
                         return (
                             <a
                                 key={item.name}
@@ -64,14 +64,20 @@ const Sidebar: React.FC<{
                                     e.preventDefault();
                                     setCurrentPage(item.name);
                                 }}
-                                className={`flex items-center space-x-2 py-2.5 px-4 rounded transition duration-200 ${
+                                className={`flex items-center justify-between py-2.5 px-4 rounded transition duration-200 ${
                                     currentPage === item.name
                                         ? 'bg-lemon text-black font-bold'
                                         : 'hover:bg-gray-800'
                                 }`}
                             >
-                                {Icon && <Icon className="w-6 h-6" />}
-                                <span className="capitalize font-semibold">{item.name === 'qrMenu' ? 'QR Menu' : item.name === 'refer' ? 'Refer & Earn' : item.name}</span>
+                                <div className="flex items-center space-x-2">
+                                    <Icon className="w-6 h-6" />
+                                    <span className="capitalize font-semibold">
+                                        {item.name === 'qrMenu' ? 'QR Menu' : 
+                                         item.name === 'refer' ? 'Refer & Earn' : 
+                                         item.name === 'staffRequirements' ? 'Staff Hub' : item.name}
+                                    </span>
+                                </div>
                             </a>
                         );
                     })}
@@ -124,7 +130,6 @@ const BottomNavBar: React.FC<{
     );
 };
 
-
 const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurrentPage, handleLogout, alerts, onDismissAlert, loggedInUser }) => {
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -137,7 +142,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
         <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
             {alerts.map(alert => <AlertPopup key={alert.id} alert={alert} onDismiss={onDismissAlert} />)}
 
-            {/* Sidebar Desktop */}
             <div className="hidden md:block h-full">
                 <Sidebar 
                     currentPage={currentPage} 
@@ -146,7 +150,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                 />
             </div>
 
-            {/* Sidebar Mobile Overlay */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}>
                     <div className="w-64 h-full" onClick={e => e.stopPropagation()}>
@@ -160,13 +163,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
             )}
 
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
-                {/* Unified Header */}
                 <header className="h-14 flex items-center justify-between px-4 border-b border-gray-800 bg-black z-10 shrink-0">
                     <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <h1 className="text-sm font-black uppercase tracking-widest text-lemon">
-                        {currentPage === 'qrMenu' ? 'QR Menu' : currentPage}
+                        {currentPage === 'qrMenu' ? 'QR Menu' : 
+                         currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
                     </h1>
                     <div className="flex items-center gap-3">
                          <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-[10px] font-bold">
