@@ -14,13 +14,7 @@ interface AdminStaffRequirementsProps {
 
 const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ requests, applications, jobPosts, onAddPost, onDeletePost, onMarkRead, onMarkAppRead }) => {
     const [view, setView] = useState<'requests' | 'applications' | 'create'>('requests');
-    const [formData, setFormData] = useState({
-        staffName: '',
-        category: '',
-        phone: '',
-        location: '',
-        cvDetails: ''
-    });
+    const [formData, setFormData] = useState({ staffName: '', category: '', phone: '', location: '', cvDetails: '' });
 
     const staffApplyUrl = `${window.location.origin}${window.location.pathname}#staff-apply`;
 
@@ -36,15 +30,12 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
         setView('requests');
     };
 
-    const unreadApps = applications.filter(a => !a.isRead).length;
-    const unreadReqs = requests.filter(r => !r.isRead).length;
-
     return (
-        <div className="space-y-6">
-            <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="space-y-6 h-full flex flex-col">
+            <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
                 <div>
-                    <h3 className="text-white font-black text-xs uppercase tracking-widest">Public Application Link</h3>
-                    <p className="text-[10px] text-gray-500 font-bold">Share this link with staff to let them upload their CV</p>
+                    <h3 className="text-white font-black text-xs uppercase tracking-widest">Staff Link</h3>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase">Share with workers for registration</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <input readOnly value={staffApplyUrl} className="bg-black text-[10px] text-lemon p-2 rounded-lg border border-gray-800 flex-1 sm:w-64" />
@@ -52,34 +43,16 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
                 </div>
             </div>
 
-            <div className="flex gap-2 bg-gray-900 p-2 rounded-xl border border-gray-800 overflow-x-auto no-scrollbar">
-                <button 
-                    onClick={() => setView('requests')}
-                    className={`flex-1 min-w-[140px] py-3 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'requests' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}
-                >
-                    User Requests 
-                    {unreadReqs > 0 && <span className="bg-red-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px]">{unreadReqs}</span>}
-                </button>
-                <button 
-                    onClick={() => setView('applications')}
-                    className={`flex-1 min-w-[140px] py-3 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'applications' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}
-                >
-                    Submissions Hub
-                    {unreadApps > 0 && <span className="bg-red-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] animate-pulse">{unreadApps}</span>}
-                </button>
-                <button 
-                    onClick={() => setView('create')}
-                    className={`flex-1 min-w-[140px] py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'create' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}
-                >
-                    Post Manual
-                </button>
+            <div className="flex gap-2 bg-gray-900 p-2 rounded-xl border border-gray-800 shrink-0">
+                <button onClick={() => setView('requests')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'requests' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}>Inbox</button>
+                <button onClick={() => setView('applications')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'applications' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}>Submissions</button>
+                <button onClick={() => setView('create')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'create' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}>Manual Post</button>
             </div>
 
-            {view === 'requests' && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">User Requirements Inbox</h3>
-                    {requests.length > 0 ? (
-                        requests.slice().reverse().map(req => (
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+                {view === 'requests' && (
+                    <div className="space-y-4">
+                        {requests.length > 0 ? requests.slice().reverse().map(req => (
                             <div key={req.id} className={`p-4 rounded-xl border ${req.isRead ? 'bg-gray-900 border-gray-800' : 'bg-lemon/5 border-lemon/30'}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
@@ -91,104 +64,54 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
                                 <p className="text-white font-bold text-sm mb-1">{req.requirement}</p>
                                 <p className="text-lemon font-black text-xs">Salary: ₹{req.salary}</p>
                             </div>
-                        ))
-                    ) : <p className="text-center py-10 text-gray-600 italic">No incoming requests from restaurant owners</p>}
-                </div>
-            )}
+                        )) : <p className="text-center py-20 text-gray-600 font-black uppercase text-[10px]">No owner requests</p>}
+                    </div>
+                )}
 
-            {view === 'applications' && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Staff Submissions (Auto-Posted)</h3>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase -mt-2">All submissions are automatically live in the User Hub.</p>
-                    {applications.length > 0 ? (
-                        applications.slice().reverse().map(app => (
+                {view === 'applications' && (
+                    <div className="space-y-4">
+                        {applications.length > 0 ? applications.slice().reverse().map(app => (
                             <div key={app.id} className="p-5 rounded-2xl border bg-black border-gray-800">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[9px] font-black text-lemon uppercase tracking-widest">{app.category}</span>
-                                            <span className="text-[8px] font-black bg-green-900/30 text-green-400 px-2 py-0.5 rounded border border-green-800/30 uppercase">Live in Hub</span>
-                                        </div>
+                                        <span className="text-[9px] font-black text-lemon uppercase tracking-widest">{app.category}</span>
                                         <h4 className="text-xl font-black text-white uppercase">{app.staffName}</h4>
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{app.location} • {new Date(app.timestamp).toLocaleString()}</p>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{app.location}</p>
                                     </div>
-                                    <div className="flex gap-2">
-                                         <button onClick={() => onMarkAppRead(app.id)} className="text-gray-500 hover:text-white p-2" title="Archive"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
-                                    </div>
+                                    <button onClick={() => onMarkAppRead(app.id)} className="text-gray-500 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                                 </div>
-                                <p className="text-gray-300 text-sm mb-6 p-3 bg-white/5 rounded-xl border border-white/5">{app.cvDetails}</p>
-                                <div className="flex gap-3">
-                                    <a href={`tel:${app.phone}`} className="flex-1 bg-gray-800 text-white font-black py-3 rounded-xl text-center text-[10px] uppercase">Call Staff</a>
-                                    <button disabled className="flex-[2] bg-gray-900 text-gray-600 font-black py-3 rounded-xl text-[10px] uppercase border border-gray-800 cursor-default">Automatically Published</button>
-                                </div>
+                                <p className="text-gray-300 text-sm mb-6 p-3 bg-white/5 rounded-xl">{app.cvDetails}</p>
+                                <a href={`tel:${app.phone}`} className="block w-full bg-gray-800 text-white font-black py-3 rounded-xl text-center text-[10px] uppercase">Call Staff</a>
                             </div>
-                        ))
-                    ) : <p className="text-center py-10 text-gray-600 italic">No applications received yet</p>}
-                </div>
-            )}
-
-            {view === 'create' && (
-                <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-                    <h3 className="text-lg font-bold text-white uppercase mb-6 tracking-tight text-center">Post Available Staff</h3>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                            <input 
-                                placeholder="Staff Name" 
-                                className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none"
-                                value={formData.staffName}
-                                onChange={e => setFormData({...formData, staffName: e.target.value})}
-                                required
-                            />
-                            <input 
-                                placeholder="Staff Category (Ex. Chef, Waiter)" 
-                                className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none"
-                                value={formData.category}
-                                onChange={e => setFormData({...formData, category: e.target.value})}
-                                required
-                            />
-                            <input 
-                                placeholder="Phone Number" 
-                                className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none"
-                                value={formData.phone}
-                                onChange={e => setFormData({...formData, phone: e.target.value})}
-                                required
-                            />
-                            <input 
-                                placeholder="Location" 
-                                className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none"
-                                value={formData.location}
-                                onChange={e => setFormData({...formData, location: e.target.value})}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            <textarea 
-                                placeholder="CV Summary / Experience Details" 
-                                className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none h-[155px]"
-                                value={formData.cvDetails}
-                                onChange={e => setFormData({...formData, cvDetails: e.target.value})}
-                                required
-                            />
-                            <button type="submit" className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase text-xs">Publish Post</button>
-                        </div>
-                    </form>
-                </div>
-            )}
-            
-            <hr className="border-gray-800 my-8" />
-            <h3 className="text-white font-black uppercase text-xs tracking-widest">Currently Live in Hub ({jobPosts.length})</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {jobPosts.map(post => (
-                    <div key={post.id} className="bg-gray-800 p-4 rounded-xl flex justify-between items-center border border-gray-700">
-                        <div>
-                            <p className="text-white font-bold">{post.staffName}</p>
-                            <p className="text-[10px] text-lemon font-bold uppercase">{post.category}</p>
-                        </div>
-                        <button onClick={() => onDeletePost(post.id)} className="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
+                        )) : <p className="text-center py-20 text-gray-600 font-black uppercase text-[10px]">No staff profiles</p>}
                     </div>
-                ))}
+                )}
+
+                {view === 'create' && (
+                    <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+                        <h3 className="text-lg font-black text-white uppercase mb-6 tracking-tighter">Publish Live Post</h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <input placeholder="Staff Name" className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none font-bold" value={formData.staffName} onChange={e => setFormData({...formData, staffName: e.target.value})} required />
+                            <input placeholder="Staff Category (Ex. Chef, Waiter)" className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none font-bold" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required />
+                            <input placeholder="Phone Number" className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none font-bold" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
+                            <input placeholder="Location" className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none font-bold" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+                            <textarea placeholder="CV Summary / Experience Details" className="w-full bg-black text-lemon p-3 rounded-xl border border-gray-800 outline-none font-bold h-32" value={formData.cvDetails} onChange={e => setFormData({...formData, cvDetails: e.target.value})} required />
+                            <button type="submit" className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest shadow-xl shadow-lemon/10">Publish Available Worker</button>
+                        </form>
+                    </div>
+                )}
+
+                <div className="mt-8 border-t border-gray-800 pt-6">
+                    <h3 className="text-white font-black uppercase text-[10px] tracking-widest mb-4">Currently Live Worker Hub ({jobPosts.length})</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {jobPosts.map(post => (
+                            <div key={post.id} className="bg-gray-800 p-4 rounded-xl flex justify-between items-center border border-gray-700">
+                                <div><p className="text-white font-bold">{post.staffName}</p><p className="text-[10px] text-lemon font-bold uppercase">{post.category}</p></div>
+                                <button onClick={() => onDeletePost(post.id)} className="text-red-500 hover:bg-red-500/10 p-2 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );

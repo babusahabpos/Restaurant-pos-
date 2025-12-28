@@ -92,6 +92,16 @@ export interface StaffJobPost {
     timestamp: Date;
 }
 
+export interface RestaurantJobPost {
+    id: number;
+    restaurantName: string;
+    address: string;
+    category: string;
+    salary: string;
+    phone: string;
+    timestamp: Date;
+}
+
 export interface StaffApplication {
     id: number;
     staffName: string;
