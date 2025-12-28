@@ -43,7 +43,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                     onClick={() => setView('inbox')}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'inbox' ? 'bg-lemon text-black shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    CV Inbox ({applications.filter(a => !a.isRead).length})
+                    Inbound CVs ({applications.filter(a => !a.isRead).length})
                 </button>
                 <button 
                     onClick={() => setView('create')}
@@ -127,7 +127,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                             </div>
-                        )) : <p className="col-span-full text-center py-20 text-gray-700 font-black uppercase text-[10px] tracking-widest">No vacancies found</p>}
+                        )) : <p className="col-span-full text-center py-20 text-gray-700 font-black uppercase text-[10px] tracking-widest">No vacancies matching search</p>}
                     </div>
                 </div>
             )}
