@@ -23,9 +23,10 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
-import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
+// Added missing imports for AdminStaffHub and AdminStaffManagement
 import AdminStaffHub from './components/admin/AdminStaffHub';
 import AdminStaffManagement from './components/admin/AdminStaffManagement';
+import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
@@ -121,26 +122,31 @@ function App() {
 
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
-        const updated = [...staffUsers, newUser];
-        setStaffUsers(updated);
-        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
+        setStaffUsers(prev => {
+            const updated = [...prev, newUser];
+            localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
+            return updated;
+        });
         return newUser;
     };
 
     const handleAdminApproveStaff = (userId: number, approve: boolean) => {
-        const updated = staffUsers.map(u => u.id === userId ? { ...u, status: approve ? 'Approved' : 'Rejected' } : u);
-        setStaffUsers(updated);
-        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
+        setStaffUsers(prev => {
+            const updated = prev.map(u => u.id === userId ? { ...u, status: approve ? 'Approved' : 'Rejected' } : u);
+            localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
+            return updated;
+        });
     };
 
     const handleAdminCreateJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
-        const updated = [...restaurantJobPosts, newJob];
-        setRestaurantJobPosts(updated);
-        localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
+        setRestaurantJobPosts(prev => {
+            const updated = [...prev, newJob];
+            localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
+            return updated;
+        });
     };
 
-    // Define handleLogout to fix missing name error in child components.
     const handleLogout = () => {
         setAuthState('login');
         setLoggedInUser(null);

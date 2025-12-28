@@ -32,8 +32,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
     };
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
-            <nav className="bg-gray-900 shadow-lg fixed top-0 left-0 right-0 z-[100] border-b border-gray-800 h-16 px-4">
+        <div className="flex flex-col h-screen w-screen overflow-hidden bg-black text-white relative">
+            {/* Header Navigation */}
+            <nav className="bg-gray-900 shadow-lg border-b border-gray-800 h-16 px-4 flex-shrink-0 z-[100]">
                 <div className="max-w-7xl mx-auto h-full flex items-center justify-between">
                     <div className="flex-shrink-0">
                         <a href="#" className="text-xl font-extrabold text-lemon uppercase tracking-tighter">BaBu SAHAB <span className="text-white/30 ml-1">ADMIN</span></a>
@@ -72,9 +73,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                 </div>
             </nav>
 
+            {/* Mobile Sidebar Menu */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 bg-black/90 z-[90] lg:hidden animate-fade-in" onClick={() => setMobileMenuOpen(false)}>
-                    <div className="bg-gray-900 pt-20 pb-10 px-4 space-y-2" onClick={e => e.stopPropagation()}>
+                    <div className="bg-gray-900 pt-20 pb-10 px-4 space-y-2 h-full overflow-y-auto" onClick={e => e.stopPropagation()}>
                         {NAV_ITEMS.map((item) => (
                             <button
                                 key={item.name}
@@ -90,18 +92,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                 </div>
             )}
 
-            <div className="flex-1 flex flex-col pt-16 h-full w-full">
-                <main className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-8">
-                    <div className="max-w-7xl mx-auto space-y-6">
-                        <div className="mb-8">
-                             <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-white">{currentPage}</h1>
-                             <div className="h-1.5 w-24 bg-lemon mt-2"></div>
-                        </div>
-                        {children}
-                        <div className="h-20" /> {/* Spacer for bottom of scroll */}
+            {/* Main Content Area - This must handle the scroll */}
+            <main className="flex-1 overflow-y-auto no-scrollbar bg-black p-4 md:p-8">
+                <div className="max-w-7xl mx-auto space-y-6 pb-24">
+                    <div className="mb-8">
+                         <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white">{currentPage}</h1>
+                         <div className="h-1 w-20 bg-lemon mt-2"></div>
                     </div>
-                </main>
-            </div>
+                    {children}
+                </div>
+            </main>
         </div>
     );
 };
