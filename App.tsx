@@ -90,6 +90,16 @@ function App() {
             if (e.key === 'babuSahabPos_staffApplications') {
                 setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
             }
+            if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
+                try {
+                    const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
+                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
+                    setOrders(prev => [...prev, incomingOrder]);
+                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                    if (audio) audio.play().catch(() => {});
+                    localStorage.removeItem(e.key);
+                } catch (err) {}
+            }
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
@@ -118,7 +128,14 @@ function App() {
 
     // Staff Handlers
     const handleStaffUserRegister = (name: string, phone: string) => {
-        const newUser: StaffUser = { id: Date.now(), name, phone, subscriptionStatus: 'none', isBlocked: false, registeredAt: new Date() };
+        const newUser: StaffUser = { 
+            id: Date.now(), 
+            name, 
+            phone, 
+            subscriptionStatus: 'none', 
+            isBlocked: false, 
+            registeredAt: new Date() 
+        };
         setStaffUsers(prev => [...prev, newUser]);
         return newUser;
     };
@@ -134,7 +151,6 @@ function App() {
     const handleAdminCreateJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         setRestaurantJobPosts(prev => [...prev, newJob]);
-        alert("Job Posted to Staff Hub!");
     };
 
     const handleStaffApply = (application: StaffApplication) => {
