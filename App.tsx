@@ -52,9 +52,6 @@ function App() {
         if (storedUsers) {
             return JSON.parse(storedUsers).map((u: any) => ({
                 ...u,
-                taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5,
-                deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30,
-                isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true,
                 menu: Array.isArray(u.menu) ? u.menu : MOCK_MENU_ITEMS
             }));
         }
@@ -96,16 +93,6 @@ function App() {
             if (e.key === 'babuSahabPos_users') {
                 setRegisteredUsers(JSON.parse(e.newValue || '[]'));
             }
-            if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
-                try {
-                    const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
-                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
-                    setOrders(prev => [...prev, incomingOrder]);
-                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                    if (audio) audio.play().catch(() => {});
-                    localStorage.removeItem(e.key);
-                } catch (err) {}
-            }
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
@@ -132,13 +119,13 @@ function App() {
 
     const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
 
-    // Staff Registry Handler
+    // Staff Handlers
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { 
             id: Date.now(), 
             name, 
             phone, 
-            subscriptionStatus: 'none', 
+            status: 'Pending', // New staff needs approval
             isBlocked: false, 
             registeredAt: new Date() 
         };
@@ -146,17 +133,10 @@ function App() {
         return newUser;
     };
 
-    // Subscription Request Handler
-    const handleStaffSubscriptionRequest = (userId: number) => {
-        setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionStatus: 'pending' } : u));
+    const handleAdminApproveStaff = (userId: number, approve: boolean) => {
+        setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, status: approve ? 'Approved' : 'Rejected' } : u));
     };
 
-    // Admin Approval Handler
-    const handleAdminApproveStaffSub = (userId: number, approve: boolean) => {
-        setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionStatus: approve ? 'active' : 'none' } : u));
-    };
-
-    // Vacancy Creation Handler
     const handleAdminCreateJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         setRestaurantJobPosts(prev => [...prev, newJob]);
@@ -167,7 +147,7 @@ function App() {
         setStaffApplications(prev => [...prev, newApp]);
     };
 
-    if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} onSubscribeStaff={handleStaffSubscriptionRequest} />;
+    if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={() => {}} onNavigateToLogin={() => setAuthState('login')} />;
@@ -178,11 +158,11 @@ function App() {
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={(id, msg) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
             [AdminPage.StaffHub]: <AdminStaffHub applications={staffApplications} onDeleteApp={(id) => setStaffApplications(prev => prev.filter(a => a.id !== id))} onPostApp={() => {}} onMarkRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} onCreateJob={handleAdminCreateJob} activeJobs={restaurantJobPosts} onDeleteJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))} />,
-            [AdminPage.StaffManagement]: <AdminStaffManagement users={staffUsers} onBlock={(id, b) => setStaffUsers(prev => prev.map(u => u.id === id ? {...u, isBlocked: b} : u))} onDelete={(id) => setStaffUsers(prev => prev.filter(u => u.id !== id))} onApproveSubscription={handleAdminApproveStaffSub} onMessage={() => {}} />,
+            [AdminPage.StaffManagement]: <AdminStaffManagement users={staffUsers} onBlock={(id, b) => setStaffUsers(prev => prev.map(u => u.id === id ? {...u, isBlocked: b} : u))} onDelete={(id) => setStaffUsers(prev => prev.filter(u => u.id !== id))} onApproveStatus={handleAdminApproveStaff} onMessage={() => {}} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={() => {}} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={() => {}} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
-        const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length + staffUsers.filter(u => u.subscriptionStatus === 'pending').length;
+        const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length + staffUsers.filter(u => u.status === 'Pending').length;
         return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: staffApplications.filter(a => !a.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 

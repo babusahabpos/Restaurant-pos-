@@ -28,7 +28,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
         onCreateJob(jobForm);
         setJobForm({ restaurantName: '', address: '', category: '', salary: '', phone: '' });
         setView('active');
-        alert("Vacancy Published Successfully! It will appear on the Worker Staff Link.");
+        alert("Vacancy Published! It will now appear on the Staff Hub Link.");
     };
 
     const filteredJobs = activeJobs.filter(job => 
@@ -43,7 +43,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                     onClick={() => setView('inbox')}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'inbox' ? 'bg-lemon text-black shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    Worker CVs ({applications.filter(a => !a.isRead).length})
+                    CV Submissions ({applications.filter(a => !a.isRead).length})
                 </button>
                 <button 
                     onClick={() => setView('create')}
@@ -55,7 +55,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                     onClick={() => setView('active')}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'active' ? 'bg-lemon text-black shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    Live Hub ({activeJobs.length})
+                    Active Vacancies ({activeJobs.length})
                 </button>
             </div>
 
@@ -81,7 +81,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                                 </div>
                             ))}
                         </div>
-                    ) : <p className="text-center py-20 text-gray-600 font-black uppercase text-[10px] tracking-widest">No staff profiles in inbox</p>}
+                    ) : <p className="text-center py-20 text-gray-600 font-black uppercase text-[10px] tracking-widest">No staff profiles found</p>}
                 </div>
             )}
 
@@ -93,28 +93,18 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                             <input placeholder="Restaurant Name" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.restaurantName} onChange={e => setJobForm({...jobForm, restaurantName: e.target.value})} required />
                             <input placeholder="Role (e.g. Chef, Waiter)" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.category} onChange={e => setJobForm({...jobForm, category: e.target.value})} required />
                         </div>
-                        <input placeholder="Restaurant Address" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.address} onChange={e => setJobForm({...jobForm, address: e.target.value})} required />
+                        <input placeholder="Address" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.address} onChange={e => setJobForm({...jobForm, address: e.target.value})} required />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input placeholder="Monthly Salary Range" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.salary} onChange={e => setJobForm({...jobForm, salary: e.target.value})} required />
-                            <input placeholder="Contact Phone Number" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.phone} onChange={e => setJobForm({...jobForm, phone: e.target.value})} required />
+                            <input placeholder="Salary" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.salary} onChange={e => setJobForm({...jobForm, salary: e.target.value})} required />
+                            <input placeholder="Contact Phone" className="bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={jobForm.phone} onChange={e => setJobForm({...jobForm, phone: e.target.value})} required />
                         </div>
-                        <button type="submit" className="w-full bg-lemon text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 active:scale-95 transition-all">Publish to Staff link feed</button>
+                        <button type="submit" className="w-full bg-lemon text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 active:scale-95 transition-all">Publish to Staff Hub</button>
                     </form>
                 </div>
             )}
 
             {view === 'active' && (
                 <div className="space-y-4">
-                    <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        <input 
-                            type="text" 
-                            placeholder="Filter vacancies by name or phone..." 
-                            className="bg-transparent text-white w-full outline-none font-bold text-sm"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {filteredJobs.length > 0 ? filteredJobs.slice().reverse().map(job => (
                             <div key={job.id} className="bg-gray-900 border border-gray-800 p-5 rounded-2xl flex justify-between items-center group hover:border-lemon/30 transition-all">
@@ -127,7 +117,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                             </div>
-                        )) : <p className="col-span-full text-center py-20 text-gray-700 font-black uppercase text-[10px] tracking-widest">No vacancies found</p>}
+                        )) : <p className="col-span-full text-center py-20 text-gray-700 font-black uppercase text-[10px] tracking-widest">No active vacancies</p>}
                     </div>
                 </div>
             )}

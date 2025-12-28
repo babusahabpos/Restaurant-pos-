@@ -7,14 +7,14 @@ interface AdminStaffManagementProps {
     onBlock: (id: number, block: boolean) => void;
     onDelete: (id: number) => void;
     onMessage: (id: number) => void;
-    onApproveSubscription: (userId: number, approve: boolean) => void;
+    onApproveStatus: (userId: number, approve: boolean) => void;
 }
 
-const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBlock, onDelete, onMessage, onApproveSubscription }) => {
+const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBlock, onDelete, onMessage, onApproveStatus }) => {
     return (
         <div className="bg-gray-900 rounded-3xl border border-gray-800 overflow-hidden">
             <div className="p-6 border-b border-gray-800 flex justify-between items-center">
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Staff Member Registry ({users.length})</h3>
+                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Registered Staff Members ({users.length})</h3>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -22,7 +22,7 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                         <tr className="bg-black/50 text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-gray-800">
                             <th className="px-6 py-4">Worker Profile</th>
                             <th className="px-6 py-4">Phone</th>
-                            <th className="px-6 py-4">Subscription</th>
+                            <th className="px-6 py-4">Verification</th>
                             <th className="px-6 py-4">System Access</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
@@ -32,20 +32,20 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                             <tr key={user.id} className="hover:bg-white/5 transition-colors">
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-bold text-white uppercase">{user.name}</p>
-                                    <p className="text-[8px] text-gray-600 font-black uppercase">Registered: {new Date(user.registeredAt).toLocaleDateString()}</p>
+                                    <p className="text-[8px] text-gray-600 font-black uppercase">Joined: {new Date(user.registeredAt).toLocaleDateString()}</p>
                                 </td>
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-mono text-lemon">{user.phone}</p>
                                 </td>
                                 <td className="px-6 py-4">
-                                    {user.subscriptionStatus === 'pending' ? (
+                                    {user.status === 'Pending' ? (
                                         <div className="flex gap-1 animate-pulse">
-                                            <button onClick={() => onApproveSubscription(user.id, true)} className="bg-green-600 text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-transform">Approve Pay</button>
-                                            <button onClick={() => onApproveSubscription(user.id, false)} className="bg-red-600/10 text-red-500 border border-red-600/30 text-[8px] font-black px-3 py-1.5 rounded-lg uppercase">Reject</button>
+                                            <button onClick={() => onApproveStatus(user.id, true)} className="bg-green-600 text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg active:scale-95 transition-transform">Approve</button>
+                                            <button onClick={() => onApproveStatus(user.id, false)} className="bg-red-600/10 text-red-500 border border-red-600/30 text-[8px] font-black px-3 py-1.5 rounded-lg uppercase">Reject</button>
                                         </div>
                                     ) : (
-                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${user.subscriptionStatus === 'active' ? 'bg-green-600/10 text-green-500' : 'bg-gray-800 text-gray-400'}`}>
-                                            {user.subscriptionStatus === 'active' ? 'Premium (Active)' : 'Free Plan'}
+                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${user.status === 'Approved' ? 'bg-green-600/10 text-green-500' : 'bg-red-600/10 text-red-500'}`}>
+                                            {user.status}
                                         </span>
                                     )}
                                 </td>
@@ -65,7 +65,7 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                     </tbody>
                 </table>
                 {users.length === 0 && (
-                    <div className="py-20 text-center text-gray-600 font-black uppercase text-xs tracking-widest opacity-50">Staff Registry is currently empty</div>
+                    <div className="py-20 text-center text-gray-600 font-black uppercase text-xs tracking-widest opacity-50">Staff list is empty</div>
                 )}
             </div>
         </div>
