@@ -18,6 +18,7 @@ import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
 import StaffRequirements from './components/StaffRequirements';
+import StaffApplicationPage from './components/StaffApplicationPage'; // Import public form
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -26,7 +27,7 @@ import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, MenuItem } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem } from './types';
 
 // Helper for pure KOT Printing (No Amounts)
 const triggerKOTPrint = (orderData: any) => {
@@ -76,10 +77,11 @@ const triggerKOTPrint = (orderData: any) => {
 };
 
 function App() {
-    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
+    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
     
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (window.location.hash.startsWith('#customer-order')) return 'customer';
+        if (window.location.hash === '#staff-apply') return 'staffApply';
         return 'login';
     });
 
@@ -113,25 +115,35 @@ function App() {
     // Staff Hub State
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]'));
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]'));
 
     useEffect(() => {
-        const handleHashChange = () => { if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); };
+        const handleHashChange = () => { 
+            if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
+            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
+        };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
     useEffect(() => {
-        const handleStorageChange = (event: StorageEvent) => {
-            if (event.key?.startsWith('babuSahabPos_incomingOrder_') && event.newValue) {
-                try {
-                    const incomingOrder: OrderStatusItem = JSON.parse(event.newValue);
-                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
-                    setOrders(prevOrders => [...prevOrders, incomingOrder]);
-                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                    if (audio) audio.play().catch(() => {});
-                    localStorage.removeItem(event.key);
-                } catch (e) {
-                    if (event.key) localStorage.removeItem(event.key);
+        const handleStorageChange = () => {
+            // Re-sync apps if changed in public form
+            const savedApps = localStorage.getItem('babuSahabPos_staffApplications');
+            if (savedApps) setStaffApplications(JSON.parse(savedApps));
+            
+            const incomingKey = Object.keys(localStorage).find(k => k.startsWith('babuSahabPos_incomingOrder_'));
+            if (incomingKey) {
+                const incomingData = localStorage.getItem(incomingKey);
+                if (incomingData) {
+                    try {
+                        const incomingOrder: OrderStatusItem = JSON.parse(incomingData);
+                        incomingOrder.timestamp = new Date(incomingOrder.timestamp);
+                        setOrders(prevOrders => [...prevOrders, incomingOrder]);
+                        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                        if (audio) audio.play().catch(() => {});
+                        localStorage.removeItem(incomingKey);
+                    } catch (e) {}
                 }
             }
         };
@@ -145,7 +157,26 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
+    // Admin Notification Logic for Browser Title Badge (Ex. (3) BaBu SAHAB)
+    useEffect(() => {
+        if (authState === 'adminLoggedIn') {
+            const totalNotifications = 
+                supportTickets.filter(t => t.status === 'Open').length + 
+                staffRequests.filter(r => !r.isRead).length +
+                staffApplications.filter(a => !a.isRead).length;
+            
+            if (totalNotifications > 0) {
+                document.title = `(${totalNotifications}) BaBu SAHAB Admin`;
+            } else {
+                document.title = 'BaBu SAHAB Admin';
+            }
+        } else {
+            document.title = 'BaBu SAHAB POS';
+        }
+    }, [authState, supportTickets, staffRequests, staffApplications]);
+
     useEffect(() => {
         if (!loggedInUser) { setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 }); return; };
         const now = new Date();
@@ -205,6 +236,7 @@ function App() {
         setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, messages: [...t.messages, { sender: 'admin', text: message, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t));
     };
 
+    if (authState === 'staffApply') return <StaffApplicationPage />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -216,14 +248,17 @@ function App() {
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements 
                 requests={staffRequests} 
+                applications={staffApplications}
                 jobPosts={jobPosts} 
                 onAddPost={handleAddStaffPost} 
                 onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))}
                 onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))}
+                onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))}
             />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffRequests.filter(r => !r.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        const totalStaffAlerts = staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalStaffAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {

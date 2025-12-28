@@ -1,5 +1,4 @@
 
-// FIX: Removed circular import of 'Page' type.
 export type Page = 
     'dashboard' | 
     'billing' | 
@@ -83,7 +82,6 @@ export interface StaffLogEntry {
     timestamp: Date;
 }
 
-// New Interface for Staff Post by Admin
 export interface StaffJobPost {
     id: number;
     staffName: string;
@@ -94,7 +92,18 @@ export interface StaffJobPost {
     timestamp: Date;
 }
 
-// New Interface for Requirement Request by User
+// New Interface for Staff Applicant (Public Form)
+export interface StaffApplication {
+    id: number;
+    staffName: string;
+    category: string;
+    phone: string;
+    location: string;
+    cvDetails: string;
+    timestamp: Date;
+    isRead: boolean;
+}
+
 export interface StaffRequirementRequest {
     id: number;
     userId: number;
@@ -110,7 +119,7 @@ export enum AdminPage {
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
-    StaffRequirements = 'Staff Requirements', // Renamed from Management to match request
+    StaffRequirements = 'Staff Requirements',
 }
 
 export enum UserStatus {
