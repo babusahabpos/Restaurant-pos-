@@ -22,7 +22,7 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                         <tr className="bg-black/50 text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-gray-800">
                             <th className="px-6 py-4">Worker Profile</th>
                             <th className="px-6 py-4">Phone</th>
-                            <th className="px-6 py-4">Pay Status</th>
+                            <th className="px-6 py-4">Subscription</th>
                             <th className="px-6 py-4">System Access</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
