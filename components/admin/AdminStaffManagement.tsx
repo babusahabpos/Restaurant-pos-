@@ -7,9 +7,10 @@ interface AdminStaffManagementProps {
     onBlock: (id: number, block: boolean) => void;
     onDelete: (id: number) => void;
     onMessage: (id: number) => void;
+    onApproveSubscription: (userId: number, approve: boolean) => void;
 }
 
-const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBlock, onDelete, onMessage }) => {
+const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBlock, onDelete, onMessage, onApproveSubscription }) => {
     return (
         <div className="bg-gray-900 rounded-3xl border border-gray-800 overflow-hidden">
             <div className="p-6 border-b border-gray-800 flex justify-between items-center">
@@ -21,8 +22,8 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                         <tr className="bg-black/50 text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-gray-800">
                             <th className="px-6 py-4">Worker Name</th>
                             <th className="px-6 py-4">Phone</th>
+                            <th className="px-6 py-4">Subscription</th>
                             <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Registered</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -31,23 +32,28 @@ const AdminStaffManagement: React.FC<AdminStaffManagementProps> = ({ users, onBl
                             <tr key={user.id} className="hover:bg-white/5 transition-colors">
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-bold text-white uppercase">{user.name}</p>
+                                    <p className="text-[8px] text-gray-600 font-black uppercase">Reg: {new Date(user.registeredAt).toLocaleDateString()}</p>
                                 </td>
                                 <td className="px-6 py-4">
                                     <p className="text-sm font-mono text-lemon">{user.phone}</p>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${user.isSubscribed ? 'bg-green-600/10 text-green-500' : 'bg-gray-800 text-gray-400'}`}>
-                                            {user.isSubscribed ? 'Paid Member' : 'Free User'}
+                                    {user.subscriptionStatus === 'pending' ? (
+                                        <div className="flex gap-1">
+                                            <button onClick={() => onApproveSubscription(user.id, true)} className="bg-green-600 text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase">Approve</button>
+                                            <button onClick={() => onApproveSubscription(user.id, false)} className="bg-red-600 text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase">Reject</button>
+                                        </div>
+                                    ) : (
+                                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${user.subscriptionStatus === 'active' ? 'bg-green-600/10 text-green-500' : 'bg-gray-800 text-gray-400'}`}>
+                                            {user.subscriptionStatus === 'active' ? 'Paid Member' : 'Free User'}
                                         </span>
-                                        {user.isBlocked && <span className="bg-red-600/10 text-red-500 px-2 py-1 rounded text-[9px] font-black uppercase">Blocked</span>}
-                                    </div>
+                                    )}
                                 </td>
-                                <td className="px-6 py-4 text-[10px] text-gray-500 font-bold uppercase">
-                                    {new Date(user.registeredAt).toLocaleDateString()}
+                                <td className="px-6 py-4">
+                                     {user.isBlocked ? <span className="bg-red-600/10 text-red-500 px-2 py-1 rounded text-[9px] font-black uppercase">Blocked</span> : <span className="text-green-500 text-[9px] font-black uppercase tracking-widest">Active</span>}
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex justify-end gap-3">
                                         <button onClick={() => onMessage(user.id)} className="text-[10px] font-black text-blue-500 uppercase hover:underline">Message</button>
                                         <button onClick={() => onBlock(user.id, !user.isBlocked)} className="text-[10px] font-black text-lemon uppercase hover:underline">
                                             {user.isBlocked ? 'Unblock' : 'Block'}

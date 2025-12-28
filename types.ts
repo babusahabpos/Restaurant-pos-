@@ -127,7 +127,7 @@ export interface StaffUser {
     id: number;
     name: string;
     phone: string;
-    isSubscribed: boolean;
+    subscriptionStatus: 'none' | 'pending' | 'active';
     isBlocked: boolean;
     registeredAt: Date;
 }

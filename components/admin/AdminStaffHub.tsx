@@ -14,6 +14,7 @@ interface AdminStaffHubProps {
 
 const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp, onPostApp, onMarkRead, onCreateJob, activeJobs, onDeleteJob }) => {
     const [view, setView] = useState<'inbox' | 'create' | 'active'>('inbox');
+    const [searchTerm, setSearchTerm] = useState('');
     const [jobForm, setJobForm] = useState({
         restaurantName: '',
         address: '',
@@ -39,6 +40,11 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
     };
 
     const sortedApps = [...applications].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const filteredJobs = activeJobs.filter(job => 
+        job.restaurantName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        job.phone.includes(searchTerm)
+    );
 
     return (
         <div className="space-y-6">
@@ -110,19 +116,31 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
             )}
 
             {view === 'active' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {activeJobs.length > 0 ? activeJobs.map(job => (
-                        <div key={job.id} className="bg-gray-900 border border-gray-800 p-5 rounded-2xl flex justify-between items-center">
-                            <div>
-                                <h4 className="text-white font-black uppercase">{job.restaurantName}</h4>
-                                <p className="text-lemon text-[10px] font-bold uppercase">{job.category} • ₹{job.salary}</p>
-                                <p className="text-gray-500 text-[9px] uppercase mt-1">{job.address}</p>
+                <div className="space-y-4">
+                    <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex items-center gap-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input 
+                            type="text" 
+                            placeholder="Search by restaurant name or phone..." 
+                            className="bg-transparent text-white w-full outline-none font-bold text-sm"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredJobs.length > 0 ? filteredJobs.map(job => (
+                            <div key={job.id} className="bg-gray-900 border border-gray-800 p-5 rounded-2xl flex justify-between items-center group hover:border-lemon/30 transition-all">
+                                <div>
+                                    <h4 className="text-white font-black uppercase">{job.restaurantName}</h4>
+                                    <p className="text-lemon text-[10px] font-bold uppercase">{job.category} • ₹{job.salary}</p>
+                                    <p className="text-gray-500 text-[9px] uppercase mt-1">{job.address} • {job.phone}</p>
+                                </div>
+                                <button onClick={() => onDeleteJob(job.id)} className="bg-red-600/10 text-red-500 p-3 rounded-xl border border-red-600/20 hover:bg-red-600 hover:text-white transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
                             </div>
-                            <button onClick={() => onDeleteJob(job.id)} className="bg-red-600/10 text-red-500 p-3 rounded-xl border border-red-600/20">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                        </div>
-                    )) : <p className="col-span-2 text-center py-20 text-gray-700 font-black uppercase text-[10px]">No active vacancies posted</p>}
+                        )) : <p className="col-span-2 text-center py-20 text-gray-700 font-black uppercase text-[10px]">No vacancies matching your search</p>}
+                    </div>
                 </div>
             )}
         </div>

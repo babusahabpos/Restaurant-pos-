@@ -21,11 +21,19 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
     const [appForm, setAppForm] = useState({ category: '', location: '', cvDetails: '' });
     const [selectedJob, setSelectedJob] = useState<RestaurantJobPost | null>(null);
 
-    // Sync current user to local storage for persistent login
+    // Sync current user to local storage and update from global staff registry
     useEffect(() => {
-        if (currentUser) localStorage.setItem('babuSahabPos_activeStaff', JSON.stringify(currentUser));
-        else localStorage.removeItem('babuSahabPos_activeStaff');
-    }, [currentUser]);
+        if (currentUser) {
+            // Find current user's latest data from the registry (e.g., if Admin approved subscription)
+            const latest = registeredStaff.find(u => u.id === currentUser.id);
+            if (latest) {
+                setCurrentUser(latest);
+                localStorage.setItem('babuSahabPos_activeStaff', JSON.stringify(latest));
+            }
+        } else {
+            localStorage.removeItem('babuSahabPos_activeStaff');
+        }
+    }, [registeredStaff, currentUser?.id]);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,7 +49,7 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
 
     const handleContactOwner = (job: RestaurantJobPost) => {
         if (!currentUser) { setView('account'); return; }
-        if (!currentUser.isSubscribed) {
+        if (currentUser.subscriptionStatus !== 'active') {
             setSelectedJob(job);
             setView('paywall');
         } else {
@@ -52,10 +60,8 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
     const handlePaySubscription = () => {
         if (!currentUser) return;
         onSubscribeStaff(currentUser.id);
-        const updated = { ...currentUser, isSubscribed: true };
-        setCurrentUser(updated);
+        // Status updates to 'pending' in global state via prop
         setView('feed');
-        alert("Subscription Activated! You can now contact owners.");
     };
 
     const handleJobSubmit = (e: React.FormEvent) => {
@@ -80,7 +86,7 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
             <header className="sticky top-0 z-20 bg-black/90 border-b border-gray-800 p-4 flex justify-between items-center backdrop-blur-md shrink-0">
                 <h1 className="text-xl font-black text-lemon uppercase tracking-tighter">BaBu SAHAB <span className="text-white/40">STAFF HUB</span></h1>
                 <div className="bg-lemon/10 px-3 py-1 rounded-full border border-lemon/20">
-                     <span className="text-[10px] text-lemon font-black uppercase tracking-widest">{currentUser ? 'Active' : 'Guest'}</span>
+                     <span className="text-[10px] text-lemon font-black uppercase tracking-widest">{currentUser ? 'Logged In' : 'Guest'}</span>
                 </div>
             </header>
 
@@ -104,10 +110,12 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                                 </div>
                                 <button 
                                     onClick={() => handleContactOwner(job)}
-                                    className={`w-full py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${currentUser?.isSubscribed ? 'bg-lemon text-black shadow-lg shadow-lemon/10' : 'bg-gray-800 text-gray-400'}`}
+                                    className={`w-full py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${currentUser?.subscriptionStatus === 'active' ? 'bg-lemon text-black shadow-lg shadow-lemon/10' : 'bg-gray-800 text-gray-400'}`}
                                 >
-                                    {currentUser?.isSubscribed ? (
+                                    {currentUser?.subscriptionStatus === 'active' ? (
                                         <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> CALL OWNER</>
+                                    ) : currentUser?.subscriptionStatus === 'pending' ? (
+                                        <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> APPROVAL PENDING</>
                                     ) : (
                                         <><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> UNLOCK CONTACT</>
                                     )}
@@ -140,11 +148,15 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                                 <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 flex justify-between items-center">
                                     <div>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase">Membership Status</p>
-                                        <p className={`text-sm font-black uppercase mt-1 ${currentUser.isSubscribed ? 'text-green-500' : 'text-yellow-500'}`}>
-                                            {currentUser.isSubscribed ? 'Premium Access' : 'Free Tier'}
+                                        <p className={`text-sm font-black uppercase mt-1 ${
+                                            currentUser.subscriptionStatus === 'active' ? 'text-green-500' : 
+                                            currentUser.subscriptionStatus === 'pending' ? 'text-blue-400' : 'text-yellow-500'
+                                        }`}>
+                                            {currentUser.subscriptionStatus === 'active' ? 'Premium Access' : 
+                                             currentUser.subscriptionStatus === 'pending' ? 'Pending Approval' : 'Free Tier'}
                                         </p>
                                     </div>
-                                    {!currentUser.isSubscribed && (
+                                    {currentUser.subscriptionStatus === 'none' && (
                                         <button onClick={() => setView('paywall')} className="bg-lemon text-black font-black px-4 py-2 rounded-lg text-[9px] uppercase tracking-widest">Upgrade</button>
                                     )}
                                 </div>
@@ -177,7 +189,8 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                              <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Standard Plan</p>
                              <p className="text-4xl font-black text-lemon">₹9<span className="text-xs">/month</span></p>
                         </div>
-                        <button onClick={handlePaySubscription} className="w-full bg-lemon text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 mb-4">Pay & Unlock Now</button>
+                        <button onClick={handlePaySubscription} className="w-full bg-lemon text-black font-black py-5 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 mb-4">Request Access & Pay</button>
+                        <p className="text-[8px] text-gray-500 uppercase font-black tracking-widest mb-4">Approval takes up to 1-2 hours</p>
                         <button onClick={() => setView('feed')} className="text-gray-500 font-black uppercase text-[9px] tracking-widest">Maybe Later</button>
                     </div>
                 )}
