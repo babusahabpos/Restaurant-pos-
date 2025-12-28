@@ -15,25 +15,27 @@ import QrMenu from './components/QrMenu';
 import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
 import SocialMedia from './components/SocialMedia';
-import Referral from './components/Referral'; // Import Referral
-import CustomerOrderPage from './components/CustomerOrderPage'; // Import CustomerOrderPage
+import Referral from './components/Referral'; 
+import CustomerOrderPage from './components/CustomerOrderPage'; 
+import StaffRequirements from './components/StaffRequirements';
+import StaffApplicationPage from './components/StaffApplicationPage'; 
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
+import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, TicketMessage, OrderItem, MenuItem } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem } from './types';
 
 function App() {
-    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
+    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
     
     // Initialize auth state based on URL hash
     const [authState, setAuthState] = useState<AuthState>(() => {
-        if (window.location.hash.startsWith('#customer-order')) {
-            return 'customer';
-        }
+        if (window.location.hash.startsWith('#customer-order')) return 'customer';
+        if (window.location.hash === '#staff-apply') return 'staffApply';
         return 'login';
     });
 
@@ -45,88 +47,81 @@ function App() {
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
-    // Robust user loading with data migration for missing menus and sanitizing prices
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
         try {
             const storedUsers = localStorage.getItem('babuSahabPos_users');
             if (storedUsers) {
-                const parsedUsers = JSON.parse(storedUsers);
-                // Ensure every user has a menu property (migration fix) and valid prices and delivery settings
-                return parsedUsers.map((u: any) => ({
+                return JSON.parse(storedUsers).map((u: any) => ({
                     ...u,
-                    taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5, // Default to 5% if missing
-                    deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30, // Default delivery charge
-                    isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true, // Default delivery enabled
-                    isPrinterEnabled: u.isPrinterEnabled !== undefined ? u.isPrinterEnabled : true, // Default printer enabled
-                    fssai: u.fssai !== undefined ? u.fssai : '', // Default empty FSSAI
-                    referralCode: u.referralCode ? u.referralCode : `refer${u.restaurantName.replace(/\s+/g, '').toLowerCase()}`,
-                    socialMedia: u.socialMedia || {},
-                    menu: (Array.isArray(u.menu) && u.menu.length > 0) 
-                        ? u.menu.map((m: any) => ({
-                            ...m,
-                            // Force prices to be numbers to prevent .toFixed crashes
-                            offlinePrice: Number(m.offlinePrice) || 0,
-                            onlinePrice: Number(m.onlinePrice) || 0,
-                            inStock: m.inStock !== undefined ? m.inStock : true,
-                            // Removed image handling as requested
-                        })) 
-                        : MOCK_MENU_ITEMS
+                    taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5,
+                    deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30,
+                    isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true,
+                    isPrinterEnabled: u.isPrinterEnabled !== undefined ? u.isPrinterEnabled : true,
+                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu.map((m: any) => ({
+                        ...m,
+                        offlinePrice: Number(m.offlinePrice) || 0,
+                        onlinePrice: Number(m.onlinePrice) || 0,
+                        inStock: m.inStock !== undefined ? m.inStock : true,
+                    })) : MOCK_MENU_ITEMS
                 }));
             }
-        } catch (error) {
-            console.error("Error loading users from local storage", error);
-        }
+        } catch (error) {}
         return JSON.parse(JSON.stringify(MOCK_USERS));
     });
 
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
-    // Listen for hash changes to switch between customer and other views if necessary
+    // --- Staff Management State ---
+    const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_staffApplications');
+        if (saved) {
+            return JSON.parse(saved).map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) }));
+        }
+        return [];
+    });
+
     useEffect(() => {
-        const handleHashChange = () => {
-            if (window.location.hash.startsWith('#customer-order')) {
-                setAuthState('customer');
-            }
+        const handleHashChange = () => { 
+            if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
+            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
         };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
     useEffect(() => {
-        const handleStorageChange = (event: StorageEvent) => {
-            // Check for new individual orders
-            if (event.key?.startsWith('babuSahabPos_incomingOrder_') && event.newValue) {
-                try {
-                    const incomingOrder: OrderStatusItem = JSON.parse(event.newValue);
-                    // Re-hydrate date objects
-                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
-                    
-                    // Add the new order to the state
-                    setOrders(prevOrders => [...prevOrders, incomingOrder]);
-                    
-                    // Play notification sound
-                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                    if (audio) audio.play().catch(e => console.error("Audio notification failed:", e));
-
-                    // IMPORTANT: Remove the specific order key from localStorage to prevent re-processing
-                    localStorage.removeItem(event.key);
-
-                } catch (e) {
-                    console.error("Error processing incoming order from localStorage", e);
-                    // Also remove the key if parsing fails to avoid it being stuck
-                    if (event.key) {
-                        localStorage.removeItem(event.key);
-                    }
+        const handleStorageChange = (e: StorageEvent) => {
+            // Robust Cross-Tab Sync for applications and posts
+            if (e.key === 'babuSahabPos_staffApplications') {
+                const latest = localStorage.getItem('babuSahabPos_staffApplications');
+                if (latest) {
+                    setStaffApplications(JSON.parse(latest).map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
                 }
             }
+            if (e.key === 'babuSahabPos_jobPosts') {
+                const latest = localStorage.getItem('babuSahabPos_jobPosts');
+                if (latest) {
+                    setJobPosts(JSON.parse(latest).map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) })));
+                }
+            }
+            
+            // Handle cross-tab sync for orders
+            if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
+                try {
+                    const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
+                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
+                    setOrders(prevOrders => [...prevOrders, incomingOrder]);
+                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                    if (audio) audio.play().catch(() => {});
+                    localStorage.removeItem(e.key);
+                } catch (err) {}
+            }
         };
-
         window.addEventListener('storage', handleStorageChange);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-        };
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     // --- Persistence Effects ---
@@ -134,59 +129,52 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
-    // --- Derived State & Logic ---
+    // --- UI/Logic Effects ---
     useEffect(() => {
-        if (!loggedInUser) {
-            setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-            return;
-        };
+        if (authState === 'adminLoggedIn') {
+            const totalNotifications = 
+                supportTickets.filter(t => t.status === 'Open').length + 
+                staffRequests.filter(r => !r.isRead).length +
+                staffApplications.filter(a => !a.isRead).length;
+            document.title = totalNotifications > 0 ? `(${totalNotifications}) Admin Panel` : 'Admin Panel';
+        } else {
+            document.title = 'BaBu SAHAB POS';
+        }
+    }, [authState, supportTickets, staffRequests, staffApplications]);
 
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        
-        const todaysUserOrders = orders.filter(o => 
-            o.restaurantId === loggedInUser.id &&
-            new Date(o.timestamp) >= today
-        );
-
+    useEffect(() => {
+        if (!loggedInUser) { setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 }); return; };
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todaysUserOrders = orders.filter(o => o.restaurantId === loggedInUser.id && new Date(o.timestamp) >= startOfDay);
         const newDashboardData = todaysUserOrders.reduce((acc, order) => {
             if (order.status === 'Completed') {
-                if (order.type === 'Online') {
-                    acc.onlineSales += order.total;
-                    acc.onlineOrders += 1;
-                } else {
-                    acc.offlineSales += order.total;
-                    acc.offlineOrders += 1;
-                }
+                if (order.type === 'Online') { acc.onlineSales += order.total; acc.onlineOrders += 1; } 
+                else { acc.offlineSales += order.total; acc.offlineOrders += 1; }
             }
             return acc;
         }, { onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-
         setDashboardData(newDashboardData);
     }, [orders, loggedInUser]);
 
-    // Subscription renewal alert logic
     useEffect(() => {
         const today = new Date();
         const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-        
         const usersToAlert = registeredUsers.filter(user => {
             if (user.status !== UserStatus.Approved) return false;
             const endDate = new Date(user.subscriptionEndDate);
             return endDate <= sevenDaysFromNow && endDate >= today;
         });
-
         setAlerts(prevAlerts => {
             const newAlerts = [...prevAlerts];
             usersToAlert.forEach(user => {
                 const alertId = `renewal-${user.id}`;
                 if (!newAlerts.some(a => a.id === alertId)) {
-                    newAlerts.push({
-                        id: alertId,
-                        userId: user.id,
-                        message: 'Subscription Renewal: Your plan is expiring soon. Please renew to avoid service interruption.'
-                    });
+                    newAlerts.push({ id: alertId, userId: user.id, message: 'Subscription Renewal: Your plan is expiring soon.' });
                 }
             });
             return newAlerts;
@@ -196,146 +184,82 @@ function App() {
     // --- Handlers ---
 
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
-        // Updated Admin Credentials
-        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') {
-            setAuthState('adminLoggedIn');
-            setLoggedInUser(null);
-            return 'admin';
-        }
-        
+        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
-
         if (user) {
-            switch (user.status) {
-                case UserStatus.Approved:
-                    setAuthState('loggedIn');
-                    setLoggedInUser(user);
-                    return 'ok';
-                case UserStatus.Pending:
-                    return 'pending';
-                case UserStatus.Blocked:
-                    return 'blocked';
-                case UserStatus.Rejected:
-                    return 'blocked'; // Treat rejected as blocked for login purposes
-                case UserStatus.Deleted:
-                    return 'deleted';
-            }
+            if (user.status === UserStatus.Approved) { setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; }
+            return user.status === UserStatus.Pending ? 'pending' : user.status === UserStatus.Blocked ? 'blocked' : user.status === UserStatus.Deleted ? 'deleted' : 'blocked';
         }
         return 'not_found';
     };
 
-    const handleRegister = (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'isPrinterEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, referralCode?: string) => {
+    const handleRegister = (newUser: any, referralCode?: string) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        
-        // Generate new referral code: 'refer' + restaurant name (lowercase, no spaces)
         const generatedReferralCode = `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
-
         let updatedUsers = [...registeredUsers];
         let referrerCodeFound = '';
 
-        // Handle Referral Logic
         if (referralCode) {
             const referrerIndex = updatedUsers.findIndex(u => u.referralCode === referralCode);
             if (referrerIndex !== -1) {
                 referrerCodeFound = referralCode;
-                // Extend referrer subscription by 30 days
                 const referrer = updatedUsers[referrerIndex];
                 const currentEndDate = new Date(referrer.subscriptionEndDate);
                 const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                
-                updatedUsers[referrerIndex] = {
-                    ...referrer,
-                    subscriptionEndDate: newEndDate
-                };
-                
-                // Add alert for referrer
-                setAlerts(prev => [...prev, {
-                    id: Date.now() + 1,
-                    userId: referrer.id,
-                    message: 'Congrats! You earned 1 Month Free Subscription for referring a new user!'
-                }]);
+                updatedUsers[referrerIndex] = { ...referrer, subscriptionEndDate: newEndDate };
+                setAlerts(prev => [...prev, { id: Date.now() + 1, userId: referrer.id, message: 'Congrats! You earned 1 Month Free Subscription!' }]);
             }
         }
 
-        const user: RegisteredUser = {
-            ...newUser,
-            id: Date.now(),
-            status: UserStatus.Pending,
-            lastLogin: 'Never',
-            subscriptionEndDate: getFutureDate(30), // Default 30 day trial
-            address: 'Please update in settings',
-            taxRate: 5, // Default tax rate
-            deliveryCharge: 30, // Default delivery charge
-            isDeliveryEnabled: true,
-            isPrinterEnabled: true, // Default printer enabled
-            fssai: '', // Default empty FSSAI
-            menu: MOCK_MENU_ITEMS, // Start with a default menu
-            referralCode: generatedReferralCode,
-            referredBy: referrerCodeFound,
-            socialMedia: { autoPostEnabled: false },
+        const user: RegisteredUser = { 
+            ...newUser, 
+            id: Date.now(), 
+            status: UserStatus.Pending, 
+            lastLogin: 'Never', 
+            subscriptionEndDate: getFutureDate(30), 
+            address: 'Update in settings', 
+            taxRate: 5, 
+            deliveryCharge: 30, 
+            isDeliveryEnabled: true, 
+            isPrinterEnabled: true, 
+            menu: MOCK_MENU_ITEMS, 
+            referralCode: generatedReferralCode, 
+            referredBy: referrerCodeFound, 
+            socialMedia: { autoPostEnabled: false } 
         };
-        
-        updatedUsers.push(user);
-        setRegisteredUsers(updatedUsers);
+        setRegisteredUsers([...updatedUsers, user]);
     };
 
     const handleForgotPassword = (identifier: string): boolean => {
-        // Check for Admin email for password reset simulation
-        if (identifier === 'diptifoodice@gmail.com') {
-             alert(`A password reset link has been sent to ${identifier}. (Simulation)`);
-             return true;
-        }
-
         const user = registeredUsers.find(u => u.email === identifier || u.phone === identifier);
-        if (user) {
-            alert(`A password reset link has been sent to ${user.email}. (Simulation)`);
+        if (user || identifier === 'diptifoodice@gmail.com') {
+            alert(`A password reset link has been sent. (Simulation)`);
             return true;
-        } else {
-            alert("User not found.");
-            return false;
         }
-    };
-    
-    // Allow guests/users who can't login to contact admin
-    const handleGuestMessage = (email: string, message: string) => {
-        const newAlert: AdminAlert = {
-            id: Date.now(),
-            userId: 'all', // Show to admin
-            message: `[Guest Contact] From: ${email} - Message: ${message}`
-        };
-        setAlerts(prev => [...prev, newAlert]);
-    };
-    
-    const handleLogout = () => {
-        setAuthState('login');
-        setLoggedInUser(null);
+        alert("User not found.");
+        return false;
     };
 
-    const handleKOT = (newOrderData: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'>) => {
+    const handleGuestMessage = (email: string, message: string) => {
+        setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `[Guest] From: ${email} - ${message}` }]);
+    };
+
+    const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
+
+    const handleKOT = (newOrderData: any) => {
         if (!loggedInUser) return;
-        const newOrder: OrderStatusItem = {
-            ...newOrderData,
-            id: Date.now(),
-            restaurantId: loggedInUser.id,
-            status: 'Preparation',
-            timestamp: new Date()
-        };
+        const newOrder: OrderStatusItem = { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() };
         setOrders(prev => [...prev, newOrder]);
-        
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-        if(audio) audio.play();
+        if(audio) audio.play().catch(() => {});
     };
 
     const handleCompleteOrder = (orderId: number) => {
-        setOrders(prevOrders => prevOrders.map(order => 
-            order.id === orderId ? { ...order, status: 'Completed' } : order
-        ));
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Completed' } : o));
     };
 
     const handleUpdateOrder = (updatedOrder: OrderStatusItem) => {
-        setOrders(prevOrders => prevOrders.map(order => 
-            order.id === updatedOrder.id ? updatedOrder : order
-        ));
+        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
     };
 
     const handleCreateTicket = (subject: string, message: string, attachment?: string, attachmentType?: 'image' | 'pdf') => {
@@ -344,14 +268,8 @@ function App() {
             id: Date.now(),
             userId: loggedInUser.id,
             userName: loggedInUser.name,
-            subject: subject,
-            messages: [{ 
-                sender: 'user', 
-                text: message, 
-                timestamp: new Date(),
-                attachment,
-                attachmentType
-            }],
+            subject,
+            messages: [{ sender: 'user', text: message, timestamp: new Date(), attachment, attachmentType }],
             status: 'Open',
             lastUpdate: new Date(),
         };
@@ -360,211 +278,135 @@ function App() {
 
     const handleUpdateMenu = (newMenu: MenuItem[]) => {
         if (!loggedInUser) return;
-        // Ensure new menu items also have numeric prices to avoid future issues
-        const sanitizedMenu = newMenu.map(item => ({
-            ...item,
-            offlinePrice: Number(item.offlinePrice) || 0,
-            onlinePrice: Number(item.onlinePrice) || 0,
-            // Removed image mapping
-        }));
-
-        setRegisteredUsers(prevUsers => 
-            prevUsers.map(user => 
-                user.id === loggedInUser.id ? { ...user, menu: sanitizedMenu } : user
-            )
-        );
-        // Also update loggedInUser state to reflect changes immediately
+        const sanitizedMenu = newMenu.map(m => ({ ...m, offlinePrice: Number(m.offlinePrice) || 0, onlinePrice: Number(m.onlinePrice) || 0 }));
+        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, menu: sanitizedMenu } : u));
         setLoggedInUser(prev => prev ? { ...prev, menu: sanitizedMenu } : null);
     };
 
     const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
         if (!loggedInUser) return;
-        
-        let finalUpdates = { ...updates };
-        
-        // If restaurant name is changing, auto-update the referral code
+        const finalUpdates = { ...updates };
         if (updates.restaurantName && updates.restaurantName !== loggedInUser.restaurantName) {
-             const newReferralCode = `refer${updates.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
-             finalUpdates.referralCode = newReferralCode;
+             finalUpdates.referralCode = `refer${updates.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
         }
-
-        setRegisteredUsers(prev => prev.map(user => 
-            user.id === loggedInUser.id ? { ...user, ...finalUpdates } : user
-        ));
+        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...finalUpdates } : u));
         setLoggedInUser(prev => prev ? { ...prev, ...finalUpdates } : null);
-        alert('Settings updated successfully!');
+        alert('Settings updated!');
     };
-    
+
     const handleDismissAlert = (alertId: number | string) => {
         setAlerts(prev => prev.filter(a => a.id !== alertId));
     };
 
-    // --- Admin Handlers ---
-    const handleApproveRejectUser = (userId: number, decision: 'approve' | 'reject') => {
-        setRegisteredUsers(prev => prev.map(user => 
-            user.id === userId ? { ...user, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : user
-        ));
-        const user = registeredUsers.find(u => u.id === userId);
-        if (user) {
-            const message = decision === 'approve' ? `Your account has been approved. You can now log in.` : `Your account has been rejected.`;
-            handleAdminSendMessage(userId, message);
-        }
+    // --- Staff Management Handlers ---
+    const handleStaffRequirementSubmit = (req: string, salary: string) => {
+        if (!loggedInUser) return;
+        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
+        setStaffRequests(prev => [...prev, newReq]);
     };
 
-    const handleBlockUser = (userId: number, shouldBlock: boolean) => {
-        setRegisteredUsers(prev => prev.map(user =>
-            user.id === userId ? { ...user, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : user
-        ));
-    };
-    
-    // Soft delete user
-    const handleDeleteUser = (userId: number) => {
-        setRegisteredUsers(prev => prev.map(user =>
-            user.id === userId ? { ...user, status: UserStatus.Deleted } : user
-        ));
-    };
+    const handleStaffApply = (application: StaffApplication) => {
+        // AUTO POST LOGIC: When a staff member applies, automatically post them to the Job Hub
+        // No admin approval needed.
+        
+        // 1. Log the application in the Admin inbox
+        setStaffApplications(prev => [...prev, { ...application, isRead: true }]); // Auto-marked as read since it's auto-processed
 
-    const handleAdminSendMessage = (userId: number | 'all', message: string) => {
-        const newAlert = {
-            id: Date.now(),
-            userId,
-            message
+        // 2. Automatically create a job post in the public Staff Hub
+        const newJobPost: StaffJobPost = {
+            id: application.id,
+            staffName: application.staffName,
+            category: application.category,
+            phone: application.phone,
+            location: application.location,
+            cvDetails: application.cvDetails,
+            timestamp: new Date(application.timestamp)
         };
-        setAlerts(prev => [...prev, newAlert]);
-        alert(`Message sent!`);
+        setJobPosts(prev => [...prev, newJobPost]);
+
+        // Trigger notification sound
+        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+        if (audio) audio.play().catch(() => {});
     };
-    
+
+    const handleAddStaffPost = (post: any) => {
+        setJobPosts(prev => [...prev, { ...post, id: Date.now(), timestamp: new Date() }]);
+    };
+
+    const handleMarkAppRead = (id: number) => {
+        setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a));
+    };
+
+    // --- Admin Handlers ---
+    const handleApproveRejectUser = (id: number, decision: 'approve' | 'reject') => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u));
+    };
+    const handleBlockUser = (id: number, b: boolean) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u));
+    };
+    const handleDeleteUser = (id: number) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: UserStatus.Deleted} : u));
+    };
+    const handleAdminSendMessage = (userId: number | 'all', message: string) => {
+        setAlerts(prev => [...prev, { id: Date.now(), userId, message }]);
+    };
     const handlePasswordChange = (userId: number, newPass: string) => {
-        setRegisteredUsers(prev => prev.map(user => 
-            user.id === userId ? { ...user, password: newPass } : user
-        ));
-        alert('Password updated successfully!');
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPass } : u));
     };
-    
     const handleUpdateSubscription = (userId: number, newDate: string) => {
-        setRegisteredUsers(prev => prev.map(user =>
-            user.id === userId ? { ...user, subscriptionEndDate: newDate } : user
-        ));
-        alert('Subscription date updated!');
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionEndDate: newDate } : u));
     };
-    
-    // New handler for Admin to update user menu (with photo uploads)
-    const handleAdminUpdateMenu = (userId: number, newMenu: MenuItem[]) => {
-        setRegisteredUsers(prev => prev.map(user => 
-            user.id === userId ? { ...user, menu: newMenu } : user
-        ));
-        alert('Menu updated successfully!');
+    const handleAdminUpdateMenu = (userId: number, menu: MenuItem[]) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
     };
-    
-    const handleTicketReply = (ticketId: number, message: string) => {
-        setSupportTickets(prev => prev.map(ticket => {
-            if (ticket.id === ticketId) {
-                return {
-                    ...ticket,
-                    messages: [...ticket.messages, { sender: 'admin', text: message, timestamp: new Date() }],
-                    status: 'Pending',
-                    lastUpdate: new Date()
-                };
-            }
-            return ticket;
-        }));
+    const handleTicketReply = (id: number, msg: string) => {
+        setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t));
     };
-    
-    const handleResolveTicket = (ticketId: number) => {
-        setSupportTickets(prev => prev.map(ticket =>
-            ticket.id === ticketId ? { ...ticket, status: 'Resolved' } : ticket
-        ));
+    const handleResolveTicket = (id: number) => {
+        setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t));
     };
 
+    // --- Rendering Logic ---
 
-    // --- Render Logic ---
-
-    // Customer View
-    if (authState === 'customer') {
-        return <CustomerOrderPage />;
-    }
-
-    if (authState === 'login') {
-        return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} onContactAdmin={handleGuestMessage} />;
-    }
-    if (authState === 'register') {
-        return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
-    }
+    if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} />;
+    if (authState === 'customer') return <CustomerOrderPage />;
+    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} onContactAdmin={handleGuestMessage} />;
+    if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
-            [AdminPage.UserManagement]: <UserManagement 
-                users={registeredUsers} 
-                onBlockUser={handleBlockUser} 
-                onSendMessage={handleAdminSendMessage} 
-                onPasswordChange={handlePasswordChange} 
-                onUpdateSubscription={handleUpdateSubscription}
-                onUpdateMenu={handleAdminUpdateMenu} 
-                onDeleteUser={handleDeleteUser} // Pass delete handler
-            />,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription} onUpdateMenu={handleAdminUpdateMenu} onDeleteUser={handleDeleteUser} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
+            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={handleMarkAppRead} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };
-
-        return (
-            <AdminLayout currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
-                {adminPages[currentAdminPage]}
-            </AdminLayout>
-        );
+        const totalStaffAlerts = staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalStaffAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
         const userOrders = orders.filter(o => o.restaurantId === loggedInUser.id);
-        
-        // Ensure menu is an array and filter out malformed items to prevent crashes
         const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
 
         const pages = {
-            dashboard: <Dashboard 
-                data={dashboardData} 
-                orders={userOrders} 
-                onCompleteOrder={handleCompleteOrder} 
-                taxRate={loggedInUser.taxRate || 5} 
-                restaurantName={loggedInUser.restaurantName}
-                address={loggedInUser.address}
-                fssai={loggedInUser.fssai || ''}
-                menuItems={safeMenu}
-                onUpdateOrder={handleUpdateOrder}
-                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
-            />,
-            billing: <Billing 
-                menuItems={safeMenu} 
-                onPrintKOT={handleKOT} 
-                taxRate={loggedInUser.taxRate || 5} 
-                restaurantName={loggedInUser.restaurantName}
-                isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true}
-            />,
+            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={safeMenu} onUpdateOrder={handleUpdateOrder} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
+            billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} />,
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
             qrMenu: <QrMenu menu={safeMenu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
-            inventory: <Inventory />,
             staff: <Staff />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={handleStaffRequirementSubmit} />,
+            inventory: <Inventory />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
-            refer: <Referral user={loggedInUser} />, // Added Referral Page
-            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} />,
+            refer: <Referral user={loggedInUser} />,
+            settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} onLogout={handleLogout} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={handleCreateTicket} />,
         };
 
-        return (
-            <MainLayout
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                handleLogout={handleLogout}
-                alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)}
-                onDismissAlert={handleDismissAlert}
-                loggedInUser={loggedInUser}
-            >
-                {pages[currentPage]}
-            </MainLayout>
-        );
+        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={handleDismissAlert} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
     
     return <div>Something went wrong. Please refresh.</div>;

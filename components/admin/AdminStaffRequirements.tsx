@@ -29,19 +29,6 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
         alert("Staff Application Link Copied!");
     };
 
-    const handleApproveApp = (app: StaffApplication) => {
-        onAddPost({
-            staffName: app.staffName,
-            category: app.category,
-            phone: app.phone,
-            location: app.location,
-            cvDetails: app.cvDetails
-        });
-        onMarkAppRead(app.id);
-        alert(`Approved ${app.staffName} and posted to Staff Hub!`);
-        setView('requests');
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onAddPost(formData);
@@ -77,7 +64,7 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
                     onClick={() => setView('applications')}
                     className={`flex-1 min-w-[140px] py-3 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'applications' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    Staff Apps
+                    Submissions Hub
                     {unreadApps > 0 && <span className="bg-red-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[8px] animate-pulse">{unreadApps}</span>}
                 </button>
                 <button 
@@ -111,26 +98,28 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
 
             {view === 'applications' && (
                 <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Staff Submissions (CVs)</h3>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Staff Submissions (Auto-Posted)</h3>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase -mt-2">All submissions are automatically live in the User Hub.</p>
                     {applications.length > 0 ? (
                         applications.slice().reverse().map(app => (
-                            <div key={app.id} className={`p-5 rounded-2xl border ${app.isRead ? 'bg-gray-900 border-gray-800 opacity-60' : 'bg-black border-lemon/40 shadow-xl'}`}>
+                            <div key={app.id} className="p-5 rounded-2xl border bg-black border-gray-800">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
-                                        <span className="text-[9px] font-black text-lemon uppercase tracking-widest">{app.category}</span>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[9px] font-black text-lemon uppercase tracking-widest">{app.category}</span>
+                                            <span className="text-[8px] font-black bg-green-900/30 text-green-400 px-2 py-0.5 rounded border border-green-800/30 uppercase">Live in Hub</span>
+                                        </div>
                                         <h4 className="text-xl font-black text-white uppercase">{app.staffName}</h4>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase">{app.location} • {new Date(app.timestamp).toLocaleString()}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                         <button onClick={() => onMarkAppRead(app.id)} className="text-gray-500 hover:text-white p-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                         <button onClick={() => onMarkAppRead(app.id)} className="text-gray-500 hover:text-white p-2" title="Archive"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                                     </div>
                                 </div>
                                 <p className="text-gray-300 text-sm mb-6 p-3 bg-white/5 rounded-xl border border-white/5">{app.cvDetails}</p>
                                 <div className="flex gap-3">
                                     <a href={`tel:${app.phone}`} className="flex-1 bg-gray-800 text-white font-black py-3 rounded-xl text-center text-[10px] uppercase">Call Staff</a>
-                                    {!app.isRead && (
-                                        <button onClick={() => handleApproveApp(app)} className="flex-[2] bg-lemon text-black font-black py-3 rounded-xl text-[10px] uppercase shadow-lg shadow-lemon/10">Approve & Post to Staff Hub</button>
-                                    )}
+                                    <button disabled className="flex-[2] bg-gray-900 text-gray-600 font-black py-3 rounded-xl text-[10px] uppercase border border-gray-800 cursor-default">Automatically Published</button>
                                 </div>
                             </div>
                         ))
