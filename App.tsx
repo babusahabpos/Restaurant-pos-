@@ -24,6 +24,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
 import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
+import AdminStaffHub from './components/admin/AdminStaffHub';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
@@ -123,7 +124,6 @@ function App() {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    // Sync state when localStorage changes in another tab
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'babuSahabPos_staffApplications') {
@@ -147,7 +147,6 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // Individual Persistence Effects
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
@@ -208,35 +207,47 @@ function App() {
     };
 
     const handleStaffApply = (application: StaffApplication) => {
-        // CRITICAL FIX: Read existing data from localStorage first to prevent overwriting
-        const existingApplications = JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]');
-        const existingPosts = JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]');
-
-        const updatedApplications = [...existingApplications, { ...application, isRead: true }];
-        const newJobPost: StaffJobPost = {
-            id: application.id,
-            staffName: application.staffName,
-            category: application.category,
-            phone: application.phone,
-            location: application.location,
-            cvDetails: application.cvDetails,
-            timestamp: new Date(application.timestamp)
-        };
-        const updatedPosts = [...existingPosts, newJobPost];
-
-        // Save back to localStorage immediately
-        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updatedApplications));
-        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updatedPosts));
-
-        // Update local state if the user happens to be in the same session
-        setStaffApplications(updatedApplications.map(a => ({...a, timestamp: new Date(a.timestamp)})));
-        setJobPosts(updatedPosts.map(p => ({...p, timestamp: new Date(p.timestamp)})));
+        // Read existing and append
+        const existing = JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]');
+        const updated = [...existing, { ...application, isRead: false }];
+        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updated));
+        setStaffApplications(updated.map(a => ({...a, timestamp: new Date(a.timestamp)})));
 
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if (audio) audio.play().catch(() => {});
     };
 
-    // Other handlers...
+    // Admin Handlers for Hub
+    const handleDeleteApp = (id: number) => {
+        const updated = staffApplications.filter(a => a.id !== id);
+        setStaffApplications(updated);
+        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updated));
+    };
+
+    const handlePostApp = (app: StaffApplication) => {
+        // Mark application as read and published
+        const updatedApps = staffApplications.map(a => a.id === app.id ? {...a, isRead: true} : a);
+        setStaffApplications(updatedApps);
+        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updatedApps));
+
+        // Add to public job posts
+        const newPost: StaffJobPost = {
+            id: app.id,
+            staffName: app.staffName,
+            category: app.category,
+            phone: app.phone,
+            location: app.location,
+            cvDetails: app.cvDetails,
+            timestamp: new Date()
+        };
+        const existingPosts = JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]');
+        const updatedPosts = [...existingPosts, newPost];
+        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updatedPosts));
+        setJobPosts(updatedPosts.map(p => ({...p, timestamp: new Date(p.timestamp)})));
+        
+        alert(`${app.staffName} has been posted to the Live Hub!`);
+    };
+
     const handleCompleteOrder = (id: number) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o));
     const handleUpdateOrder = (upd: OrderStatusItem) => setOrders(prev => prev.map(o => o.id === upd.id ? upd : o));
     const handleUpdateMenu = (m: MenuItem[]) => {
@@ -264,10 +275,14 @@ function App() {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={(id, msg) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
+            [AdminPage.StaffHub]: <AdminStaffHub applications={staffApplications} onDeleteApp={handleDeleteApp} onPostApp={handlePostApp} onMarkRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={(post) => setJobPosts(prev => [...prev, { ...post, id: Date.now(), timestamp: new Date() }])} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        const totalAlerts = staffRequests.filter(r => !r.isRead).length;
+        const totalApps = staffApplications.filter(a => !a.isRead).length;
+        
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: totalApps }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {

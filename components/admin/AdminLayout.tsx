@@ -15,7 +15,8 @@ const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
     { name: AdminPage.SupportTickets, key: 'tickets' },
-    { name: AdminPage.StaffRequirements, key: 'staff' },
+    { name: AdminPage.StaffHub, key: 'staff_hub' },
+    { name: AdminPage.StaffRequirements, key: 'staff_reqs' },
     { name: AdminPage.SubscriptionRenewal, key: 'subscriptions' },
 ];
 
@@ -25,30 +26,31 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
     const getBadgeCount = (name: AdminPage) => {
         if (name === AdminPage.SupportTickets) return badgeCounts.tickets || 0;
         if (name === AdminPage.StaffRequirements) return badgeCounts.staffReqs || 0;
+        if (name === AdminPage.StaffHub) return badgeCounts.staffApps || 0;
         return 0;
     };
 
     return (
         <div className="min-h-screen bg-black text-white">
-            <nav className="bg-gray-900 shadow-lg sticky top-0 z-20">
+            <nav className="bg-gray-900 shadow-lg sticky top-0 z-20 border-b border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex-shrink-0">
-                            <a href="#" className="text-xl font-extrabold text-lemon">BaBu SAHAB - ADMIN</a>
+                            <a href="#" className="text-xl font-extrabold text-lemon">BaBu SAHAB <span className="text-white/30 ml-1">ADMIN</span></a>
                         </div>
                         
                         <div className="hidden lg:flex items-center">
-                            <div className="ml-10 flex items-baseline space-x-2">
+                            <div className="ml-10 flex items-baseline space-x-1">
                                 {NAV_ITEMS.map((item) => {
                                     const badge = getBadgeCount(item.name);
                                     return (
                                         <button
                                             key={item.name}
                                             onClick={() => setCurrentPage(item.name)}
-                                            className={`relative px-3 py-2 rounded-md text-[10px] font-black uppercase tracking-tighter transition-all ${
+                                            className={`relative px-3 py-2 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${
                                                 currentPage === item.name
                                                     ? 'bg-lemon text-black shadow-lg shadow-lemon/10'
-                                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                                             }`}
                                         >
                                             {item.name}
@@ -63,9 +65,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                             </div>
                              <button 
                                 onClick={handleLogout}
-                                className="ml-8 flex items-center px-3 py-2 rounded-md text-[10px] font-black uppercase text-gray-300 hover:bg-gray-700 hover:text-white"
+                                className="ml-8 flex items-center px-3 py-2 rounded-md text-[10px] font-black uppercase text-gray-500 hover:text-red-400 transition-colors"
                             >
-                                <LogoutIcon className="w-5 h-5 mr-1" />
+                                <LogoutIcon className="w-4 h-4 mr-1" />
                                 Logout
                             </button>
                         </div>
@@ -99,7 +101,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                                     className={`w-full text-left block px-3 py-3 rounded-md text-xs font-bold uppercase ${
                                         currentPage === item.name
                                             ? 'bg-lemon text-black'
-                                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                                     } flex justify-between items-center`}
                                 >
                                     {item.name}
@@ -108,7 +110,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                             ))}
                             <button
                                  onClick={handleLogout}
-                                className="w-full text-left flex items-center px-3 py-3 rounded-md text-xs font-bold uppercase text-gray-300 hover:bg-gray-700 hover:text-white"
+                                className="w-full text-left flex items-center px-3 py-3 rounded-md text-xs font-bold uppercase text-gray-300 hover:bg-gray-800 hover:text-white"
                             >
                                 <LogoutIcon className="w-5 h-5 mr-2" />
                                 Logout
@@ -120,9 +122,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
             
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                  <header>
-                     <h1 className="text-3xl font-black uppercase tracking-tighter text-white">{currentPage}</h1>
+                     <h1 className="text-4xl font-black uppercase tracking-tighter text-white mb-2">{currentPage}</h1>
+                     <div className="h-1 w-20 bg-lemon"></div>
                 </header>
-                <main className="mt-6">
+                <main className="mt-8">
                     {children}
                 </main>
             </div>

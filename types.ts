@@ -9,10 +9,10 @@ export type Page =
     'reports' | 
     'subscription' | 
     'help' | 
-    'qrMenu' |
-    'settings' |
-    'social' |
-    'staffRequirements' |
+    'qrMenu' | 
+    'settings' | 
+    'social' | 
+    'staffRequirements' | 
     'refer'; 
 
 export interface MenuItem {
@@ -92,7 +92,6 @@ export interface StaffJobPost {
     timestamp: Date;
 }
 
-// New Interface for Staff Applicant (Public Form)
 export interface StaffApplication {
     id: number;
     staffName: string;
@@ -120,6 +119,7 @@ export enum AdminPage {
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
     StaffRequirements = 'Staff Requirements',
+    StaffHub = 'Staff Hub',
 }
 
 export enum UserStatus {
