@@ -123,6 +123,15 @@ export interface StaffRequirementRequest {
     isRead: boolean;
 }
 
+export interface StaffUser {
+    id: number;
+    name: string;
+    phone: string;
+    isSubscribed: boolean;
+    isBlocked: boolean;
+    registeredAt: Date;
+}
+
 export enum AdminPage {
     Dashboard = 'Admin Dashboard',
     UserManagement = 'User Management',
@@ -130,6 +139,7 @@ export enum AdminPage {
     SubscriptionRenewal = 'Subscription Renewal',
     StaffRequirements = 'Staff Requirements',
     StaffHub = 'Staff Hub',
+    StaffManagement = 'Staff Management',
 }
 
 export enum UserStatus {
