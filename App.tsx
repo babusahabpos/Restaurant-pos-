@@ -52,9 +52,6 @@ function App() {
         if (storedUsers) {
             return JSON.parse(storedUsers).map((u: any) => ({
                 ...u,
-                taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5,
-                deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30,
-                isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true,
                 menu: Array.isArray(u.menu) ? u.menu : MOCK_MENU_ITEMS
             }));
         }
@@ -90,21 +87,11 @@ function App() {
             if (e.key === 'babuSahabPos_staffApplications') {
                 setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
             }
-            if (e.key === 'babuSahabPos_staffRequests') {
-                setStaffRequests(JSON.parse(e.newValue || '[]').map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) })));
-            }
             if (e.key === 'babuSahabPos_users') {
                 setRegisteredUsers(JSON.parse(e.newValue || '[]'));
             }
-            if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
-                try {
-                    const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
-                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
-                    setOrders(prev => [...prev, incomingOrder]);
-                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                    if (audio) audio.play().catch(() => {});
-                    localStorage.removeItem(e.key);
-                } catch (err) {}
+            if (e.key === 'babuSahabPos_staffRequests') {
+                setStaffRequests(JSON.parse(e.newValue || '[]').map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) })));
             }
         };
         window.addEventListener('storage', handleStorageChange);
@@ -132,7 +119,7 @@ function App() {
 
     const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
 
-    // Staff Registry Handler
+    // Staff Handlers
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { 
             id: Date.now(), 
@@ -146,17 +133,14 @@ function App() {
         return newUser;
     };
 
-    // Subscription Request Handler
     const handleStaffSubscriptionRequest = (userId: number) => {
         setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionStatus: 'pending' } : u));
     };
 
-    // Admin Approval Handler
     const handleAdminApproveStaffSub = (userId: number, approve: boolean) => {
         setStaffUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionStatus: approve ? 'active' : 'none' } : u));
     };
 
-    // Vacancy Creation Handler
     const handleAdminCreateJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         setRestaurantJobPosts(prev => [...prev, newJob]);

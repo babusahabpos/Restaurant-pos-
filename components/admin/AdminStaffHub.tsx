@@ -43,7 +43,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                     onClick={() => setView('inbox')}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'inbox' ? 'bg-lemon text-black shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    Inbound CVs ({applications.filter(a => !a.isRead).length})
+                    CV Inbox ({applications.filter(a => !a.isRead).length})
                 </button>
                 <button 
                     onClick={() => setView('create')}
@@ -55,7 +55,7 @@ const AdminStaffHub: React.FC<AdminStaffHubProps> = ({ applications, onDeleteApp
                     onClick={() => setView('active')}
                     className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'active' ? 'bg-lemon text-black shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
-                    Manage Active ({activeJobs.length})
+                    Active Hub ({activeJobs.length})
                 </button>
             </div>
 
