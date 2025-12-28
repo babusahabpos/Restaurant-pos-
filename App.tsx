@@ -18,7 +18,7 @@ import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
 import StaffRequirements from './components/StaffRequirements';
-import StaffApplicationPage from './components/StaffApplicationPage'; // Import public form
+import StaffApplicationPage from './components/StaffApplicationPage'; 
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -29,7 +29,6 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem } from './types';
 
-// Helper for pure KOT Printing (No Amounts)
 const triggerKOTPrint = (orderData: any) => {
     const kotContent = `
         <style>
@@ -112,7 +111,6 @@ function App() {
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
-    // Staff Hub State
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]'));
     const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]'));
@@ -127,24 +125,22 @@ function App() {
     }, []);
 
     useEffect(() => {
-        const handleStorageChange = () => {
-            // Re-sync apps if changed in public form
-            const savedApps = localStorage.getItem('babuSahabPos_staffApplications');
-            if (savedApps) setStaffApplications(JSON.parse(savedApps));
+        const handleStorageChange = (e: StorageEvent) => {
+            // Handle cross-tab sync for applications
+            if (e.key === 'babuSahabPos_staffApplications' && e.newValue) {
+                setStaffApplications(JSON.parse(e.newValue));
+            }
             
-            const incomingKey = Object.keys(localStorage).find(k => k.startsWith('babuSahabPos_incomingOrder_'));
-            if (incomingKey) {
-                const incomingData = localStorage.getItem(incomingKey);
-                if (incomingData) {
-                    try {
-                        const incomingOrder: OrderStatusItem = JSON.parse(incomingData);
-                        incomingOrder.timestamp = new Date(incomingOrder.timestamp);
-                        setOrders(prevOrders => [...prevOrders, incomingOrder]);
-                        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-                        if (audio) audio.play().catch(() => {});
-                        localStorage.removeItem(incomingKey);
-                    } catch (e) {}
-                }
+            // Handle cross-tab sync for orders
+            if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
+                try {
+                    const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
+                    incomingOrder.timestamp = new Date(incomingOrder.timestamp);
+                    setOrders(prevOrders => [...prevOrders, incomingOrder]);
+                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                    if (audio) audio.play().catch(() => {});
+                    localStorage.removeItem(e.key);
+                } catch (err) {}
             }
         };
         window.addEventListener('storage', handleStorageChange);
@@ -159,19 +155,13 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
-    // Admin Notification Logic for Browser Title Badge (Ex. (3) BaBu SAHAB)
     useEffect(() => {
         if (authState === 'adminLoggedIn') {
             const totalNotifications = 
                 supportTickets.filter(t => t.status === 'Open').length + 
                 staffRequests.filter(r => !r.isRead).length +
                 staffApplications.filter(a => !a.isRead).length;
-            
-            if (totalNotifications > 0) {
-                document.title = `(${totalNotifications}) BaBu SAHAB Admin`;
-            } else {
-                document.title = 'BaBu SAHAB Admin';
-            }
+            document.title = totalNotifications > 0 ? `(${totalNotifications}) Admin Panel` : 'Admin Panel';
         } else {
             document.title = 'BaBu SAHAB POS';
         }
@@ -202,7 +192,7 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: any, referralCode?: string) => {
+    const handleRegister = (newUser: any) => {
         const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const user: RegisteredUser = { ...newUser, id: Date.now(), status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: getFutureDate(30), address: 'Update in settings', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, menu: MOCK_MENU_ITEMS, referralCode: `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`, socialMedia: { autoPostEnabled: false } };
         setRegisteredUsers(prev => [...prev, user]);
@@ -216,7 +206,7 @@ function App() {
         setOrders(prev => [...prev, newOrder]);
         if (loggedInUser.isPrinterEnabled) triggerKOTPrint(newOrderData);
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-        if(audio) audio.play();
+        if(audio) audio.play().catch(() => {});
     };
 
     const handleStaffRequirementSubmit = (req: string, salary: string) => {
@@ -227,16 +217,18 @@ function App() {
         if (audio) audio.play().catch(() => {});
     };
 
+    const handleStaffApply = (application: StaffApplication) => {
+        setStaffApplications(prev => [...prev, application]);
+        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+        if (audio) audio.play().catch(() => {});
+    };
+
     const handleAddStaffPost = (post: any) => {
         const newPost: StaffJobPost = { ...post, id: Date.now(), timestamp: new Date() };
         setJobPosts(prev => [...prev, newPost]);
     };
 
-    const handleTicketReply = (ticketId: number, message: string) => {
-        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, messages: [...t.messages, { sender: 'admin', text: message, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t));
-    };
-
-    if (authState === 'staffApply') return <StaffApplicationPage />;
+    if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -245,7 +237,7 @@ function App() {
         const adminPages = {
             [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
-            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
+            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={(id, msg) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements 
                 requests={staffRequests} 
                 applications={staffApplications}
@@ -271,9 +263,9 @@ function App() {
             online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={safeMenu} setMenu={(m) => { setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u)); setLoggedInUser(prev => prev ? {...prev, menu: m} : null); }} />,
             qrMenu: <QrMenu menu={safeMenu} setMenu={() => {}} loggedInUser={loggedInUser} />,
+            staff: <Staff />,
             staffRequirements: <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={handleStaffRequirementSubmit} />,
             inventory: <Inventory />,
-            staff: <Staff />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
             refer: <Referral user={loggedInUser} />,

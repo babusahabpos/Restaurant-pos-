@@ -2,7 +2,11 @@
 import React, { useState } from 'react';
 import { StaffApplication } from '../types';
 
-const StaffApplicationPage: React.FC = () => {
+interface StaffApplicationPageProps {
+    onApply: (application: StaffApplication) => void;
+}
+
+const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply }) => {
     const [formData, setFormData] = useState({
         staffName: '',
         category: '',
@@ -21,19 +25,15 @@ const StaffApplicationPage: React.FC = () => {
             isRead: false
         };
 
-        // Simulated backend save via LocalStorage event
-        const existingApplications = JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]');
-        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify([...existingApplications, application]));
-        
-        // Trigger storage event for other tabs (Admin panel might be open)
-        window.dispatchEvent(new Event('storage'));
+        // Call the parent handler for real-time update in the current session
+        onApply(application);
         
         setSubmitted(true);
     };
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center p-6">
+            <div className="min-h-screen bg-black flex items-center justify-center p-6 text-white font-sans">
                 <div className="bg-gray-900 border border-lemon p-10 rounded-3xl text-center shadow-2xl max-w-md animate-fade-in">
                     <div className="w-20 h-20 bg-lemon rounded-full flex items-center justify-center mx-auto mb-6">
                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -46,7 +46,7 @@ const StaffApplicationPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-black p-6 flex flex-col items-center justify-center">
+        <div className="min-h-screen bg-black p-6 flex flex-col items-center justify-center text-white font-sans">
              <div className="mb-10 text-center">
                 <h1 className="text-4xl font-black text-lemon uppercase tracking-tighter">Staff Registry</h1>
                 <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Upload your details for restaurant jobs</p>
