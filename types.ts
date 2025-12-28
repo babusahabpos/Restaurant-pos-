@@ -110,7 +110,7 @@ export enum AdminPage {
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
-    StaffRequirements = 'Staff Management',
+    StaffRequirements = 'Staff Requirements', // Renamed from Management to match request
 }
 
 export enum UserStatus {
