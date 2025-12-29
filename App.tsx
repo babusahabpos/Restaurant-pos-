@@ -44,7 +44,7 @@ const Market: React.FC = () => (
                 onClick={() => window.open('https://merket.babusahab.com', '_blank')}
                 className="w-full bg-lemon text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 active:scale-95 transition-all"
             >
-                Visit Market Portal
+                Visit Merket Portal
             </button>
         </div>
     </div>
@@ -104,7 +104,7 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    // --- Persistence Effects ---
+    // --- Sync State Changes to LocalStorage ---
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
@@ -114,18 +114,15 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // SYNC ENGINE: This is critical for data to move between the worker's tab and admin's tab
+            // SYNC ENGINE: Listen for changes from other tabs (Staff Link registration, Admin Hub posting)
             if (e.key === 'babuSahabPos_staffUsers') {
-                const updated = JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)}));
-                setStaffUsers(updated);
+                setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
-                const updated = JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)}));
-                setRestaurantJobPosts(updated);
+                setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
             }
             if (e.key === 'babuSahabPos_staffApplications') {
-                const updated = JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) }));
-                setStaffApplications(updated);
+                setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -157,6 +154,7 @@ function App() {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updatedStaff = [...staffUsers, newUser];
         setStaffUsers(updatedStaff);
+        // Force immediate save so Admin tab detects it via storage listener
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
@@ -185,6 +183,7 @@ function App() {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         const updatedJobs = [...restaurantJobPosts, newJob];
         setRestaurantJobPosts(updatedJobs);
+        // Force immediate save for cross-tab visibility in Staff Link
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
