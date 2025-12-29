@@ -76,7 +76,7 @@ function App() {
     const [restaurantJobPosts, setRestaurantJobPosts] = useState<RestaurantJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_restaurantJobPosts') || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
     const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffUsers') || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
 
-    // PERSISTENCE EFFECT: Save Auth State
+    // PERSISTENCE EFFECT: Save Auth State whenever it changes
     useEffect(() => {
         localStorage.setItem('babuSahabPos_authState', authState);
         if (loggedInUser) {
@@ -98,6 +98,7 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
+            // Robust sync for users and staff across tabs
             if (e.key === 'babuSahabPos_staffUsers') {
                 const latest = JSON.parse(e.newValue || '[]');
                 setStaffUsers(latest.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
@@ -123,6 +124,7 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
+    // Sync state to local storage whenever they change
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(restaurantJobPosts)); }, [restaurantJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
@@ -142,7 +144,8 @@ function App() {
                 setLoggedInUser(user); 
                 return 'ok'; 
             }
-            return user.status.toLowerCase(); // 'pending', 'blocked', 'deleted'
+            // If user is pending, return 'pending' so Login.tsx can show the error message
+            return user.status.toLowerCase(); 
         }
         return 'not_found';
     };
@@ -170,6 +173,7 @@ function App() {
 
         const updatedUsers = [...registeredUsers, user];
         setRegisteredUsers(updatedUsers);
+        // Force immediate persistence for cross-tab sync
         localStorage.setItem('babuSahabPos_users', JSON.stringify(updatedUsers));
     };
 
@@ -177,6 +181,7 @@ function App() {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updated = [...staffUsers, newUser];
         setStaffUsers(updated);
+        // Force immediate persistence so Admin sees it
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
         return newUser;
     };
@@ -217,7 +222,7 @@ function App() {
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
         const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length + staffUsers.filter(u => u.status === 'Pending').length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: staffApplications.filter(a => !a.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
