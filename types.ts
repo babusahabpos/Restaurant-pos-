@@ -13,6 +13,7 @@ export type Page =
     'settings' | 
     'social' | 
     'staffRequirements' | 
+    'market' | 
     'refer'; 
 
 export interface MenuItem {

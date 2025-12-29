@@ -7,8 +7,9 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
-    { name: 'staff', icon: 'staff' }, // Moved Up
-    { name: 'staffRequirements', icon: 'staff' }, // Moved Down (Staff Hub)
+    { name: 'staff', icon: 'staff' }, 
+    { name: 'staffRequirements', icon: 'staff' }, 
+    { name: 'market', icon: 'market' }, 
     { name: 'inventory', icon: 'inventory' },
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 

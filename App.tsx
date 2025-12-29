@@ -31,10 +31,28 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem, StaffUser, RestaurantJobPost } from './types';
 
+// --- Market Component ---
+const Market: React.FC = () => (
+    <div className="h-full flex items-center justify-center p-6 text-center">
+        <div className="max-w-md bg-gray-900 border border-gray-800 p-10 rounded-[2.5rem] shadow-2xl space-y-6">
+            <div className="w-20 h-20 bg-lemon/10 rounded-full mx-auto flex items-center justify-center text-lemon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">BaBu SAHAB Merket</h2>
+            <p className="text-gray-400 text-sm font-bold uppercase tracking-tight leading-relaxed">Access premium restaurant equipment, groceries, and services at the best industry rates.</p>
+            <button 
+                onClick={() => window.open('https://merket.babusahab.com', '_blank')}
+                className="w-full bg-lemon text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 active:scale-95 transition-all"
+            >
+                Visit Market Portal
+            </button>
+        </div>
+    </div>
+);
+
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
     
-    // PERSISTENCE: Load initial state from localStorage
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (window.location.hash.startsWith('#customer-order')) return 'customer';
         if (window.location.hash === '#staff-apply') return 'staffApply';
@@ -98,13 +116,16 @@ function App() {
         const handleStorageChange = (e: StorageEvent) => {
             // SYNC ENGINE: This is critical for data to move between the worker's tab and admin's tab
             if (e.key === 'babuSahabPos_staffUsers') {
-                setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+                const updated = JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)}));
+                setStaffUsers(updated);
             }
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
-                setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
+                const updated = JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)}));
+                setRestaurantJobPosts(updated);
             }
             if (e.key === 'babuSahabPos_staffApplications') {
-                setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
+                const updated = JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) }));
+                setStaffApplications(updated);
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -136,7 +157,6 @@ function App() {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updatedStaff = [...staffUsers, newUser];
         setStaffUsers(updatedStaff);
-        // Force immediate save for visibility in Admin tab
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
@@ -165,7 +185,6 @@ function App() {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         const updatedJobs = [...restaurantJobPosts, newJob];
         setRestaurantJobPosts(updatedJobs);
-        // Save immediately so Staff Link tab sees it
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
@@ -206,6 +225,7 @@ function App() {
             settings: <Settings user={loggedInUser} onSave={(upd) => setLoggedInUser(prev => prev ? {...prev, ...upd} : null)} onLogout={handleLogout} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
+            market: <Market />,
         };
         return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={[]} onDismissAlert={() => {}} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }

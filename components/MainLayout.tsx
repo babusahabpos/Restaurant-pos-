@@ -29,6 +29,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     social: Icons.SocialIcon,
     refer: Icons.ReferIcon,
     staffRequirements: Icons.StaffIcon,
+    market: Icons.MarketIcon,
 };
 
 const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
@@ -76,6 +77,7 @@ const Sidebar: React.FC<{
                                         {item.name === 'qrMenu' ? 'QR Menu' : 
                                          item.name === 'refer' ? 'Refer & Earn' : 
                                          item.name === 'staff' ? 'Staff Attendance' :
+                                         item.name === 'market' ? 'Merket' :
                                          item.name === 'staffRequirements' ? 'Staff Hub' : item.name}
                                     </span>
                                 </div>
@@ -171,6 +173,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                     <h1 className="text-sm font-black uppercase tracking-widest text-lemon">
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Staff Attendance' :
+                         currentPage === 'market' ? 'Merket' :
                          currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
                     </h1>
                     <div className="flex items-center gap-3">
