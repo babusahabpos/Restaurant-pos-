@@ -23,7 +23,6 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
-// Added missing imports for AdminStaffHub and AdminStaffManagement
 import AdminStaffHub from './components/admin/AdminStaffHub';
 import AdminStaffManagement from './components/admin/AdminStaffManagement';
 import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
@@ -77,11 +76,17 @@ function App() {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
+    const reloadStaffData = () => {
+        const latest = localStorage.getItem('babuSahabPos_staffUsers');
+        if (latest) {
+            setStaffUsers(JSON.parse(latest).map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+        }
+    };
+
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'babuSahabPos_staffUsers') {
-                const latest = JSON.parse(e.newValue || '[]');
-                setStaffUsers(latest.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+                reloadStaffData();
             }
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
                 const latest = JSON.parse(e.newValue || '[]');
@@ -102,7 +107,12 @@ function App() {
             }
         };
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        // Also reload on focus to catch up with changes in background tabs
+        window.addEventListener('focus', reloadStaffData);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('focus', reloadStaffData);
+        };
     }, []);
 
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
