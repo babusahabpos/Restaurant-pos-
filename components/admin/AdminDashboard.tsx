@@ -47,9 +47,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
                 {/* Pending Approvals Section */}
-                <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col">
+                <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
                         Pending Approvals
                         {([...pendingUsers, ...pendingStaff].length > 0) && (
@@ -106,7 +106,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                 </div>
 
                 {/* Unified Activity Feed Section */}
-                <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col">
+                <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight">System Feed</h3>
                     <div className="space-y-3">
                         {activityItems.length > 0 ? activityItems.map((item, idx) => (

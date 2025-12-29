@@ -34,14 +34,14 @@ import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserSt
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
     
-    // Persistence: Load Auth State and User from localStorage
+    // PERSISTENCE: Initialize from localStorage
     const [authState, setAuthState] = useState<AuthState>(() => {
         const hash = window.location.hash;
         if (hash.startsWith('#customer-order')) return 'customer';
         if (hash === '#staff-apply') return 'staffApply';
         
-        const savedState = localStorage.getItem('babuSahabPos_authState');
-        return (savedState as AuthState) || 'login';
+        const savedAuth = localStorage.getItem('babuSahabPos_authState');
+        return (savedAuth as AuthState) || 'login';
     });
 
     const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(() => {
@@ -52,6 +52,7 @@ function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
+    // --- State Management ---
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
@@ -75,16 +76,7 @@ function App() {
     const [restaurantJobPosts, setRestaurantJobPosts] = useState<RestaurantJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_restaurantJobPosts') || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
     const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffUsers') || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
 
-    useEffect(() => {
-        const handleHashChange = () => { 
-            if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
-            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
-        };
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-
-    // Effect to Persist Auth State
+    // PERSISTENCE EFFECT: Save Auth State
     useEffect(() => {
         localStorage.setItem('babuSahabPos_authState', authState);
         if (loggedInUser) {
@@ -95,14 +87,26 @@ function App() {
     }, [authState, loggedInUser]);
 
     useEffect(() => {
+        const handleHashChange = () => { 
+            const hash = window.location.hash;
+            if (hash.startsWith('#customer-order')) setAuthState('customer'); 
+            else if (hash === '#staff-apply') setAuthState('staffApply');
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'babuSahabPos_staffUsers') {
                 const latest = JSON.parse(e.newValue || '[]');
                 setStaffUsers(latest.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
             if (e.key === 'babuSahabPos_users') {
-                const latest = JSON.parse(e.newValue || '[]');
-                setRegisteredUsers(latest);
+                setRegisteredUsers(JSON.parse(e.newValue || '[]'));
+            }
+            if (e.key === 'babuSahabPos_staffApplications') {
+                setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -125,11 +129,20 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
 
     const handleLogin = (email: string, pass: string): any => {
-        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
+        // Super Admin
+        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
+            setAuthState('adminLoggedIn'); 
+            return 'admin'; 
+        }
+        
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
         if (user) {
-            if (user.status === UserStatus.Approved) { setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; }
-            return user.status.toLowerCase();
+            if (user.status === UserStatus.Approved) { 
+                setAuthState('loggedIn'); 
+                setLoggedInUser(user); 
+                return 'ok'; 
+            }
+            return user.status.toLowerCase(); // 'pending', 'blocked', 'deleted'
         }
         return 'not_found';
     };
@@ -204,7 +217,7 @@ function App() {
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
         const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length + staffUsers.filter(u => u.status === 'Pending').length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: staffApplications.filter(a => !a.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
