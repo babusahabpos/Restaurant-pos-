@@ -34,13 +34,21 @@ import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserSt
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
     
+    // Persistence: Load Auth State and User from localStorage
     const [authState, setAuthState] = useState<AuthState>(() => {
-        if (window.location.hash.startsWith('#customer-order')) return 'customer';
-        if (window.location.hash === '#staff-apply') return 'staffApply';
-        return 'login';
+        const hash = window.location.hash;
+        if (hash.startsWith('#customer-order')) return 'customer';
+        if (hash === '#staff-apply') return 'staffApply';
+        
+        const savedState = localStorage.getItem('babuSahabPos_authState');
+        return (savedState as AuthState) || 'login';
     });
 
-    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
+    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(() => {
+        const savedUser = localStorage.getItem('babuSahabPos_loggedInUser');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
+
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
@@ -76,24 +84,25 @@ function App() {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    const reloadStaffData = () => {
-        const latest = localStorage.getItem('babuSahabPos_staffUsers');
-        if (latest) {
-            setStaffUsers(JSON.parse(latest).map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+    // Effect to Persist Auth State
+    useEffect(() => {
+        localStorage.setItem('babuSahabPos_authState', authState);
+        if (loggedInUser) {
+            localStorage.setItem('babuSahabPos_loggedInUser', JSON.stringify(loggedInUser));
+        } else {
+            localStorage.removeItem('babuSahabPos_loggedInUser');
         }
-    };
+    }, [authState, loggedInUser]);
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'babuSahabPos_staffUsers') {
-                reloadStaffData();
-            }
-            if (e.key === 'babuSahabPos_restaurantJobPosts') {
                 const latest = JSON.parse(e.newValue || '[]');
-                setRestaurantJobPosts(latest.map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) })));
+                setStaffUsers(latest.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
             if (e.key === 'babuSahabPos_users') {
-                setRegisteredUsers(JSON.parse(e.newValue || '[]'));
+                const latest = JSON.parse(e.newValue || '[]');
+                setRegisteredUsers(latest);
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -107,12 +116,7 @@ function App() {
             }
         };
         window.addEventListener('storage', handleStorageChange);
-        // Also reload on focus to catch up with changes in background tabs
-        window.addEventListener('focus', reloadStaffData);
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('focus', reloadStaffData);
-        };
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
@@ -130,42 +134,64 @@ function App() {
         return 'not_found';
     };
 
+    const handleRegister = (newUser: any, referralCode?: string) => {
+        const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const generatedReferralCode = `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
+        
+        const user: RegisteredUser = { 
+            ...newUser, 
+            id: Date.now(), 
+            status: UserStatus.Pending, 
+            lastLogin: 'Never', 
+            subscriptionEndDate: getFutureDate(30), 
+            address: 'Update in settings', 
+            taxRate: 5, 
+            deliveryCharge: 30, 
+            isDeliveryEnabled: true, 
+            isPrinterEnabled: true, 
+            menu: MOCK_MENU_ITEMS, 
+            referralCode: generatedReferralCode, 
+            referredBy: referralCode || '', 
+            socialMedia: { autoPostEnabled: false } 
+        };
+
+        const updatedUsers = [...registeredUsers, user];
+        setRegisteredUsers(updatedUsers);
+        localStorage.setItem('babuSahabPos_users', JSON.stringify(updatedUsers));
+    };
+
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
-        setStaffUsers(prev => {
-            const updated = [...prev, newUser];
-            localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
-            return updated;
-        });
+        const updated = [...staffUsers, newUser];
+        setStaffUsers(updated);
+        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
         return newUser;
     };
 
     const handleAdminApproveStaff = (userId: number, approve: boolean) => {
-        setStaffUsers(prev => {
-            const updated = prev.map(u => u.id === userId ? { ...u, status: approve ? 'Approved' : 'Rejected' } : u);
-            localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
-            return updated;
-        });
+        const updated = staffUsers.map(u => u.id === userId ? { ...u, status: approve ? 'Approved' : 'Rejected' } : u);
+        setStaffUsers(updated);
+        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
     };
 
     const handleAdminCreateJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
-        setRestaurantJobPosts(prev => {
-            const updated = [...prev, newJob];
-            localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
-            return updated;
-        });
+        const updated = [...restaurantJobPosts, newJob];
+        setRestaurantJobPosts(updated);
+        localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
     };
 
     const handleLogout = () => {
         setAuthState('login');
         setLoggedInUser(null);
+        localStorage.removeItem('babuSahabPos_authState');
+        localStorage.removeItem('babuSahabPos_loggedInUser');
     };
 
     if (authState === 'staffApply') return <StaffApplicationPage onApply={(a) => setStaffApplications(prev => [...prev, {...a, id: Date.now(), timestamp: new Date()}])} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
-    if (authState === 'register') return <Register onRegister={() => {}} onNavigateToLogin={() => setAuthState('login')} />;
+    if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
