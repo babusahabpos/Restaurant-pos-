@@ -38,15 +38,10 @@ function App() {
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (window.location.hash.startsWith('#customer-order')) return 'customer';
         if (window.location.hash === '#staff-apply') return 'staffApply';
-        const savedAuth = localStorage.getItem('babuSahabPos_authState');
-        return (savedAuth as AuthState) || 'login';
+        return 'login';
     });
 
-    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(() => {
-        const savedUser = localStorage.getItem('babuSahabPos_loggedInUser');
-        return savedUser ? JSON.parse(savedUser) : null;
-    });
-
+    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
@@ -91,34 +86,17 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    // --- Sync State Changes to LocalStorage ---
-    useEffect(() => {
-        localStorage.setItem('babuSahabPos_authState', authState);
-        if (loggedInUser) {
-            localStorage.setItem('babuSahabPos_loggedInUser', JSON.stringify(loggedInUser));
-        } else {
-            localStorage.removeItem('babuSahabPos_loggedInUser');
-        }
-    }, [authState, loggedInUser]);
-
+    // --- Persistence Effects ---
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(restaurantJobPosts)); }, [restaurantJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
-
-    useEffect(() => {
-        const handleHashChange = () => { 
-            if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
-            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
-        };
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
+    useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // SYNC ENGINE: Listen for changes from other tabs (like the Staff Hub page)
+            // SYNC ENGINE: This is critical for data to move between the worker's tab and admin's tab
             if (e.key === 'babuSahabPos_staffUsers') {
                 setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
@@ -154,31 +132,11 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: any, referralCode?: string) => {
-        const user: RegisteredUser = { 
-            ...newUser, 
-            id: Date.now(), 
-            status: UserStatus.Pending, 
-            lastLogin: 'Never', 
-            subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
-            address: 'Update in settings', 
-            taxRate: 5, 
-            deliveryCharge: 30, 
-            isDeliveryEnabled: true, 
-            isPrinterEnabled: true, 
-            menu: MOCK_MENU_ITEMS, 
-            referralCode: `refer${newUser.restaurantName.replace(/\s+/g, '').toLowerCase()}`, 
-            referredBy: referralCode || '', 
-            socialMedia: { autoPostEnabled: false } 
-        };
-        setRegisteredUsers(prev => [...prev, user]);
-    };
-
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updatedStaff = [...staffUsers, newUser];
         setStaffUsers(updatedStaff);
-        // Force immediate persistence for cross-tab visibility
+        // Force immediate save for visibility in Admin tab
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
@@ -192,38 +150,31 @@ function App() {
     };
 
     const handleDeleteStaff = (id: number) => {
-        if (window.confirm("Delete this staff account permanently?")) {
-            setStaffUsers(prev => prev.filter(u => u.id !== id));
-        }
+        if (window.confirm("Delete permanently?")) setStaffUsers(prev => prev.filter(u => u.id !== id));
     };
 
-    const handleLogout = () => { 
-        setAuthState('login'); 
-        setLoggedInUser(null);
-        localStorage.removeItem('babuSahabPos_authState');
-        localStorage.removeItem('babuSahabPos_loggedInUser');
-    };
+    const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
 
     const handleStaffApply = (application: StaffApplication) => {
         const updatedApps = [...staffApplications, { ...application, isRead: false }];
         setStaffApplications(updatedApps);
         localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updatedApps));
-        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-        if (audio) audio.play().catch(() => {});
     };
 
     const handleCreateAdminJobPost = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         const updatedJobs = [...restaurantJobPosts, newJob];
         setRestaurantJobPosts(updatedJobs);
-        // Explicit storage call so the public link tab picks it up
+        // Save immediately so Staff Link tab sees it
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
+
+    // --- Rendering Logic ---
 
     if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
-    if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
+    if (authState === 'register') return <Register onRegister={(u, r) => setRegisteredUsers(prev => [...prev, {...u, id: Date.now(), status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], address: '', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, menu: MOCK_MENU_ITEMS, referralCode: 'refer'+u.restaurantName.replace(/\s+/g,'').toLowerCase(), referredBy: r||'', socialMedia: {}}])} onNavigateToLogin={() => setAuthState('login')} />;
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
@@ -241,7 +192,7 @@ function App() {
 
     if (authState === 'loggedIn' && loggedInUser) {
         const pages = {
-            dashboard: <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? {...o, status: 'Completed'} : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={loggedInUser.menu} onUpdateOrder={() => {}} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
+            dashboard: <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? {...o, status: 'Completed'} : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={loggedInUser.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(x => x.id === o.id ? o : x))} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
             billing: <Billing menuItems={loggedInUser.menu} onPrintKOT={(o) => setOrders(prev => [...prev, {...o, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date()}])} taxRate={5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={true} />,
             online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(o) => setOrders(prev => [...prev, {...o, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date()}])} />,
             menu: <Menu menu={loggedInUser.menu} setMenu={(m) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u))} />,
