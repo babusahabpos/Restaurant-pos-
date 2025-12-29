@@ -32,6 +32,25 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     market: Icons.MarketIcon,
 };
 
+const GlobalNotice: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div className="bg-red-600 text-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-bounce-short">
+            <div className="bg-red-700 p-4 text-center border-b border-white/10">
+                <h2 className="text-2xl font-black uppercase tracking-[0.2em]">NOTICE</h2>
+            </div>
+            <div className="p-8 text-center space-y-6">
+                <p className="text-lg font-bold leading-relaxed">{alert.message}</p>
+                <button 
+                    onClick={() => onDismiss(alert.id)}
+                    className="w-full bg-white text-red-600 font-black py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-gray-100 transition-colors"
+                >
+                    Acknowledge
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 const AlertPopup: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
     <div className="fixed top-5 right-5 bg-lemon text-gray-900 p-4 rounded-lg shadow-lg z-50 max-w-sm animate-bounce">
         <h4 className="font-bold">Message from Admin</h4>
@@ -141,9 +160,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
         setMobileMenuOpen(false);
     };
 
+    const globalNotice = alerts.find(a => a.userId === 'all');
+    const personalAlerts = alerts.filter(a => a.userId !== 'all');
+
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
-            {alerts.map(alert => <AlertPopup key={alert.id} alert={alert} onDismiss={onDismissAlert} />)}
+            {globalNotice && <GlobalNotice alert={globalNotice} onDismiss={onDismissAlert} />}
+            {personalAlerts.map(alert => <AlertPopup key={alert.id} alert={alert} onDismiss={onDismissAlert} />)}
 
             <div className="hidden md:block h-full">
                 <Sidebar 

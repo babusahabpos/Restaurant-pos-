@@ -44,7 +44,7 @@ const Market: React.FC = () => (
                 onClick={() => window.open('https://merket.babusahab.com', '_blank')}
                 className="w-full bg-lemon text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-lemon/20 active:scale-95 transition-all"
             >
-                Visit Merket Portal
+                Visit Market Portal
             </button>
         </div>
     </div>
@@ -104,17 +104,18 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    // --- Sync State Changes to LocalStorage ---
+    // --- Persistence Effects ---
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(restaurantJobPosts)); }, [restaurantJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // SYNC ENGINE: Listen for changes from other tabs (Staff Link registration, Admin Hub posting)
+            // SYNC ENGINE: This is critical for data to move between the worker's tab and admin's tab
             if (e.key === 'babuSahabPos_staffUsers') {
                 setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
@@ -123,6 +124,9 @@ function App() {
             }
             if (e.key === 'babuSahabPos_staffApplications') {
                 setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
+            }
+            if (e.key === 'babuSahabPos_alerts') {
+                setAlerts(JSON.parse(e.newValue || '[]'));
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -154,7 +158,7 @@ function App() {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updatedStaff = [...staffUsers, newUser];
         setStaffUsers(updatedStaff);
-        // Force immediate save so Admin tab detects it via storage listener
+        // Force immediate save for visibility in Admin tab
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
@@ -183,7 +187,7 @@ function App() {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         const updatedJobs = [...restaurantJobPosts, newJob];
         setRestaurantJobPosts(updatedJobs);
-        // Force immediate save for cross-tab visibility in Staff Link
+        // Save immediately so Staff Link tab sees it
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
@@ -196,8 +200,8 @@ function App() {
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} staffUsers={staffUsers} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} onApproveStaff={handleApproveStaff} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />,
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={(id, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: msg }])} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} />,
             [AdminPage.StaffHub]: <AdminStaffHub applications={staffApplications} onDeleteApp={(id) => setStaffApplications(prev => prev.filter(a => a.id !== id))} onPostApp={() => {}} onMarkRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} onCreateJob={handleCreateAdminJobPost} activeJobs={restaurantJobPosts} onDeleteJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))} />,
             [AdminPage.StaffManagement]: <AdminStaffManagement users={staffUsers} onBlock={handleBlockStaff} onDelete={handleDeleteStaff} onApproveStatus={handleApproveStaff} onMessage={() => {}} />,
@@ -224,9 +228,8 @@ function App() {
             settings: <Settings user={loggedInUser} onSave={(upd) => setLoggedInUser(prev => prev ? {...prev, ...upd} : null)} onLogout={handleLogout} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
-            market: <Market />,
         };
-        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={[]} onDismissAlert={() => {}} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
+        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
     
     return <div>Refresh...</div>;
