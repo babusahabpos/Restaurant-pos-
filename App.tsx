@@ -118,8 +118,15 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
+            // SYNC ENGINE: Listen for changes from other tabs (like the Staff Hub page)
             if (e.key === 'babuSahabPos_staffUsers') {
                 setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+            }
+            if (e.key === 'babuSahabPos_restaurantJobPosts') {
+                setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
+            }
+            if (e.key === 'babuSahabPos_staffApplications') {
+                setStaffApplications(JSON.parse(e.newValue || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
             }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
@@ -169,7 +176,10 @@ function App() {
 
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
-        setStaffUsers(prev => [...prev, newUser]);
+        const updatedStaff = [...staffUsers, newUser];
+        setStaffUsers(updatedStaff);
+        // Force immediate persistence for cross-tab visibility
+        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
 
@@ -195,14 +205,19 @@ function App() {
     };
 
     const handleStaffApply = (application: StaffApplication) => {
-        setStaffApplications(prev => [...prev, { ...application, isRead: false }]);
+        const updatedApps = [...staffApplications, { ...application, isRead: false }];
+        setStaffApplications(updatedApps);
+        localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(updatedApps));
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if (audio) audio.play().catch(() => {});
     };
 
     const handleCreateAdminJobPost = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
-        setRestaurantJobPosts(prev => [...prev, newJob]);
+        const updatedJobs = [...restaurantJobPosts, newJob];
+        setRestaurantJobPosts(updatedJobs);
+        // Explicit storage call so the public link tab picks it up
+        localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
     if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
@@ -221,7 +236,7 @@ function App() {
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
         };
         const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length + staffUsers.filter(u => u.status === 'Pending').length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: staffApplications.filter(a => !a.isRead).length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
