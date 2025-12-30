@@ -49,7 +49,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-                {/* Pending Approvals Section */}
+                {/* Approval Queue Section */}
                 <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
                         Approval Queue
@@ -107,7 +107,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                     </div>
                 </div>
 
-                {/* Unified Activity Feed Section */}
+                {/* System Activity Section */}
                 <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight">System Feed</h3>
                     <div className="space-y-3 overflow-y-auto no-scrollbar pr-2">

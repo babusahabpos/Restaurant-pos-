@@ -140,6 +140,7 @@ function App() {
     };
 
     const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
+        // CV Submission goes to pending state for Admin approval
         const newPost: StaffJobPost = { ...app, id: Date.now(), timestamp: new Date(), status: 'Pending' };
         setJobPosts(prev => [...prev, newPost]);
         alert("Worker profile submitted for admin approval.");
