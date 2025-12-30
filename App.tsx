@@ -26,7 +26,6 @@ import SupportTickets from './components/admin/SupportTickets';
 import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import AdminStaffHub from './components/admin/AdminStaffHub';
-import AdminStaffManagement from './components/admin/AdminStaffManagement';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem, StaffUser, RestaurantJobPost, StaffMessage } from './types';
@@ -142,18 +141,16 @@ function App() {
         return 'not_found';
     };
 
-    // Instant Registration for Staff
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Approved', isBlocked: false, registeredAt: new Date() };
         setStaffUsers(prev => [...prev, newUser]);
         return newUser;
     };
 
-    // Worker publishes CV - Goes to Admin for Approval
     const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
         const newPost: StaffJobPost = { ...app, id: Date.now(), timestamp: new Date(), status: 'Pending' };
         setJobPosts(prev => [...prev, newPost]);
-        alert("CV submitted to admin for approval.");
+        alert("Worker profile submitted for admin approval.");
     };
 
     const handleSendMessageToStaff = (phone: string, text: string, senderName: string) => {
@@ -170,7 +167,19 @@ function App() {
     // --- Admin Routing ---
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} staffUsers={staffUsers} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
+            [AdminPage.Dashboard]: (
+                <AdminDashboard 
+                    users={registeredUsers} 
+                    staffUsers={staffUsers} 
+                    tickets={supportTickets} 
+                    staffRequests={staffRequests} 
+                    staffApplications={staffApplications} 
+                    jobPosts={jobPosts}
+                    onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))}
+                    onApproveJobPost={handleApproveJobPost}
+                    onDeleteJobPost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))}
+                />
+            ),
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={(id, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: msg }])} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, password: p} : u))} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, subscriptionEndDate: d} : u))} onUpdateMenu={(id, m) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, menu: m} : u))} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, messages: [...t.messages, {sender: 'admin', text: m, timestamp: new Date()}], lastUpdate: new Date()} : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t))} />,
             [AdminPage.StaffHub]: (
@@ -184,7 +193,6 @@ function App() {
                     onDeleteRestaurantJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))}
                 />
             ),
-            [AdminPage.StaffManagement]: <AdminStaffManagement users={staffUsers} onBlock={(id, b) => setStaffUsers(prev => prev.map(u => u.id === id ? {...u, isBlocked: b} : u))} onDelete={(id) => setStaffUsers(prev => prev.filter(u => u.id !== id))} onApproveStatus={() => {}} onMessage={(id) => {}} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts.filter(p => p.status === 'Approved')} onAddPost={(p) => setJobPosts(prev => [...prev, {...p, id: Date.now(), timestamp: new Date(), status: 'Approved'}])} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, subscriptionEndDate: d} : u))} />,
         };

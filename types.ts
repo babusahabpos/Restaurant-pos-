@@ -149,8 +149,7 @@ export enum AdminPage {
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
     StaffRequirements = 'Staff Requirements',
-    StaffHub = 'Staff Hub',
-    StaffManagement = 'Staff Management',
+    StaffHub = 'Staff Hub'
 }
 
 export enum UserStatus {

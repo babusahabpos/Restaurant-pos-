@@ -13,7 +13,6 @@ interface StaffApplicationPageProps {
 
 const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, restaurantJobs = [], registeredStaff = [], onRegisterStaff, messages, onMarkMessageRead }) => {
     const [view, setView] = useState<'feed' | 'apply' | 'account' | 'messages'>('feed');
-    const [searchTerm, setSearchTerm] = useState('');
     const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
         const saved = localStorage.getItem('babuSahabPos_activeStaff');
         return saved ? JSON.parse(saved) : null;
@@ -54,14 +53,20 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
 
     return (
         <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
-            <header className="sticky top-0 z-20 bg-black border-b border-gray-800 p-4 flex flex-col gap-4 shadow-xl shrink-0">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-xl font-black text-lemon uppercase tracking-tighter">BaBu SAHAB <span className="text-white/40">STAFF LINK</span></h1>
-                    <div className="bg-lemon/10 px-3 py-1 rounded-full border border-lemon/20 flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${currentUser ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                        <span className="text-[10px] text-lemon font-black uppercase tracking-widest">{currentUser ? 'Verified' : 'Guest'}</span>
-                    </div>
-                </div>
+            <header className="sticky top-0 z-20 bg-black border-b border-gray-800 p-4 flex items-center justify-between shadow-xl shrink-0">
+                <h1 className="text-xl font-black text-lemon uppercase tracking-tighter">BaBu SAHAB <span className="text-white/40">STAFF LINK</span></h1>
+                
+                <button 
+                    onClick={() => setView('messages')}
+                    className="relative bg-gray-900 p-2.5 rounded-xl border border-gray-800 text-lemon active:scale-95 transition-transform"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] w-5 h-5 rounded-full flex items-center justify-center font-black border-2 border-black animate-pulse">
+                            {unreadCount}
+                        </span>
+                    )}
+                </button>
             </header>
 
             <main className="flex-1 overflow-y-auto no-scrollbar p-4 pb-28">
@@ -86,7 +91,10 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
 
                 {view === 'messages' && (
                     <div className="animate-fade-in space-y-4">
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-6">Messages Inbox</h2>
+                        <div className="flex justify-between items-center mb-6">
+                             <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Messages</h2>
+                             <button onClick={() => setView('feed')} className="text-gray-500 font-black text-[10px] uppercase tracking-widest">Back to Feed</button>
+                        </div>
                         {userMessages.length > 0 ? userMessages.slice().reverse().map(msg => (
                             <div key={msg.id} onClick={() => onMarkMessageRead(msg.id)} className={`p-6 rounded-[2rem] border transition-all ${msg.isRead ? 'bg-gray-900/50 border-gray-800' : 'bg-lemon/10 border-lemon/30 shadow-lg'}`}>
                                 <div className="flex justify-between items-start mb-3">
@@ -155,8 +163,11 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
 
             <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 h-20 px-4 flex justify-around items-center z-[100] backdrop-blur-lg">
                 <button onClick={() => setView('feed')} className={`flex flex-col items-center gap-1 ${view === 'feed' ? 'text-lemon' : 'text-gray-600'}`}><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg><span className="text-[8px] font-black uppercase tracking-widest">Feed</span></button>
-                <button onClick={() => setView('messages')} className={`flex flex-col items-center gap-1 relative ${view === 'messages' ? 'text-lemon' : 'text-gray-600'}`}><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg><span className="text-[8px] font-black uppercase tracking-widest">Inbox</span>{unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[7px] w-3 h-3 rounded-full flex items-center justify-center font-black">{unreadCount}</span>}</button>
-                <div className="relative"><button onClick={() => setView('apply')} className="flex items-center justify-center w-14 h-14 -mt-10 rounded-full bg-lemon text-black shadow-2xl border-4 border-black"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button></div>
+                <div className="relative">
+                    <button onClick={() => setView('apply')} className="flex items-center justify-center w-14 h-14 -mt-10 rounded-full bg-lemon text-black shadow-2xl border-4 border-black active:scale-90 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
+                </div>
                 <button onClick={() => setView('account')} className={`flex flex-col items-center gap-1 ${view === 'account' ? 'text-lemon' : 'text-gray-600'}`}><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4 4-4-4"/></svg><span className="text-[8px] font-black uppercase tracking-widest">Account</span></button>
             </nav>
         </div>

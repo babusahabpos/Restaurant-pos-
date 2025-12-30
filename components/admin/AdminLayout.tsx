@@ -14,7 +14,6 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
-    { name: AdminPage.StaffManagement, key: 'staff_users' },
     { name: AdminPage.SupportTickets, key: 'tickets' },
     { name: AdminPage.StaffHub, key: 'staff_hub' },
     { name: AdminPage.StaffRequirements, key: 'staff_reqs' },

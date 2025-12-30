@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { RegisteredUser, UserStatus, StaffUser, SupportTicket, StaffRequirementRequest, StaffApplication } from '../../types';
+import { RegisteredUser, UserStatus, StaffUser, SupportTicket, StaffRequirementRequest, StaffApplication, StaffJobPost } from '../../types';
 
 interface AdminDashboardProps {
     users: RegisteredUser[];
@@ -8,21 +8,22 @@ interface AdminDashboardProps {
     tickets: SupportTicket[];
     staffRequests: StaffRequirementRequest[];
     staffApplications: StaffApplication[];
+    jobPosts: StaffJobPost[];
     onApproveReject: (userId: number, decision: 'approve' | 'reject') => void;
-    onApproveStaff?: (userId: number, approve: boolean) => void;
+    onApproveJobPost?: (id: number) => void;
+    onDeleteJobPost?: (id: number) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [], tickets, staffRequests, staffApplications, onApproveReject, onApproveStaff }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [], tickets, staffRequests, staffApplications, jobPosts, onApproveReject, onApproveJobPost, onDeleteJobPost }) => {
 
     const pendingUsers = users.filter(u => u.status === UserStatus.Pending);
-    const pendingStaff = staffUsers.filter(u => u.status === 'Pending');
+    const pendingJobPosts = jobPosts.filter(p => p.status === 'Pending');
 
     const activityItems = [
         ...pendingUsers.map(u => ({ type: 'Restaurant', title: u.restaurantName, subtitle: `Owner: ${u.name}`, time: 'Awaiting Approval', status: 'priority' })),
-        ...pendingStaff.map(u => ({ type: 'Worker Account', title: u.name, subtitle: `Phone: ${u.phone}`, time: 'Registration Request', status: 'priority' })),
+        ...pendingJobPosts.map(p => ({ type: 'Staff CV', title: p.staffName, subtitle: `Role: ${p.category}`, time: 'Awaiting Approval', status: 'priority' })),
         ...tickets.filter(t => t.status === 'Open').map(t => ({ type: 'Ticket', title: t.subject, subtitle: `From: ${t.userName}`, time: 'Open', status: 'normal' })),
         ...staffRequests.filter(r => !r.isRead).map(r => ({ type: 'Staff Req', title: r.requirement, subtitle: r.restaurantName, time: 'New Request', status: 'normal' })),
-        ...staffApplications.filter(a => !a.isRead).map(a => ({ type: 'Worker Profile', title: a.staffName, subtitle: a.category, time: 'New Submission', status: 'normal' })),
     ].sort((a, b) => b.type.localeCompare(a.type));
 
     return (
@@ -34,8 +35,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                     <p className="text-3xl font-black text-white mt-1">{users.filter(u => u.status === UserStatus.Approved).length}</p>
                 </div>
                 <div className="bg-gray-900 border border-gray-800 p-5 rounded-3xl">
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Total Staff</p>
-                    <p className="text-3xl font-black text-lemon mt-1">{staffUsers.length}</p>
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Live Workers</p>
+                    <p className="text-3xl font-black text-lemon mt-1">{jobPosts.filter(p => p.status === 'Approved').length}</p>
                 </div>
                 <div className="bg-gray-900 border border-gray-800 p-5 rounded-3xl">
                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Open Tickets</p>
@@ -51,13 +52,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                 {/* Pending Approvals Section */}
                 <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
-                        Pending Approvals
-                        {([...pendingUsers, ...pendingStaff].length > 0) && (
-                            <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{[...pendingUsers, ...pendingStaff].length}</span>
+                        Approval Queue
+                        {([...pendingUsers, ...pendingJobPosts].length > 0) && (
+                            <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{[...pendingUsers, ...pendingJobPosts].length}</span>
                         )}
                     </h3>
                     <div className="space-y-4">
-                        {[...pendingUsers, ...pendingStaff].length > 0 ? (
+                        {[...pendingUsers, ...pendingJobPosts].length > 0 ? (
                             <>
                                 {pendingUsers.map(user => (
                                     <div key={user.id} className="p-5 bg-black border border-gray-800 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-l-lemon shadow-lg">
@@ -72,25 +73,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                                         </div>
                                     </div>
                                 ))}
-                                {pendingStaff.map(staff => (
-                                    <div key={staff.id} className="p-5 bg-black border border-gray-800 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-l-blue-500 shadow-lg">
+                                {pendingJobPosts.map(post => (
+                                    <div key={post.id} className="p-5 bg-black border border-gray-800 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-l-green-500 shadow-lg">
                                         <div className="text-center sm:text-left flex-1">
-                                            <span className="text-[8px] bg-blue-500 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Staff Member</span>
-                                            <p className="font-black text-white uppercase text-sm mt-1 leading-tight">{staff.name}</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{staff.phone}</p>
+                                            <span className="text-[8px] bg-green-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Staff Job Request</span>
+                                            <p className="font-black text-white uppercase text-sm mt-1 leading-tight">{post.staffName}</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{post.category} • {post.location}</p>
+                                            <p className="text-[9px] text-gray-600 mt-2 line-clamp-1 italic">"{post.cvDetails}"</p>
                                         </div>
                                         <div className="flex gap-2 w-full sm:w-auto">
                                             <button 
-                                                onClick={() => onApproveStaff && onApproveStaff(staff.id, true)} 
-                                                className="flex-1 sm:flex-none bg-blue-600 text-white font-black py-2.5 px-6 rounded-2xl text-[10px] uppercase shadow-lg shadow-blue-900/20"
+                                                onClick={() => onApproveJobPost && onApproveJobPost(post.id)} 
+                                                className="flex-1 sm:flex-none bg-green-600 text-white font-black py-2.5 px-6 rounded-2xl text-[10px] uppercase shadow-lg shadow-green-900/20"
                                             >
                                                 Approve
                                             </button>
                                             <button 
-                                                onClick={() => onApproveStaff && onApproveStaff(staff.id, false)} 
+                                                onClick={() => onDeleteJobPost && onDeleteJobPost(post.id)} 
                                                 className="flex-1 sm:flex-none bg-gray-800 text-white font-black py-2.5 px-6 rounded-2xl text-[10px] uppercase"
                                             >
-                                                Reject
+                                                Delete
                                             </button>
                                         </div>
                                     </div>
@@ -99,7 +101,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                         ) : (
                             <div className="py-20 flex flex-col items-center justify-center opacity-30 grayscale">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                                <p className="text-gray-500 font-black uppercase text-xs tracking-widest text-center">No pending items</p>
+                                <p className="text-gray-500 font-black uppercase text-xs tracking-widest text-center">Queue is clear</p>
                             </div>
                         )}
                     </div>
@@ -108,7 +110,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, staffUsers = [],
                 {/* Unified Activity Feed Section */}
                 <div className="p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800 flex flex-col min-h-[400px]">
                     <h3 className="mb-6 text-xl font-black text-white uppercase tracking-tight">System Feed</h3>
-                    <div className="space-y-3">
+                    <div className="space-y-3 overflow-y-auto no-scrollbar pr-2">
                         {activityItems.length > 0 ? activityItems.map((item, idx) => (
                             <div key={idx} className="bg-black/50 p-4 rounded-2xl border border-gray-800 flex justify-between items-center group hover:border-lemon/30 transition-all cursor-default">
                                 <div className="flex-1 min-w-0 pr-4">
