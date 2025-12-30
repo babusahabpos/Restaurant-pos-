@@ -115,9 +115,9 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // SYNC ENGINE: This is critical for data to move between the worker's tab and admin's tab
             if (e.key === 'babuSahabPos_staffUsers') {
-                setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+                const updated = JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)}));
+                setStaffUsers(updated);
             }
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
                 setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
@@ -158,7 +158,6 @@ function App() {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Pending', isBlocked: false, registeredAt: new Date() };
         const updatedStaff = [...staffUsers, newUser];
         setStaffUsers(updatedStaff);
-        // Force immediate save for visibility in Admin tab
         localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updatedStaff));
         return newUser;
     };
@@ -187,7 +186,6 @@ function App() {
         const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
         const updatedJobs = [...restaurantJobPosts, newJob];
         setRestaurantJobPosts(updatedJobs);
-        // Save immediately so Staff Link tab sees it
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
@@ -200,7 +198,7 @@ function App() {
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} />,
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} staffUsers={staffUsers} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))} onApproveStaff={handleApproveStaff} />,
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={(id, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: msg }])} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} />,
             [AdminPage.StaffHub]: <AdminStaffHub applications={staffApplications} onDeleteApp={(id) => setStaffApplications(prev => prev.filter(a => a.id !== id))} onPostApp={() => {}} onMarkRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} onCreateJob={handleCreateAdminJobPost} activeJobs={restaurantJobPosts} onDeleteJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))} />,
@@ -228,6 +226,7 @@ function App() {
             settings: <Settings user={loggedInUser} onSave={(upd) => setLoggedInUser(prev => prev ? {...prev, ...upd} : null)} onLogout={handleLogout} />,
             subscription: <Subscription />,
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
+            market: <Market />,
         };
         return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
