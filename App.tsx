@@ -103,7 +103,7 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    // --- Persistence ---
+    // --- Persistence Effects ---
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
@@ -187,10 +187,11 @@ function App() {
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
-    // --- Rendering ---
+    // --- Rendering Logic ---
+
     if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
     if (authState === 'customer') return <CustomerOrderPage />;
-    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
+    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleLogin} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={(u, r) => setRegisteredUsers(prev => [...prev, {...u, id: Date.now(), status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], address: '', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, menu: MOCK_MENU_ITEMS, referralCode: 'refer'+u.restaurantName.replace(/\s+/g,'').toLowerCase(), referredBy: r||'', socialMedia: {}}])} onNavigateToLogin={() => setAuthState('login')} />;
     
     if (authState === 'adminLoggedIn') {
