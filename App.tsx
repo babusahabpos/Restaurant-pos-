@@ -93,9 +93,23 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
+            // SYNC STAFF JOB REQUESTS (CVs)
             if (e.key === 'babuSahabPos_jobPosts') {
                 setJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
             }
+            // SYNC RESTAURANT VACANCIES
+            if (e.key === 'babuSahabPos_restaurantJobPosts') {
+                setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
+            }
+            // SYNC STAFF USERS
+            if (e.key === 'babuSahabPos_staffUsers') {
+                setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
+            }
+            // SYNC STAFF MESSAGES
+            if (e.key === 'babuSahabPos_staffMessages') {
+                setStaffMessages(JSON.parse(e.newValue || '[]').map((m: any) => ({...m, timestamp: new Date(m.timestamp)})));
+            }
+            // SYNC INCOMING ORDERS
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
                     const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
@@ -140,7 +154,6 @@ function App() {
     };
 
     const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
-        // CV Submission goes to pending state for Admin approval
         const newPost: StaffJobPost = { ...app, id: Date.now(), timestamp: new Date(), status: 'Pending' };
         setJobPosts(prev => [...prev, newPost]);
         alert("Worker profile submitted for admin approval.");
