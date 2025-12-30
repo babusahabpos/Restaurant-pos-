@@ -92,7 +92,6 @@ function App() {
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
-    // --- Staff Management State ---
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
     const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => {
@@ -104,7 +103,7 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    // --- Persistence Effects ---
+    // --- Persistence ---
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
@@ -116,8 +115,7 @@ function App() {
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'babuSahabPos_staffUsers') {
-                const updated = JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)}));
-                setStaffUsers(updated);
+                setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
                 setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
@@ -189,8 +187,7 @@ function App() {
         localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updatedJobs));
     };
 
-    // --- Rendering Logic ---
-
+    // --- Rendering ---
     if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} restaurantJobs={restaurantJobPosts} registeredStaff={staffUsers} onRegisterStaff={handleStaffUserRegister} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
