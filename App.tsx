@@ -86,6 +86,7 @@ function App() {
         const handleHashChange = () => { 
             if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
             else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
+            else if (window.location.hash === '') setAuthState('login');
         };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
@@ -93,23 +94,18 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // SYNC STAFF JOB REQUESTS (CVs)
             if (e.key === 'babuSahabPos_jobPosts') {
                 setJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
             }
-            // SYNC RESTAURANT VACANCIES
             if (e.key === 'babuSahabPos_restaurantJobPosts') {
                 setRestaurantJobPosts(JSON.parse(e.newValue || '[]').map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
             }
-            // SYNC STAFF USERS
             if (e.key === 'babuSahabPos_staffUsers') {
                 setStaffUsers(JSON.parse(e.newValue || '[]').map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
             }
-            // SYNC STAFF MESSAGES
             if (e.key === 'babuSahabPos_staffMessages') {
                 setStaffMessages(JSON.parse(e.newValue || '[]').map((m: any) => ({...m, timestamp: new Date(m.timestamp)})));
             }
-            // SYNC INCOMING ORDERS
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
                     const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
@@ -202,8 +198,8 @@ function App() {
             [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts.filter(p => p.status === 'Approved')} onAddPost={(p) => setJobPosts(prev => [...prev, {...p, id: Date.now(), timestamp: new Date(), status: 'Approved'}])} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, subscriptionEndDate: d} : u))} />,
         };
-        const totalAlerts = supportTickets.filter(t => t.status === 'Open').length + staffRequests.filter(r => !r.isRead).length + jobPosts.filter(p => p.status === 'Pending').length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalAlerts, staffApps: jobPosts.filter(p => p.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        const totalStaffAlerts = staffRequests.filter(r => !r.isRead).length + jobPosts.filter(p => p.status === 'Pending').length;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalStaffAlerts, staffApps: jobPosts.filter(p => p.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'staffApply') return (
