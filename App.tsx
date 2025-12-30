@@ -48,19 +48,8 @@ function App() {
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
-        try {
-            const storedUsers = localStorage.getItem('babuSahabPos_users');
-            if (storedUsers) {
-                return JSON.parse(storedUsers).map((u: any) => ({
-                    ...u,
-                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu.map((m: any) => ({
-                        ...m,
-                        offlinePrice: Number(m.offlinePrice) || 0,
-                        onlinePrice: Number(m.onlinePrice) || 0,
-                    })) : MOCK_MENU_ITEMS
-                }));
-            }
-        } catch (error) {}
+        const stored = localStorage.getItem('babuSahabPos_users');
+        if (stored) return JSON.parse(stored);
         return JSON.parse(JSON.stringify(MOCK_USERS));
     });
 
@@ -145,23 +134,44 @@ function App() {
 
     const handleStaffUserRegister = (name: string, phone: string) => {
         const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Approved', isBlocked: false, registeredAt: new Date() };
-        setStaffUsers(prev => [...prev, newUser]);
+        const updated = [...staffUsers, newUser];
+        setStaffUsers(updated);
+        localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(updated));
         return newUser;
     };
 
     const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
         const newPost: StaffJobPost = { ...app, id: Date.now(), timestamp: new Date(), status: 'Pending' };
-        setJobPosts(prev => [...prev, newPost]);
+        const updated = [...jobPosts, newPost];
+        setJobPosts(updated);
+        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
         alert("Worker profile submitted for admin approval.");
     };
 
     const handleSendMessageToStaff = (phone: string, text: string, senderName: string) => {
         const newMessage: StaffMessage = { id: Date.now(), senderName, recipientPhone: phone, text, timestamp: new Date(), isRead: false };
-        setStaffMessages(prev => [...prev, newMessage]);
+        const updated = [...staffMessages, newMessage];
+        setStaffMessages(updated);
+        localStorage.setItem('babuSahabPos_staffMessages', JSON.stringify(updated));
     };
 
     const handleApproveJobPost = (id: number) => {
-        setJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p));
+        const updated = jobPosts.map(p => p.id === id ? { ...p, status: 'Approved' as const } : p);
+        setJobPosts(updated);
+        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+    };
+
+    const handleCreateRestaurantJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
+        const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
+        const updated = [...restaurantJobPosts, newJob];
+        setRestaurantJobPosts(updated);
+        localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
+    };
+
+    const handleDeleteRestaurantJob = (id: number) => {
+        const updated = restaurantJobPosts.filter(p => p.id !== id);
+        setRestaurantJobPosts(updated);
+        localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(updated));
     };
 
     const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
@@ -179,7 +189,11 @@ function App() {
                     jobPosts={jobPosts}
                     onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u))}
                     onApproveJobPost={handleApproveJobPost}
-                    onDeleteJobPost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))}
+                    onDeleteJobPost={(id) => {
+                        const updated = jobPosts.filter(p => p.id !== id);
+                        setJobPosts(updated);
+                        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+                    }}
                 />
             ),
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u))} onSendMessage={(id, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: msg }])} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, password: p} : u))} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, subscriptionEndDate: d} : u))} onUpdateMenu={(id, m) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, menu: m} : u))} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />,
@@ -188,14 +202,27 @@ function App() {
                 <AdminStaffHub 
                     jobPosts={jobPosts} 
                     onApprove={handleApproveJobPost} 
-                    onDelete={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} 
+                    onDelete={(id) => {
+                        const updated = jobPosts.filter(p => p.id !== id);
+                        setJobPosts(updated);
+                        localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+                    }} 
                     onMessage={(phone, text) => handleSendMessageToStaff(phone, text, "Administrator")} 
-                    onCreateRestaurantJob={(job) => setRestaurantJobPosts(prev => [...prev, {...job, id: Date.now(), timestamp: new Date()}])}
+                    onCreateRestaurantJob={handleCreateRestaurantJob}
                     activeRestaurantJobs={restaurantJobPosts}
-                    onDeleteRestaurantJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))}
+                    onDeleteRestaurantJob={handleDeleteRestaurantJob}
                 />
             ),
-            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts.filter(p => p.status === 'Approved')} onAddPost={(p) => setJobPosts(prev => [...prev, {...p, id: Date.now(), timestamp: new Date(), status: 'Approved'}])} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
+            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts.filter(p => p.status === 'Approved')} onAddPost={(p) => {
+                const newPost = {...p, id: Date.now(), timestamp: new Date(), status: 'Approved' as const};
+                const updated = [...jobPosts, newPost];
+                setJobPosts(updated);
+                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+            }} onDeletePost={(id) => {
+                const updated = jobPosts.filter(p => p.id !== id);
+                setJobPosts(updated);
+                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+            }} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, subscriptionEndDate: d} : u))} />,
         };
         const totalStaffAlerts = staffRequests.filter(r => !r.isRead).length + jobPosts.filter(p => p.status === 'Pending').length;
@@ -209,7 +236,11 @@ function App() {
             registeredStaff={staffUsers} 
             onRegisterStaff={handleStaffUserRegister} 
             messages={staffMessages}
-            onMarkMessageRead={(id) => setStaffMessages(prev => prev.map(m => m.id === id ? {...m, isRead: true} : m))}
+            onMarkMessageRead={(id) => {
+                const updated = staffMessages.map(m => m.id === id ? {...m, isRead: true} : m);
+                setStaffMessages(updated);
+                localStorage.setItem('babuSahabPos_staffMessages', JSON.stringify(updated));
+            }}
         />
     );
     
@@ -225,7 +256,10 @@ function App() {
             menu: <Menu menu={loggedInUser.menu} setMenu={(m) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u))} />,
             qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={() => {}} loggedInUser={loggedInUser} />,
             staff: <Staff />,
-            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={(r, s) => setStaffRequests(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: r, salary: s, timestamp: new Date(), isRead: false }])} onMessageStaff={(phone, text) => handleSendMessageToStaff(phone, text, loggedInUser.restaurantName)} />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={(r, s) => {
+                const newReq = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: r, salary: s, timestamp: new Date(), isRead: false };
+                setStaffRequests(prev => [...prev, newReq]);
+            }} onMessageStaff={(phone, text) => handleSendMessageToStaff(phone, text, loggedInUser.restaurantName)} />,
             inventory: <Inventory />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
