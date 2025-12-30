@@ -43,7 +43,6 @@ function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
-    // --- Core Sync State ---
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
@@ -52,10 +51,6 @@ function App() {
         return stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(MOCK_USERS));
     });
 
-    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
-    const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
-
-    // --- Rebuilt Staff Integration State ---
     const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => {
         const saved = localStorage.getItem('babuSahabPos_staffUsers');
         return saved ? JSON.parse(saved).map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})) : [];
@@ -76,35 +71,31 @@ function App() {
         return saved ? JSON.parse(saved).map((p: any) => ({...p, timestamp: new Date(p.timestamp)})) : [];
     });
 
-    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => {
-        const saved = localStorage.getItem('babuSahabPos_staffRequests');
-        return saved ? JSON.parse(saved).map((r: any) => ({...r, timestamp: new Date(r.timestamp)})) : [];
-    });
+    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
+    const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
 
-    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => {
-        const saved = localStorage.getItem('babuSahabPos_staffApplications');
-        return saved ? JSON.parse(saved).map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })) : [];
-    });
+    useEffect(() => {
+        const handleHashChange = () => { 
+            if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
+            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
+            else if (window.location.hash === '') setAuthState('login');
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
 
-    // --- Cross-Tab Real-time Sync ---
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (!e.newValue) return;
             try {
                 const parsed = JSON.parse(e.newValue);
                 switch (e.key) {
-                    case 'babuSahabPos_jobPosts':
-                        setJobPosts(parsed.map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
-                        break;
-                    case 'babuSahabPos_restaurantJobPosts':
-                        setRestaurantJobPosts(parsed.map((p: any) => ({...p, timestamp: new Date(p.timestamp)})));
-                        break;
-                    case 'babuSahabPos_staffUsers':
-                        setStaffUsers(parsed.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)})));
-                        break;
-                    case 'babuSahabPos_staffMessages':
-                        setStaffMessages(parsed.map((m: any) => ({...m, timestamp: new Date(m.timestamp)})));
-                        break;
+                    case 'babuSahabPos_jobPosts': setJobPosts(parsed.map((p: any) => ({...p, timestamp: new Date(p.timestamp)}))); break;
+                    case 'babuSahabPos_restaurantJobPosts': setRestaurantJobPosts(parsed.map((p: any) => ({...p, timestamp: new Date(p.timestamp)}))); break;
+                    case 'babuSahabPos_staffUsers': setStaffUsers(parsed.map((u: any) => ({...u, registeredAt: new Date(u.registeredAt)}))); break;
+                    case 'babuSahabPos_staffMessages': setStaffMessages(parsed.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))); break;
                 }
             } catch (err) {}
 
@@ -121,46 +112,15 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // --- Persistence ---
+    useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobPosts', JSON.stringify(restaurantJobPosts)); }, [restaurantJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffUsers', JSON.stringify(staffUsers)); }, [staffUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffMessages', JSON.stringify(staffMessages)); }, [staffMessages]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
 
-    // --- Staff Logic ---
-    const handleStaffRegister = (name: string, phone: string) => {
-        const newUser: StaffUser = { id: Date.now(), name, phone, status: 'Approved', isBlocked: false, registeredAt: new Date() };
-        setStaffUsers(prev => [...prev, newUser]);
-        return newUser;
-    };
-
-    const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
-        const id = Date.now();
-        const timestamp = new Date();
-        // 1. Instantly Approve Worker Profile for the Feed
-        const newPost: StaffJobPost = { ...app, id, timestamp, status: 'Approved' };
-        setJobPosts(prev => [...prev, newPost]);
-        // 2. Log in Admin Inbox
-        setStaffApplications(prev => [...prev, { ...app, id, timestamp, isRead: false }]);
-        alert("Your profile is now LIVE! Restaurant owners can contact you.");
-    };
-
-    const handleSendMessageToStaff = (phone: string, text: string, senderName: string) => {
-        const newMessage: StaffMessage = { id: Date.now(), senderName, recipientPhone: phone, text, timestamp: new Date(), isRead: false };
-        setStaffMessages(prev => [...prev, newMessage]);
-    };
-
-    const handleCreateRestaurantJob = (job: Omit<RestaurantJobPost, 'id' | 'timestamp'>) => {
-        const newJob: RestaurantJobPost = { ...job, id: Date.now(), timestamp: new Date() };
-        setRestaurantJobPosts(prev => [...prev, newJob]);
-    };
-
-    // --- Auth Logic ---
     const handleLogin = (email: string, pass: string) => {
         if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
@@ -171,13 +131,40 @@ function App() {
         return 'not_found';
     };
 
-    // --- Render ---
+    const handleRegister = (newUser: any, status: UserStatus, referralCode?: string) => {
+        const user: RegisteredUser = { 
+            ...newUser, 
+            id: Date.now(), 
+            status: status, 
+            lastLogin: 'Never', 
+            subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            address: '', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, menu: MOCK_MENU_ITEMS, 
+            referralCode: 'refer'+newUser.restaurantName.replace(/\s+/g,'').toLowerCase(), 
+            referredBy: referralCode || '', socialMedia: {} 
+        };
+        setRegisteredUsers(prev => [...prev, user]);
+    };
+
+    const handleStaffApply = (app: Omit<StaffApplication, 'id' | 'timestamp' | 'isRead'>) => {
+        const id = Date.now();
+        const timestamp = new Date();
+        setJobPosts(prev => [...prev, { ...app, id, timestamp, status: 'Approved' }]);
+        setStaffApplications(prev => [...prev, { ...app, id, timestamp, isRead: false }]);
+        alert("Worker profile is now live!");
+    };
+
+    const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
+
     if (authState === 'staffApply') return (
         <StaffApplicationPage 
             onApply={handleStaffApply} 
             restaurantJobs={restaurantJobPosts} 
             registeredStaff={staffUsers} 
-            onRegisterStaff={handleStaffRegister} 
+            onRegisterStaff={(n, p) => {
+                const u: StaffUser = { id: Date.now(), name: n, phone: p, status: 'Approved', isBlocked: false, registeredAt: new Date() };
+                setStaffUsers(prev => [...prev, u]);
+                return u;
+            }} 
             messages={staffMessages}
             onMarkMessageRead={(id) => setStaffMessages(prev => prev.map(m => m.id === id ? {...m, isRead: true} : m))}
         />
@@ -193,8 +180,11 @@ function App() {
                     jobPosts={jobPosts} 
                     onApprove={(id) => setJobPosts(prev => prev.map(p => p.id === id ? {...p, status: 'Approved'} : p))} 
                     onDelete={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} 
-                    onMessage={(phone, text) => handleSendMessageToStaff(phone, text, "Administrator")} 
-                    onCreateRestaurantJob={handleCreateRestaurantJob}
+                    onMessage={(phone, text) => {
+                        const m: StaffMessage = { id: Date.now(), senderName: "Admin", recipientPhone: phone, text, timestamp: new Date(), isRead: false };
+                        setStaffMessages(prev => [...prev, m]);
+                    }} 
+                    onCreateRestaurantJob={(j) => setRestaurantJobPosts(prev => [...prev, {...j, id: Date.now(), timestamp: new Date()}])}
                     activeRestaurantJobs={restaurantJobPosts}
                     onDeleteRestaurantJob={(id) => setRestaurantJobPosts(prev => prev.filter(p => p.id !== id))}
                 />
@@ -213,20 +203,26 @@ function App() {
             menu: <Menu menu={loggedInUser.menu} setMenu={(m) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u))} />,
             qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={() => {}} loggedInUser={loggedInUser} />,
             staff: <Staff />,
-            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={(r, s) => setStaffRequests(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: r, salary: s, timestamp: new Date(), isRead: false }])} onMessageStaff={(phone, text) => handleSendMessageToStaff(phone, text, loggedInUser.restaurantName)} />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={(r, s) => setStaffRequests(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: r, salary: s, timestamp: new Date(), isRead: false }])} onMessageStaff={(phone, text) => {
+                const m: StaffMessage = { id: Date.now(), senderName: loggedInUser.restaurantName, recipientPhone: phone, text, timestamp: new Date(), isRead: false };
+                setStaffMessages(prev => [...prev, m]);
+            }} />,
             inventory: <Inventory />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,
             refer: <Referral user={loggedInUser} />,
-            settings: <Settings user={loggedInUser} onSave={(upd) => setLoggedInUser(prev => prev ? {...prev, ...upd} : null)} onLogout={() => setAuthState('login')} />,
+            settings: <Settings user={loggedInUser} onSave={(upd) => setLoggedInUser(prev => prev ? {...prev, ...upd} : null)} onLogout={handleLogout} />,
             subscription: <Subscription />,
-            help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={() => {}} />,
+            help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => {
+                const t: SupportTicket = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, subject: s, messages: [{sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at}], status: 'Open', lastUpdate: new Date() };
+                setSupportTickets(prev => [...prev, t]);
+            }} />,
         };
-        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={() => setAuthState('login')} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
+        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
     
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
-    if (authState === 'register') return <Register onRegister={(u) => setRegisteredUsers(prev => [...prev, {...u, id: Date.now(), status: UserStatus.Pending, lastLogin: 'Never', subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], address: '', taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, menu: MOCK_MENU_ITEMS, referralCode: 'refer'+u.restaurantName.replace(/\s+/g,'').toLowerCase(), referredBy: '', socialMedia: {}}])} onNavigateToLogin={() => setAuthState('login')} />;
+    if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
     if (authState === 'customer') return <CustomerOrderPage />;
 
     return <div>Something went wrong. Please refresh.</div>;

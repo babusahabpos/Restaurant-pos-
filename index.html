@@ -4,10 +4,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <!-- Critical for Native App feel: Disable zooming completely -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>BaBu SAHAB POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Razorpay Checkout SDK for India Auto-Verification -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -23,47 +26,25 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
-      /* Global Mobile Native Fixes */
       html, body {
         height: 100%;
-        overflow: hidden; /* Prevent body scroll, components will handle internal scroll */
+        overflow: hidden;
         position: fixed;
         width: 100%;
         -webkit-text-size-adjust: 100%;
         touch-action: manipulation;
       }
-      
-      #root {
-        height: 100%;
-        overflow: hidden;
-      }
-
-      body {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        user-select: none;
-        background-color: black;
-      }
-
-      input, textarea {
-        -webkit-user-select: text;
-        user-select: text;
-      }
-
-      /* Custom scrollbar for better mobile look */
+      #root { height: 100%; overflow: hidden; }
+      body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; background-color: black; }
+      input, textarea { -webkit-user-select: text; user-select: text; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
-      /* Animation for incoming orders */
       @keyframes blink-red {
         0%, 100% { background-color: rgba(255, 0, 0, 0.1); border-color: #ef4444; }
         50% { background-color: rgba(255, 0, 0, 0.3); border-color: #f87171; }
       }
-      .animate-alert-border {
-        animation: blink-red 1.5s infinite;
-      }
+      .animate-alert-border { animation: blink-red 1.5s infinite; }
     </style>
   <script type="importmap">
 {

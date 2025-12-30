@@ -11,7 +11,7 @@ interface StaffApplicationPageProps {
     onMarkMessageRead: (id: number) => void;
 }
 
-const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, restaurantJobs = [], registeredStaff = [], onRegisterStaff, messages, onMarkMessageRead }) => {
+const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, restaurantJobs = [], registeredStaff = [], onRegisterStaff, messages = [], onMarkMessageRead }) => {
     const [view, setView] = useState<'feed' | 'apply' | 'account' | 'messages'>('feed');
     const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
         const saved = localStorage.getItem('babuSahabPos_activeStaff');
@@ -74,8 +74,8 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                 {view === 'feed' && (
                     <div className="space-y-4 animate-fade-in">
                         <div className="bg-gray-900/50 p-6 rounded-[2rem] border border-dashed border-gray-800 text-center mb-6">
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Job Vacancies</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Hiring active right now</p>
+                            <h3 className="text-lg font-black text-white uppercase tracking-tight">Active Jobs</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Live vacancies from restaurants</p>
                         </div>
                         {restaurantJobs.length > 0 ? restaurantJobs.slice().reverse().map(job => (
                             <div key={job.id} className="bg-gray-900 border border-gray-800 p-5 rounded-[2rem] flex justify-between items-center shadow-lg group hover:border-lemon/30 transition-colors">
@@ -90,7 +90,7 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                         )) : (
                             <div className="py-20 text-center flex flex-col items-center opacity-30 grayscale">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                <p className="font-black uppercase text-xs tracking-widest">No jobs posted yet today</p>
+                                <p className="font-black uppercase text-xs tracking-widest">No jobs posted yet</p>
                             </div>
                         )}
                     </div>
@@ -110,7 +110,7 @@ const StaffApplicationPage: React.FC<StaffApplicationPageProps> = ({ onApply, re
                                 </div>
                                 <p className="text-white font-bold text-sm leading-relaxed">"{msg.text}"</p>
                                 <div className="mt-4 flex gap-3 items-center">
-                                    <button className="text-[9px] font-black text-lemon uppercase hover:underline">Reply with Call</button>
+                                    <a href={`tel:${msg.recipientPhone}`} className="text-[9px] font-black text-lemon uppercase hover:underline">Reply with Call</a>
                                     {!msg.isRead && <span className="bg-red-600 text-white text-[7px] px-2 py-0.5 rounded-full font-black uppercase">Unread</span>}
                                 </div>
                             </div>
