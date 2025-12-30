@@ -91,6 +91,7 @@ export interface StaffJobPost {
     location: string;
     cvDetails: string;
     timestamp: Date;
+    status: 'Pending' | 'Approved';
 }
 
 export interface RestaurantJobPost {
@@ -131,6 +132,15 @@ export interface StaffUser {
     status: 'Pending' | 'Approved' | 'Rejected';
     isBlocked: boolean;
     registeredAt: Date;
+}
+
+export interface StaffMessage {
+    id: number;
+    senderName: string;
+    recipientPhone: string;
+    text: string;
+    timestamp: Date;
+    isRead: boolean;
 }
 
 export enum AdminPage {
