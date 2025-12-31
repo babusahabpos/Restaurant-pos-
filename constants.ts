@@ -1,5 +1,5 @@
 
-import { Page, MenuItem, InventoryItem, StaffMember, RegisteredUser, UserStatus, SupportTicket } from './types';
+import { Page, MenuItem, InventoryItem, RegisteredUser, UserStatus, SupportTicket, StaffMember } from './types';
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'dashboard', icon: 'dashboard' },
@@ -7,10 +7,9 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
-    { name: 'staff', icon: 'staff' }, 
-    { name: 'staffRequirements', icon: 'staff' }, 
-    { name: 'market', icon: 'market' }, 
     { name: 'inventory', icon: 'inventory' },
+    { name: 'staff', icon: 'staff' },
+    { name: 'staffRequirements', icon: 'staffRequirements' },
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 
     { name: 'refer', icon: 'refer' }, 
@@ -30,22 +29,15 @@ export const MOCK_MENU_ITEMS: MenuItem[] = [
 ];
 
 export const MOCK_INVENTORY_ITEMS: InventoryItem[] = [
-    { id: 1, name: 'Pizza Base', category: 'Bakery', quantity: 50, unit: 'pcs', lowStockThreshold: 20 },
-    { id: 2, name: 'Mozzarella Cheese', category: 'Dairy', quantity: 10, unit: 'kg', lowStockThreshold: 5 },
-    { id: 3, name: 'Tomato', category: 'Vegetable', quantity: 15, unit: 'kg', lowStockThreshold: 5 },
-    { id: 4, name: 'Onion', category: 'Vegetable', quantity: 25, unit: 'kg', lowStockThreshold: 10 },
-    { id: 5, name: 'Coca-cola Cans', category: 'Beverages', quantity: 100, unit: 'pcs', lowStockThreshold: 48 },
+    { id: 1, name: 'Tomato', category: 'Vegetables', quantity: 10, unit: 'kg', lowStockThreshold: 5 },
+    { id: 2, name: 'Cheese', category: 'Dairy', quantity: 4, unit: 'kg', lowStockThreshold: 10 },
+    { id: 3, name: 'Flour', category: 'Grains', quantity: 50, unit: 'kg', lowStockThreshold: 20 },
 ];
 
 export const MOCK_STAFF: StaffMember[] = [
-    { id: 1, name: 'Anil Kumar', role: 'Manager', avatar: 'AK', status: 'Clocked In', lastAction: '26 Jun, 09:00 AM' },
-    { id: 2, name: 'Sunita Sharma', role: 'Head Chef', avatar: 'SS', status: 'Clocked Out', lastAction: '25 Jun, 11:00 PM' },
-    { id: 3, name: 'Ravi Verma', role: 'Waiter', avatar: 'RV', status: 'On Break', lastAction: '26 Jun, 01:00 PM' },
+    { id: 1, name: 'Rahul Sharma', role: 'Head Chef', avatar: 'RS', status: 'Clocked Out', lastAction: '2 days ago' },
+    { id: 2, name: 'Priya Singh', role: 'Waiter', avatar: 'PS', status: 'Clocked Out', lastAction: '1 day ago' },
 ];
-
-const getFutureDate = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-const getPastDate = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
 
 export const MOCK_USERS: RegisteredUser[] = [
     { 
@@ -64,9 +56,9 @@ export const MOCK_USERS: RegisteredUser[] = [
         menu: MOCK_MENU_ITEMS,
         status: UserStatus.Approved, 
         lastLogin: '2 hours ago', 
-        subscriptionEndDate: getFutureDate(30),
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         referralCode: 'referbabusahab',
-        socialMedia: { autoPostEnabled: true, instagram: '@babusahab', facebook: 'BaBu SAHAB Official' }
+        socialMedia: { instagram: '@babusahab', facebook: 'BaBu SAHAB Official' }
     },
 ];
 
@@ -75,11 +67,4 @@ export const MOCK_TICKETS: SupportTicket[] = [
         { sender: 'user', text: 'My billing page is not loading correctly.', timestamp: new Date(Date.now() - 3600000) },
         { sender: 'admin', text: 'We are looking into it. Can you please provide a screenshot?', timestamp: new Date(Date.now() - 1800000) }
     ], status: 'Pending', lastUpdate: new Date(Date.now() - 1800000) },
-];
-
-export const SALES_BREAKDOWN_DATA = [
-    { name: 'Dine-in', value: 15000 },
-    { name: 'Takeaway', value: 8000 },
-    { name: 'Swiggy', value: 12000 },
-    { name: 'Zomato', value: 10500 },
 ];

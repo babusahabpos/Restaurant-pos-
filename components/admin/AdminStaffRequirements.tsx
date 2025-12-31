@@ -16,13 +16,6 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
     const [view, setView] = useState<'requests' | 'applications' | 'create'>('requests');
     const [formData, setFormData] = useState({ staffName: '', category: '', phone: '', location: '', cvDetails: '' });
 
-    const staffApplyUrl = `${window.location.origin}${window.location.pathname}#staff-apply`;
-
-    const handleCopyLink = () => {
-        navigator.clipboard.writeText(staffApplyUrl);
-        alert("Staff Application Link Copied!");
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onAddPost(formData);
@@ -32,17 +25,6 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
 
     return (
         <div className="space-y-6 h-full flex flex-col">
-            <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
-                <div>
-                    <h3 className="text-white font-black text-xs uppercase tracking-widest">Staff Link</h3>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase">Share with workers for registration</p>
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <input readOnly value={staffApplyUrl} className="bg-black text-[10px] text-lemon p-2 rounded-lg border border-gray-800 flex-1 sm:w-64" />
-                    <button onClick={handleCopyLink} className="bg-lemon text-black font-black px-4 py-2 rounded-lg text-[10px] uppercase">Copy</button>
-                </div>
-            </div>
-
             <div className="flex gap-2 bg-gray-900 p-2 rounded-xl border border-gray-800 shrink-0">
                 <button onClick={() => setView('requests')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'requests' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}>Inbox</button>
                 <button onClick={() => setView('applications')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase transition-all ${view === 'applications' ? 'bg-lemon text-black' : 'text-gray-400 hover:bg-gray-800'}`}>Submissions</button>

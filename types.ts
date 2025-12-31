@@ -5,16 +5,16 @@ export type Page =
     'online' | 
     'menu' | 
     'inventory' | 
-    'staff' | 
     'reports' | 
     'subscription' | 
     'help' | 
     'qrMenu' | 
     'settings' | 
     'social' | 
-    'staffRequirements' | 
-    'market' | 
-    'refer'; 
+    'refer' |
+    'staff' |
+    'market' |
+    'staffRequirements'; 
 
 export interface MenuItem {
     id: number;
@@ -66,90 +66,13 @@ export interface InventoryItem {
     lowStockThreshold: number;
 }
 
-export interface StaffMember {
-    id: number;
-    name: string;
-    role: string;
-    avatar: string;
-    status: 'Clocked In' | 'Clocked Out' | 'On Break';
-    lastAction: string;
-}
-
-export interface StaffLogEntry {
-    id: number;
-    staffId: number;
-    staffName: string;
-    action: 'Clock In' | 'Clock Out' | 'Take Break' | 'End Break' | 'Absent';
-    timestamp: Date;
-}
-
-export interface StaffJobPost {
-    id: number;
-    staffName: string;
-    category: string;
-    phone: string;
-    location: string;
-    cvDetails: string;
-    timestamp: Date;
-    status: 'Pending' | 'Approved';
-}
-
-export interface RestaurantJobPost {
-    id: number;
-    restaurantName: string;
-    address: string;
-    category: string;
-    salary: string;
-    phone: string;
-    timestamp: Date;
-}
-
-export interface StaffApplication {
-    id: number;
-    staffName: string;
-    category: string;
-    phone: string;
-    location: string;
-    cvDetails: string;
-    timestamp: Date;
-    isRead: boolean;
-}
-
-export interface StaffRequirementRequest {
-    id: number;
-    userId: number;
-    restaurantName: string;
-    requirement: string;
-    salary: string;
-    timestamp: Date;
-    isRead: boolean;
-}
-
-export interface StaffUser {
-    id: number;
-    name: string;
-    phone: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    isBlocked: boolean;
-    registeredAt: Date;
-}
-
-export interface StaffMessage {
-    id: number;
-    senderName: string;
-    recipientPhone: string;
-    text: string;
-    timestamp: Date;
-    isRead: boolean;
-}
-
 export enum AdminPage {
     Dashboard = 'Admin Dashboard',
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
-    StaffRequirements = 'Staff Requirements',
-    StaffHub = 'Staff Hub'
+    StaffHub = 'Staff Hub',
+    StaffRequirements = 'Staff Requirements'
 }
 
 export enum UserStatus {
@@ -209,4 +132,82 @@ export interface AdminAlert {
     id: number | string;
     userId: number | 'all';
     message: string;
+}
+
+// Added missing staff and job related interfaces
+export interface StaffMember {
+    id: number;
+    name: string;
+    role: string;
+    avatar: string;
+    status: 'Clocked In' | 'Clocked Out' | 'On Break';
+    lastAction: string;
+}
+
+export interface StaffLogEntry {
+    id: number;
+    staffId: number;
+    staffName: string;
+    action: 'Clock In' | 'Clock Out' | 'Take Break' | 'End Break' | 'Absent';
+    timestamp: Date;
+}
+
+export interface StaffUser {
+    id: number;
+    name: string;
+    phone: string;
+    registeredAt: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    isBlocked: boolean;
+}
+
+export interface StaffRequirementRequest {
+    id: number;
+    userId: number;
+    restaurantName: string;
+    requirement: string;
+    salary: string;
+    timestamp: Date;
+    isRead: boolean;
+}
+
+export interface StaffApplication {
+    id: number;
+    staffName: string;
+    phone: string;
+    category: string;
+    location: string;
+    cvDetails: string;
+    timestamp: Date;
+    isRead: boolean;
+}
+
+export interface StaffJobPost {
+    id: number;
+    staffName: string;
+    category: string;
+    phone: string;
+    location: string;
+    cvDetails: string;
+    timestamp: Date;
+    status?: 'Pending' | 'Approved' | 'Rejected';
+}
+
+export interface RestaurantJobPost {
+    id: number;
+    restaurantName: string;
+    address: string;
+    category: string;
+    salary: string;
+    phone: string;
+    timestamp: Date;
+}
+
+export interface StaffMessage {
+    id: number;
+    senderName: string;
+    recipientPhone: string;
+    text: string;
+    timestamp: Date;
+    isRead: boolean;
 }

@@ -18,7 +18,6 @@ import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
 import StaffRequirements from './components/StaffRequirements';
-import StaffApplicationPage from './components/StaffApplicationPage'; 
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -30,12 +29,10 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem } from './types';
 
 function App() {
-    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'staffApply';
+    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
-    // Initialize auth state based on URL hash
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (window.location.hash.startsWith('#customer-order')) return 'customer';
-        if (window.location.hash === '#staff-apply') return 'staffApply';
         return 'login';
     });
 
@@ -43,7 +40,6 @@ function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
-    // --- State Management ---
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_orders') || '[]').map((o: any) => ({...o, timestamp: new Date(o.timestamp)})) );
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
     
@@ -72,7 +68,6 @@ function App() {
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
     
-    // --- Staff Management State ---
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
     const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => {
@@ -86,7 +81,6 @@ function App() {
     useEffect(() => {
         const handleHashChange = () => { 
             if (window.location.hash.startsWith('#customer-order')) setAuthState('customer'); 
-            else if (window.location.hash === '#staff-apply') setAuthState('staffApply');
         };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
@@ -94,7 +88,6 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
-            // Robust Cross-Tab Sync for applications and posts
             if (e.key === 'babuSahabPos_staffApplications') {
                 const latest = localStorage.getItem('babuSahabPos_staffApplications');
                 if (latest) {
@@ -107,8 +100,6 @@ function App() {
                     setJobPosts(JSON.parse(latest).map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) })));
                 }
             }
-            
-            // Handle cross-tab sync for orders
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
                     const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
@@ -124,7 +115,6 @@ function App() {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    // --- Persistence Effects ---
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
@@ -133,7 +123,6 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
-    // --- UI/Logic Effects ---
     useEffect(() => {
         if (authState === 'adminLoggedIn') {
             const totalNotifications = 
@@ -180,8 +169,6 @@ function App() {
             return newAlerts;
         });
     }, [registeredUsers]);
-
-    // --- Handlers ---
 
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
         if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
@@ -298,35 +285,10 @@ function App() {
         setAlerts(prev => prev.filter(a => a.id !== alertId));
     };
 
-    // --- Staff Management Handlers ---
     const handleStaffRequirementSubmit = (req: string, salary: string) => {
         if (!loggedInUser) return;
         const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
         setStaffRequests(prev => [...prev, newReq]);
-    };
-
-    const handleStaffApply = (application: StaffApplication) => {
-        // AUTO POST LOGIC: When a staff member applies, automatically post them to the Job Hub
-        // No admin approval needed.
-        
-        // 1. Log the application in the Admin inbox
-        setStaffApplications(prev => [...prev, { ...application, isRead: true }]); // Auto-marked as read since it's auto-processed
-
-        // 2. Automatically create a job post in the public Staff Hub
-        const newJobPost: StaffJobPost = {
-            id: application.id,
-            staffName: application.staffName,
-            category: application.category,
-            phone: application.phone,
-            location: application.location,
-            cvDetails: application.cvDetails,
-            timestamp: new Date(application.timestamp)
-        };
-        setJobPosts(prev => [...prev, newJobPost]);
-
-        // Trigger notification sound
-        const audio = document.getElementById('notification-sound') as HTMLAudioElement;
-        if (audio) audio.play().catch(() => {});
     };
 
     const handleAddStaffPost = (post: any) => {
@@ -337,7 +299,6 @@ function App() {
         setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a));
     };
 
-    // --- Admin Handlers ---
     const handleApproveRejectUser = (id: number, decision: 'approve' | 'reject') => {
         setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u));
     };
@@ -366,9 +327,6 @@ function App() {
         setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t));
     };
 
-    // --- Rendering Logic ---
-
-    if (authState === 'staffApply') return <StaffApplicationPage onApply={handleStaffApply} />;
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} onContactAdmin={handleGuestMessage} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
