@@ -337,10 +337,16 @@ function App() {
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription} onUpdateMenu={handleAdminUpdateMenu} onDeleteUser={handleDeleteUser} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
             [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={handleMarkAppRead} />,
+            /**
+             * Added StaffHub page handling for admin to resolve indexing errors
+             */
+            [AdminPage.StaffHub]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={handleMarkAppRead} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };
-        const totalStaffAlerts = staffRequests.filter(r => !r.isRead).length + staffApplications.filter(a => !a.isRead).length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: totalStaffAlerts }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
+        // Detailed counts for AdminLayout's badge display
+        const staffReqsCount = staffRequests.filter(r => !r.isRead).length;
+        const staffAppsCount = staffApplications.filter(a => !a.isRead).length;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffReqsCount, staffApps: staffAppsCount }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {

@@ -12,7 +12,7 @@ export type Page =
     'settings' | 
     'social' | 
     'refer' |
-    'staff' |
+    'staff' | 
     'market' |
     'staffRequirements'; 
 
@@ -71,8 +71,11 @@ export enum AdminPage {
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
-    StaffHub = 'Staff Hub',
-    StaffRequirements = 'Staff Requirements'
+    StaffRequirements = 'Staff Hub',
+    /**
+     * Added StaffHub enum member to resolve property missing errors in components/admin/AdminLayout.tsx
+     */
+    StaffHub = 'Staff Hub Management'
 }
 
 export enum UserStatus {
@@ -134,7 +137,6 @@ export interface AdminAlert {
     message: string;
 }
 
-// Added missing staff and job related interfaces
 export interface StaffMember {
     id: number;
     name: string;

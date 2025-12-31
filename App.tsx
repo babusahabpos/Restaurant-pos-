@@ -16,14 +16,16 @@ import HelpAndSupport from './components/HelpAndSupport';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
+import StaffRequirements from './components/StaffRequirements';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
+import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, StaffJobPost, StaffRequirementRequest, StaffApplication } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
@@ -66,6 +68,10 @@ function App() {
 
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_tickets') || JSON.stringify(MOCK_TICKETS)).map((t: any) => ({...t, lastUpdate: new Date(t.lastUpdate), messages: t.messages.map((m: any) => ({...m, timestamp: new Date(m.timestamp)}))})));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_alerts') || '[]'));
+    
+    const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
 
     useEffect(() => {
         const handleHashChange = () => { 
@@ -96,6 +102,9 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
     useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(jobPosts)); }, [jobPosts]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
     useEffect(() => {
         if (!loggedInUser) return;
@@ -151,7 +160,7 @@ function App() {
         const user: RegisteredUser = { 
             ...newUser, 
             id: Date.now(), 
-            status: UserStatus.Approved, // Simulated auto-approve after UPI input in Register component
+            status: UserStatus.Approved, 
             lastLogin: 'Never', 
             subscriptionEndDate: getFutureDate(30), 
             address: '', 
@@ -179,6 +188,16 @@ function App() {
         setOrders(prev => [...prev, newOrder]);
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if(audio) audio.play().catch(() => {});
+    };
+
+    const handleStaffRequirementSubmit = (req: string, salary: string) => {
+        if (!loggedInUser) return;
+        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
+        setStaffRequests(prev => [...prev, newReq]);
+    };
+
+    const handleAddStaffPost = (post: any) => {
+        setJobPosts(prev => [...prev, { ...post, id: Date.now(), timestamp: new Date(), status: 'Approved' }]);
     };
 
     const handleCompleteOrder = (orderId: number) => {
@@ -222,12 +241,20 @@ function App() {
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={() => {}} tickets={supportTickets} staffRequests={[]} staffApplications={[]} jobPosts={[]} staffUsers={[]} />,
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={() => {}} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} jobPosts={jobPosts} staffUsers={[]} />,
             [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
             [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} />,
             [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
+            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
+            /**
+             * Added StaffHub entry to resolve indexing errors when currentAdminPage is AdminPage.StaffHub
+             */
+            [AdminPage.StaffHub]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
         };
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage as keyof typeof adminPages] || null}</AdminLayout>;
+        // Detailed counts for AdminLayout's badge display
+        const staffReqsCount = staffRequests.filter(r => !r.isRead).length;
+        const staffAppsCount = staffApplications.filter(a => !a.isRead).length;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffReqsCount, staffApps: staffAppsCount }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage as keyof typeof adminPages] || null}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
@@ -237,6 +264,7 @@ function App() {
             online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={loggedInUser.menu} setMenu={handleUpdateMenu} />,
             qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={() => {}} loggedInUser={loggedInUser} />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={() => {}} />,
             inventory: <Inventory />,
             reports: <Reports />,
             social: <SocialMedia user={loggedInUser} />,

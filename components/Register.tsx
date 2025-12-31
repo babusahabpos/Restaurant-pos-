@@ -53,11 +53,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         setStep(2);
     };
 
-    const handleUpiPay = () => {
-        // Deep link for UPI apps
-        const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=BaBuSAHAB_Monthly_30_${formData.restaurantName.replace(/\s/g, '_')}`;
-        window.location.assign(upiUrl);
-    };
+    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=BaBuSAHAB_Monthly_30_${formData.restaurantName.replace(/\s/g, '_')}`;
 
     const handleVerifyAndActivate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -117,17 +113,20 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                 ) : (
                     <div className="space-y-6 animate-fade-in">
                         <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center shadow-inner relative overflow-hidden">
-                            <div className="absolute top-0 right-0 bg-lemon text-black text-[8px] px-3 py-1 font-black uppercase tracking-tighter rounded-bl-xl">Offer</div>
+                            <div className="absolute top-0 right-0 bg-lemon text-black text-[8px] px-3 py-1 font-black uppercase tracking-tighter rounded-bl-xl">Special Offer</div>
                             <h4 className="text-gray-500 font-black text-[10px] uppercase tracking-widest mb-1">Monthly Subscription</h4>
-                            <p className="text-4xl font-black text-white">₹{SUBSCRIPTION_AMOUNT}</p>
-                            <p className="text-[9px] text-lemon/60 font-bold uppercase mt-2">Billed Monthly • Cancel anytime</p>
+                            <div className="flex items-center justify-center gap-3">
+                                <p className="text-xl font-black text-gray-600 line-through">₹99</p>
+                                <p className="text-4xl font-black text-white">₹30</p>
+                            </div>
+                            <p className="text-[9px] text-lemon/80 font-bold uppercase mt-2 tracking-widest">Per Month • Active Forever</p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="text-center bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
                                 <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3">1. Launch Payment App</p>
-                                <button 
-                                    onClick={handleUpiPay}
+                                <a 
+                                    href={upiUrl}
                                     className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
                                 >
                                     <div className="flex gap-1.5">
@@ -135,7 +134,8 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" className="h-4" alt="UPI"/>
                                     </div>
                                     <span className="text-[11px] uppercase tracking-tighter">Open GPay / PhonePe</span>
-                                </button>
+                                </a>
+                                <p className="text-[8px] text-gray-600 mt-2 font-bold italic uppercase tracking-tighter">* Click button to open UPI apps</p>
                             </div>
 
                             <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
