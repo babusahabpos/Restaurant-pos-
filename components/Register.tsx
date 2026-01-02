@@ -36,7 +36,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [isVerifying, setIsVerifying] = useState(false);
     
     const ADMIN_UPI_ID = "7003548323@ybl";
-    const SUBSCRIPTION_AMOUNT = "30";
+    const SUBSCRIPTION_AMOUNT = "1"; // Updated to 1 Rupee as requested
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -53,11 +53,11 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         setStep(2);
     };
 
-    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=BaBuSAHAB_Monthly_30_${formData.restaurantName.replace(/\s/g, '_')}`;
+    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=BaBuSAHAB_ID_Activation_${formData.restaurantName.replace(/\s/g, '_')}`;
 
     const handleVerifyAndActivate = (e: React.FormEvent) => {
         e.preventDefault();
-        if (transactionId.length < 6) {
+        if (transactionId.length < 4) {
             alert("Please enter a valid Transaction ID / UTR.");
             return;
         }
@@ -112,14 +112,19 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                     </form>
                 ) : (
                     <div className="space-y-6 animate-fade-in">
+                        {/* New Offer Text at top */}
+                        <div className="bg-lemon text-black text-[12px] font-black uppercase tracking-[0.2em] py-2 text-center rounded-xl shadow-lg animate-pulse">
+                            🎉 Special Launch Offer
+                        </div>
+
                         <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center shadow-inner relative overflow-hidden">
-                            <div className="absolute top-0 right-0 bg-lemon text-black text-[8px] px-3 py-1 font-black uppercase tracking-tighter rounded-bl-xl">Special Offer</div>
+                            <div className="absolute top-0 right-0 bg-lemon text-black text-[8px] px-3 py-1 font-black uppercase tracking-tighter rounded-bl-xl">Offer</div>
                             <h4 className="text-gray-500 font-black text-[10px] uppercase tracking-widest mb-1">Monthly Subscription</h4>
                             <div className="flex items-center justify-center gap-3">
                                 <p className="text-xl font-black text-gray-600 line-through">₹99</p>
-                                <p className="text-4xl font-black text-white">₹30</p>
+                                <p className="text-4xl font-black text-white">₹1</p>
                             </div>
-                            <p className="text-[9px] text-lemon/80 font-bold uppercase mt-2 tracking-widest">Per Month • Active Forever</p>
+                            <p className="text-[9px] text-lemon/80 font-bold uppercase mt-2 tracking-widest">Limited Time Offer • ID Activation</p>
                         </div>
 
                         <div className="space-y-4">
@@ -127,22 +132,24 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                 <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3">1. Launch Payment App</p>
                                 <a 
                                     href={upiUrl}
-                                    className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-100 active:scale-95 transition-all shadow-lg"
+                                    className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-100 active:scale-95 transition-all shadow-lg border-2 border-white"
                                 >
                                     <div className="flex gap-1.5">
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" className="h-4" alt="GPay"/>
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" className="h-4" alt="UPI"/>
                                     </div>
-                                    <span className="text-[11px] uppercase tracking-tighter">Open GPay / PhonePe</span>
+                                    <span className="text-[11px] uppercase tracking-tighter">Pay Now with UPI</span>
                                 </a>
-                                <p className="text-[8px] text-gray-600 mt-2 font-bold italic uppercase tracking-tighter">* Click button to open UPI apps</p>
+                                <p className="text-[8px] text-gray-600 mt-3 font-bold italic uppercase tracking-tighter">
+                                    Note: If clicking doesn't work, ensure you have Google Pay, PhonePe or Paytm installed.
+                                </p>
                             </div>
 
                             <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
                                 <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">2. Paste Transaction ID</p>
                                 <input 
                                     type="text" 
-                                    placeholder="UTR / Order ID from GPay" 
+                                    placeholder="UTR / Order ID from Bank" 
                                     required 
                                     value={transactionId}
                                     onChange={e => setTransactionId(e.target.value)}
