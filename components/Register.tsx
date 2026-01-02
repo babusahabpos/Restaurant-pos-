@@ -36,7 +36,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [isVerifying, setIsVerifying] = useState(false);
     
     const ADMIN_UPI_ID = "7003548323@ybl";
-    const SUBSCRIPTION_AMOUNT = "1"; // Updated to 1 Rupee as requested
+    const SUBSCRIPTION_AMOUNT = "1"; 
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -53,7 +53,8 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         setStep(2);
     };
 
-    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=BaBuSAHAB_ID_Activation_${formData.restaurantName.replace(/\s/g, '_')}`;
+    // Simplified UPI URL for better compatibility across apps
+    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=Activation`;
 
     const handleVerifyAndActivate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,6 +69,11 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
             onRegister(formData, UserStatus.Approved, referralCode);
             setShowSuccessModal(true);
         }, 3500);
+    };
+
+    const copyUpiId = () => {
+        navigator.clipboard.writeText(ADMIN_UPI_ID);
+        alert("UPI ID Copied! You can now manually pay from GPay/PhonePe.");
     };
 
     if (showSuccessModal) return <RegistrationSuccessModal status={UserStatus.Approved} onClose={onNavigateToLogin} />;
@@ -112,19 +118,19 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                     </form>
                 ) : (
                     <div className="space-y-6 animate-fade-in">
-                        {/* New Offer Text at top */}
-                        <div className="bg-lemon text-black text-[12px] font-black uppercase tracking-[0.2em] py-2 text-center rounded-xl shadow-lg animate-pulse">
+                        {/* Offer Header */}
+                        <div className="bg-lemon text-black py-2 rounded-xl text-center font-black uppercase tracking-[0.2em] text-sm animate-pulse">
                             🎉 Special Launch Offer
                         </div>
 
                         <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center shadow-inner relative overflow-hidden">
                             <div className="absolute top-0 right-0 bg-lemon text-black text-[8px] px-3 py-1 font-black uppercase tracking-tighter rounded-bl-xl">Offer</div>
-                            <h4 className="text-gray-500 font-black text-[10px] uppercase tracking-widest mb-1">Monthly Subscription</h4>
+                            <h4 className="text-gray-500 font-black text-[10px] uppercase tracking-widest mb-1">Lifetime ID Activation</h4>
                             <div className="flex items-center justify-center gap-3">
                                 <p className="text-xl font-black text-gray-600 line-through">₹99</p>
                                 <p className="text-4xl font-black text-white">₹1</p>
                             </div>
-                            <p className="text-[9px] text-lemon/80 font-bold uppercase mt-2 tracking-widest">Limited Time Offer • ID Activation</p>
+                            <p className="text-[9px] text-lemon/80 font-bold uppercase mt-2 tracking-widest">Active Forever • One-time Payment</p>
                         </div>
 
                         <div className="space-y-4">
@@ -138,11 +144,14 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" className="h-4" alt="GPay"/>
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg" className="h-4" alt="UPI"/>
                                     </div>
-                                    <span className="text-[11px] uppercase tracking-tighter">Pay Now with UPI</span>
+                                    <span className="text-[11px] uppercase tracking-tighter">Pay with UPI App</span>
                                 </a>
-                                <p className="text-[8px] text-gray-600 mt-3 font-bold italic uppercase tracking-tighter">
-                                    Note: If clicking doesn't work, ensure you have Google Pay, PhonePe or Paytm installed.
-                                </p>
+                                <button 
+                                    onClick={copyUpiId}
+                                    className="mt-3 text-[9px] text-lemon font-bold uppercase tracking-widest hover:underline"
+                                >
+                                    Click here to Copy UPI ID if App doesn't open
+                                </button>
                             </div>
 
                             <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
