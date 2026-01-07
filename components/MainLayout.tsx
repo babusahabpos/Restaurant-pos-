@@ -75,6 +75,13 @@ const Sidebar: React.FC<{
                 <nav className="space-y-1 overflow-y-auto max-h-[80vh] no-scrollbar">
                     {NAV_ITEMS.map((item) => {
                         const Icon = iconMap[item.icon] || Icons.DashboardIcon;
+                        const label = item.name === 'qrMenu' ? 'QR Menu' : 
+                                      item.name === 'refer' ? 'Refer & Earn' : 
+                                      item.name === 'staff' ? 'Attendance' :
+                                      item.name === 'market' ? 'Marketing Hub' : 
+                                      item.name === 'staffRequirements' ? 'Staff Hub' : 
+                                      item.name.charAt(0).toUpperCase() + item.name.slice(1);
+
                         return (
                             <a
                                 key={item.name}
@@ -92,12 +99,7 @@ const Sidebar: React.FC<{
                                 <div className="flex items-center space-x-2">
                                     <Icon className="w-6 h-6" />
                                     <span className="capitalize font-semibold text-xs font-black">
-                                        {item.name === 'qrMenu' ? 'QR Menu' : 
-                                         item.name === 'refer' ? 'Refer & Earn' : 
-                                         item.name === 'staff' ? 'Attendance' :
-                                         item.name === 'market' ? 'Marketing Hub' : 
-                                         item.name === 'staffRequirements' ? 'Staff Hub' : 
-                                         item.name.charAt(0).toUpperCase() + item.name.slice(1)}
+                                        {label}
                                     </span>
                                 </div>
                             </a>
@@ -197,7 +199,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Attendance' :
                          currentPage === 'market' ? 'Marketing Hub' : 
-                         currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
+                         currentPage === 'staffRequirements' ? 'Staff Hub' : 
+                         currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
                     </h1>
                     <div className="flex items-center gap-3">
                          <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-[10px] font-bold">
