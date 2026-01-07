@@ -96,7 +96,8 @@ const Sidebar: React.FC<{
                                          item.name === 'refer' ? 'Refer & Earn' : 
                                          item.name === 'staff' ? 'Attendance' :
                                          item.name === 'market' ? 'Marketing Hub' : 
-                                         item.name === 'staffRequirements' ? 'Staff Hub' : item.name}
+                                         item.name === 'staffRequirements' ? 'Staff Hub' : 
+                                         item.name.charAt(0).toUpperCase() + item.name.slice(1)}
                                     </span>
                                 </div>
                             </a>
@@ -176,7 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
             </div>
 
             {isMobileMenuOpen && (
-                <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)}>
+                <div className="fixed inset-0 bg-black/80 z-[60] md:hidden" onClick={() => setMobileMenuOpen(false)}>
                     <div className="w-64 h-full" onClick={e => e.stopPropagation()}>
                         <Sidebar 
                             currentPage={currentPage} 
