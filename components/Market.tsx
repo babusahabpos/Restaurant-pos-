@@ -26,7 +26,7 @@ const Market: React.FC<MarketProps> = ({ products, onPlaceOrder, user }) => {
         <div className="space-y-6 h-full flex flex-col p-2 md:p-0">
             <div className="bg-lemon text-black p-4 rounded-2xl flex justify-between items-center shrink-0 shadow-xl shadow-lemon/10">
                 <div>
-                    <h2 className="text-xl font-black uppercase tracking-tighter italic">MARKETPLACE</h2>
+                    <h2 className="text-xl font-black uppercase tracking-tighter italic">MARKETING HUB</h2>
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Premium Add-ons for your Business</p>
                 </div>
                 <div className="bg-black/10 p-2 rounded-full">
@@ -59,7 +59,7 @@ const Market: React.FC<MarketProps> = ({ products, onPlaceOrder, user }) => {
                     </div>
                 )) : (
                     <div className="py-20 flex flex-col items-center justify-center opacity-30 grayscale">
-                        <p className="text-gray-500 font-black uppercase text-xs tracking-widest">Market is coming soon...</p>
+                        <p className="text-gray-500 font-black uppercase text-xs tracking-widest">Check back later for new offers</p>
                     </div>
                 )}
             </div>

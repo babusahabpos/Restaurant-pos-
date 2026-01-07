@@ -1,5 +1,5 @@
 
-import { Page, MenuItem, RegisteredUser, UserStatus, SupportTicket } from './types';
+import { Page, MenuItem, RegisteredUser, UserStatus, SupportTicket, InventoryItem, StaffMember } from './types';
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'dashboard', icon: 'dashboard' },
@@ -8,6 +8,8 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
     { name: 'market', icon: 'market' },
+    { name: 'staffRequirements', icon: 'staff' },
+    { name: 'staff', icon: 'staff' },
     { name: 'inventory', icon: 'inventory' },
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 
@@ -53,4 +55,15 @@ export const MOCK_TICKETS: SupportTicket[] = [
         { sender: 'user', text: 'My billing page is not loading correctly.', timestamp: new Date(Date.now() - 3600000) },
         { sender: 'admin', text: 'We are looking into it.', timestamp: new Date(Date.now() - 1800000) }
     ], status: 'Pending', lastUpdate: new Date(Date.now() - 1800000) },
+];
+
+export const MOCK_INVENTORY_ITEMS: InventoryItem[] = [
+    { id: 1, name: 'Tomato', category: 'Vegetables', quantity: 10, unit: 'kg', lowStockThreshold: 5 },
+    { id: 2, name: 'Cheese', category: 'Dairy', quantity: 2, unit: 'kg', lowStockThreshold: 3 },
+    { id: 3, name: 'Flour', category: 'Pantry', quantity: 20, unit: 'kg', lowStockThreshold: 10 },
+];
+
+export const MOCK_STAFF: StaffMember[] = [
+    { id: 1, name: 'Rahul Sharma', role: 'Head Chef', avatar: 'RS', status: 'Clocked Out', lastAction: 'Never' },
+    { id: 2, name: 'Priya Singh', role: 'Waitress', avatar: 'PS', status: 'Clocked In', lastAction: '2 hours ago' },
 ];

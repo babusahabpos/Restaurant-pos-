@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -30,32 +29,91 @@
         width: 100%;
         -webkit-text-size-adjust: 100%;
         touch-action: manipulation;
+        background-color: black;
       }
       #root { height: 100%; overflow: hidden; }
-      body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; background-color: black; }
+      body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
       input, textarea { -webkit-user-select: text; user-select: text; }
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      @keyframes blink-red {
-        0%, 100% { background-color: rgba(255, 0, 0, 0.1); border-color: #ef4444; }
-        50% { background-color: rgba(255, 0, 0, 0.3); border-color: #f87171; }
+      
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        background: black;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease;
       }
-      .animate-alert-border { animation: blink-red 1.5s infinite; }
+      .loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #FFFF00;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .panic-btn {
+        margin-top: 30px;
+        padding: 10px 20px;
+        background: #111;
+        color: #555;
+        border: 1px solid #222;
+        border-radius: 12px;
+        font-size: 9px;
+        font-family: monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .panic-btn:hover { background: #222; color: #ff4444; border-color: #ff4444; }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.33.0"
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "recharts": "https://esm.sh/recharts@2.12.7?deps=react@18.3.1,react-dom@18.3.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.33.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
+</script>
+<script>
+    // System Watchdog to catch early errors
+    window.onerror = function(msg, url, line) {
+        console.error("BOOT_ERROR:", msg, "at", url, ":", line);
+        const status = document.getElementById('loader-status');
+        if (status) {
+            status.innerText = "SYSTEM ERROR: " + msg;
+            status.style.color = "#ff4444";
+        }
+    };
+    
+    function resetSystemCache() {
+        if(confirm("সতর্কবার্তা: এটি আপনার সমস্ত স্টোর করা ডেটা মুছে ফেলবে। আপনি কি নিশ্চিত?")) {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        }
+    }
 </script>
 </head>
   <body class="bg-black text-white">
     <div id="root"></div>
+    <div id="initial-loader">
+        <div class="loader-spinner"></div>
+        <p style="color: #FFFF00; font-family: sans-serif; font-weight: 900; margin-top: 16px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;">BaBu SAHAB POS</p>
+        <p id="loader-status" style="color: #444; font-family: sans-serif; font-weight: 900; margin-top: 8px; font-size: 8px; text-transform: uppercase;">BOOTING KERNEL...</p>
+        <button class="panic-btn" onclick="resetSystemCache()">[ RESET SYSTEM CACHE ]</button>
+    </div>
     <audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
     <script type="module" src="./index.tsx"></script>
   </body>

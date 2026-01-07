@@ -24,7 +24,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
         if (name && price) {
             onAddProduct(name, parseFloat(price), desc);
             setName(''); setPrice(''); setDesc('');
-            alert('Product added to market!');
+            alert('Product added successfully!');
         }
     };
 
@@ -44,13 +44,13 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
         <div className="space-y-6">
             <div className="flex gap-2 bg-gray-900 p-2 rounded-2xl border border-gray-800">
                 <button onClick={() => setView('products')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'products' ? 'bg-lemon text-black' : 'text-gray-400'}`}>Manage Products</button>
-                <button onClick={() => setView('orders')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'orders' ? 'bg-lemon text-black' : 'text-gray-400'}`}>Accepted Orders ({acceptedOrders.length})</button>
+                <button onClick={() => setView('orders')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'orders' ? 'bg-lemon text-black' : 'text-gray-400'}`}>Accepted User Orders ({acceptedOrders.length})</button>
             </div>
 
             {view === 'products' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 h-fit">
-                        <h4 className="text-white font-black uppercase text-sm mb-6">Add Marketplace Item</h4>
+                        <h4 className="text-white font-black uppercase text-sm mb-6">Add Marketing Item</h4>
                         <form onSubmit={handleAdd} className="space-y-4">
                             <input placeholder="Product Name" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={name} onChange={e => setName(e.target.value)} required />
                             <input placeholder="Price (₹)" type="number" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={price} onChange={e => setPrice(e.target.value)} required />
@@ -71,7 +71,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                             </div>
-                        )) : <p className="text-center py-20 text-gray-700 font-black uppercase tracking-widest">No products in market</p>}
+                        )) : <p className="text-center py-20 text-gray-700 font-black uppercase tracking-widest">No products available</p>}
                     </div>
                 </div>
             )}
@@ -81,7 +81,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                     {acceptedOrders.length > 0 ? acceptedOrders.map(order => (
                         <div key={order.id} className="bg-gray-900 border border-gray-800 p-6 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center gap-6">
                             <div className="flex-1 text-center md:text-left">
-                                <span className="text-[8px] bg-green-900 text-green-300 px-3 py-1 rounded-full uppercase font-black">Ready for Delivery</span>
+                                <span className="text-[8px] bg-green-900 text-green-300 px-3 py-1 rounded-full uppercase font-black">Scheduled for Delivery</span>
                                 <h4 className="text-xl font-black text-white uppercase mt-2">{order.productName}</h4>
                                 <p className="text-lemon font-bold text-xs">For: {order.restaurantName} ({order.userName})</p>
                                 <p className="text-gray-400 text-[10px] font-black uppercase mt-1">Delivery on: <span className="text-white">{order.deliveryDate}</span></p>

@@ -10,7 +10,7 @@ interface AdminDashboardProps {
     onApproveMarketOrder: (order: MarketplaceOrder) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ users, tickets, marketOrders = [], onApproveReject, onApproveMarketOrder }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ users = [], tickets = [], marketOrders = [], onApproveReject, onApproveMarketOrder }) => {
 
     const pendingUsers = users.filter(u => u.status === UserStatus.Pending);
     const pendingMarketOrders = marketOrders.filter(o => o.status === 'Pending');

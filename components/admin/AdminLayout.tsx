@@ -14,7 +14,7 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
-    { name: AdminPage.Marketplace, key: 'market' },
+    { name: AdminPage.UserOrders, key: 'market' },
     { name: AdminPage.SupportTickets, key: 'tickets' },
     { name: AdminPage.SubscriptionRenewal, key: 'subscriptions' },
 ];
@@ -24,7 +24,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
 
     const getBadgeCount = (name: AdminPage) => {
         if (name === AdminPage.SupportTickets) return badgeCounts.tickets || 0;
-        if (name === AdminPage.Marketplace) return badgeCounts.marketOrders || 0;
+        if (name === AdminPage.UserOrders) return badgeCounts.marketOrders || 0;
         return 0;
     };
 

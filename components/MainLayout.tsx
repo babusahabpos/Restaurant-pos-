@@ -21,6 +21,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     menu: Icons.MenuIcon,
     inventory: Icons.InventoryIcon,
     staff: Icons.StaffIcon,
+    staffRequirements: Icons.StaffIcon,
     reports: Icons.ReportsIcon,
     subscription: Icons.SubscriptionIcon,
     help: Icons.HelpIcon,
@@ -28,7 +29,6 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     qrCode: Icons.QrCodeIcon,
     social: Icons.SocialIcon,
     refer: Icons.ReferIcon,
-    staffRequirements: Icons.StaffIcon,
     market: Icons.MarketIcon,
 };
 
@@ -92,11 +92,11 @@ const Sidebar: React.FC<{
                             >
                                 <div className="flex items-center space-x-2">
                                     <Icon className="w-6 h-6" />
-                                    <span className="capitalize font-semibold">
+                                    <span className="capitalize font-semibold text-xs font-black">
                                         {item.name === 'qrMenu' ? 'QR Menu' : 
                                          item.name === 'refer' ? 'Refer & Earn' : 
                                          item.name === 'staff' ? 'Staff Attendance' :
-                                         item.name === 'market' ? 'Market' :
+                                         item.name === 'market' ? 'Marketing' : 
                                          item.name === 'staffRequirements' ? 'Staff Hub' : item.name}
                                     </span>
                                 </div>
@@ -196,7 +196,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                     <h1 className="text-sm font-black uppercase tracking-widest text-lemon">
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Staff Attendance' :
-                         currentPage === 'market' ? 'Market' :
+                         currentPage === 'market' ? 'Marketing' : 
                          currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
                     </h1>
                     <div className="flex items-center gap-3">
