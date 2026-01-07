@@ -210,10 +210,20 @@ function App() {
 
     // --- Handlers ---
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
-        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
+        // Explicit Admin Credentials Match
+        if (email.toLowerCase() === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
+            console.log("Admin handshake successful.");
+            setAuthState('adminLoggedIn'); 
+            return 'admin'; 
+        }
+
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
         if (user) {
-            if (user.status === UserStatus.Approved) { setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; }
+            if (user.status === UserStatus.Approved) { 
+                setAuthState('loggedIn'); 
+                setLoggedInUser(user); 
+                return 'ok'; 
+            }
             if (user.status === UserStatus.Blocked) return 'blocked';
             if (user.status === UserStatus.Deleted) return 'deleted';
             return 'pending';
@@ -398,7 +408,7 @@ function App() {
     if (authState === 'loggedIn' && loggedInUser) {
         const userOrders = orders.filter(o => o && o.restaurantId === loggedInUser.id);
         const pages: Record<string, React.ReactNode> = {
-            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? {...o, status: 'Completed'} : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={loggedInUser.menu} onUpdateOrder={(uo) => setOrders(prev => prev.map(o => o.id === uo.id ? uo : o))} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
+            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? {...o, status: 'Completed'} : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={loggedInUser.menu} onUpdateOrder={(uo) => setOrders(prev => prev.map(o => o.id === uo.id ? uo : o))} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} onNavigateToMarket={() => setCurrentPage('market')} />,
             billing: <Billing menuItems={loggedInUser.menu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} />,
             online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
             menu: <Menu menu={loggedInUser.menu} setMenu={(m) => { setRegisteredUsers(users => users.map(u => u.id === loggedInUser.id ? {...u, menu: m} : u)); setLoggedInUser({...loggedInUser, menu: m}); }} />,

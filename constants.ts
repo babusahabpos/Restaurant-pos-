@@ -1,13 +1,12 @@
-
 import { Page, MenuItem, RegisteredUser, UserStatus, SupportTicket, InventoryItem, StaffMember } from './types';
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'dashboard', icon: 'dashboard' },
     { name: 'billing', icon: 'billing' },
     { name: 'online', icon: 'online' },
+    { name: 'market', icon: 'market' }, // Moved up for visibility
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
-    { name: 'market', icon: 'market' },
     { name: 'staffRequirements', icon: 'staff' },
     { name: 'staff', icon: 'staff' },
     { name: 'inventory', icon: 'inventory' },

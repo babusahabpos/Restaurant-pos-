@@ -87,18 +87,17 @@
 }
 </script>
 <script>
-    // System Watchdog to catch early errors
     window.onerror = function(msg, url, line) {
-        console.error("BOOT_ERROR:", msg, "at", url, ":", line);
+        console.error("BOOT_ERROR:", msg);
         const status = document.getElementById('loader-status');
         if (status) {
-            status.innerText = "SYSTEM ERROR: " + msg;
+            status.innerText = "Error: " + msg;
             status.style.color = "#ff4444";
         }
     };
     
     function resetSystemCache() {
-        if(confirm("সতর্কবার্তা: এটি আপনার সমস্ত স্টোর করা ডেটা মুছে ফেলবে। আপনি কি নিশ্চিত?")) {
+        if(confirm("সতর্কবার্তা: এটি আপনার সমস্ত তথ্য মুছে ফেলবে। আপনি কি নিশ্চিত?")) {
             localStorage.clear();
             sessionStorage.clear();
             window.location.reload();
@@ -112,7 +111,7 @@
         <div class="loader-spinner"></div>
         <p style="color: #FFFF00; font-family: sans-serif; font-weight: 900; margin-top: 16px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;">BaBu SAHAB POS</p>
         <p id="loader-status" style="color: #444; font-family: sans-serif; font-weight: 900; margin-top: 8px; font-size: 8px; text-transform: uppercase;">BOOTING KERNEL...</p>
-        <button class="panic-btn" onclick="resetSystemCache()">[ RESET SYSTEM CACHE ]</button>
+        <button class="panic-btn" onclick="resetSystemCache()">[ RESET SYSTEM ]</button>
     </div>
     <audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
     <script type="module" src="./index.tsx"></script>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 
@@ -101,8 +100,11 @@ const createBillContent = (order: OrderStatusItem, paymentMethod: string, taxRat
     `;
 };
 
-const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: React.ReactNode }> = ({ title, value, subtext, icon }) => (
-    <div className="bg-black p-5 rounded-2xl border border-gray-800 flex justify-between items-center h-28 relative overflow-hidden group">
+const StatCard: React.FC<{ title: string; value: string; subtext: string; icon: React.ReactNode; onClick?: () => void }> = ({ title, value, subtext, icon, onClick }) => (
+    <div 
+        onClick={onClick}
+        className={`bg-black p-5 rounded-2xl border border-gray-800 flex justify-between items-center h-28 relative overflow-hidden group transition-all ${onClick ? 'cursor-pointer active:scale-95 hover:border-lemon/50' : ''}`}
+    >
         <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 group-hover:scale-[1.8] transition-transform duration-500">
             {icon}
         </div>
@@ -345,9 +347,10 @@ interface DashboardProps {
     onUpdateOrder: (updatedOrder: OrderStatusItem) => void;
     isPrinterEnabled: boolean;
     onNavigateToQrMenu: () => void;
+    onNavigateToMarket?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder, isPrinterEnabled, onNavigateToQrMenu }) => {
+const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, taxRate, restaurantName, address, fssai, menuItems, onUpdateOrder, isPrinterEnabled, onNavigateToQrMenu, onNavigateToMarket }) => {
     const [showTodaysOrders, setShowTodaysOrders] = useState(false);
     const [showPendingOrdersModal, setShowPendingOrdersModal] = useState(false);
     const [settlingOrder, setSettlingOrder] = useState<OrderStatusItem | null>(null);
@@ -442,21 +445,52 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
             {settlingOrder && <SettleBillModal order={settlingOrder} onClose={() => setSettlingOrder(null)} onSettle={handleSettleAndPrint} />}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Online Sales" value={`₹${data.onlineSales.toFixed(0)}`} subtext={`${data.onlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} />
-                </div>
-                <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Offline Sales" value={`₹${data.offlineSales.toFixed(0)}`} subtext={`${data.offlineOrders} Orders`} icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} />
-                </div>
-                <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowTodaysOrders(true)}>
-                    <StatCard title="Today's Cash" value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} subtext="Daily Total" icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} />
-                </div>
-                 <div className="cursor-pointer active:scale-95 transition-transform" onClick={() => setShowPendingOrdersModal(true)}>
-                    <StatCard title="Kitchen Pipe" value={pendingOrders.length.toString()} subtext="Active KOTs" icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} />
-                </div>
+                <StatCard 
+                    onClick={() => setShowTodaysOrders(true)}
+                    title="Online Sales" 
+                    value={`₹${data.onlineSales.toFixed(0)}`} 
+                    subtext={`${data.onlineOrders} Orders`} 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} 
+                />
+                <StatCard 
+                    onClick={() => setShowTodaysOrders(true)}
+                    title="Offline Sales" 
+                    value={`₹${data.offlineSales.toFixed(0)}`} 
+                    subtext={`${data.offlineOrders} Orders`} 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} 
+                />
+                <StatCard 
+                    onClick={() => setShowTodaysOrders(true)}
+                    title="Today's Cash" 
+                    value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} 
+                    subtext="Daily Total" 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} 
+                />
+                <StatCard 
+                    onClick={() => setShowPendingOrdersModal(true)}
+                    title="Kitchen Pipe" 
+                    value={pendingOrders.length.toString()} 
+                    subtext="Active KOTs" 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} 
+                />
             </div>
 
-            <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKOT} onNavigateToQrMenu={onNavigateToQrMenu} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKOT} onNavigateToQrMenu={onNavigateToQrMenu} />
+                
+                {onNavigateToMarket && (
+                    <div 
+                        onClick={onNavigateToMarket}
+                        className="bg-gray-900 border border-lemon/30 p-6 rounded-2xl flex flex-col justify-center items-center gap-2 cursor-pointer active:scale-95 hover:bg-lemon/5 transition-all shadow-xl"
+                    >
+                        <div className="bg-lemon text-black p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        </div>
+                        <p className="text-white font-black uppercase text-sm tracking-widest mt-2">Marketing Hub</p>
+                        <p className="text-lemon/50 text-[9px] font-bold uppercase">Order supplies & growth tools</p>
+                    </div>
+                )}
+            </div>
 
             <div className="bg-black border border-gray-800 p-5 rounded-2xl mb-10">
                 <h3 className="text-[11px] font-black text-lemon mb-6 uppercase tracking-[0.2em] text-center">Connected Delivery Platforms</h3>

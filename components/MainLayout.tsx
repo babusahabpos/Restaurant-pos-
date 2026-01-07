@@ -1,4 +1,3 @@
-
 import React, { ReactNode, useState } from 'react';
 import { Page, AdminAlert, RegisteredUser } from '../types';
 import { NAV_ITEMS } from '../constants';
@@ -95,8 +94,8 @@ const Sidebar: React.FC<{
                                     <span className="capitalize font-semibold text-xs font-black">
                                         {item.name === 'qrMenu' ? 'QR Menu' : 
                                          item.name === 'refer' ? 'Refer & Earn' : 
-                                         item.name === 'staff' ? 'Staff Attendance' :
-                                         item.name === 'market' ? 'Marketing' : 
+                                         item.name === 'staff' ? 'Attendance' :
+                                         item.name === 'market' ? 'Marketing Hub' : 
                                          item.name === 'staffRequirements' ? 'Staff Hub' : item.name}
                                     </span>
                                 </div>
@@ -195,8 +194,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                     </button>
                     <h1 className="text-sm font-black uppercase tracking-widest text-lemon">
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
-                         currentPage === 'staff' ? 'Staff Attendance' :
-                         currentPage === 'market' ? 'Marketing' : 
+                         currentPage === 'staff' ? 'Attendance' :
+                         currentPage === 'market' ? 'Marketing Hub' : 
                          currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
                     </h1>
                     <div className="flex items-center gap-3">
