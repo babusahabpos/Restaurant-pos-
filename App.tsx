@@ -8,6 +8,7 @@ import Billing from './components/Billing';
 import OnlineOrders from './components/OnlineOrders';
 import Menu from './components/Menu';
 import Inventory from './components/Inventory';
+import Staff from './components/Staff';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
 import QrMenu from './components/QrMenu';
@@ -21,29 +22,21 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
 import SupportTickets from './components/admin/SupportTickets';
-import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
+import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, StaffJobPost, StaffRequirementRequest, StaffApplication } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, StaffJobPost, StaffRequirementRequest, StaffApplication, MenuItem } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (window.location.hash.startsWith('#customer-order')) return 'customer';
-        const savedUser = localStorage.getItem('babuSahabPos_loggedInUser');
-        const savedAdmin = localStorage.getItem('babuSahabPos_adminLoggedIn');
-        if (savedAdmin === 'true') return 'adminLoggedIn';
-        if (savedUser) return 'loggedIn';
         return 'login';
     });
 
-    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(() => {
-        const saved = localStorage.getItem('babuSahabPos_loggedInUser');
-        return saved ? JSON.parse(saved) : null;
-    });
-
+    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
@@ -59,7 +52,13 @@ function App() {
                     taxRate: u.taxRate !== undefined ? Number(u.taxRate) : 5,
                     deliveryCharge: u.deliveryCharge !== undefined ? Number(u.deliveryCharge) : 30,
                     isDeliveryEnabled: u.isDeliveryEnabled !== undefined ? u.isDeliveryEnabled : true,
-                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu : MOCK_MENU_ITEMS
+                    isPrinterEnabled: u.isPrinterEnabled !== undefined ? u.isPrinterEnabled : true,
+                    menu: (Array.isArray(u.menu) && u.menu.length > 0) ? u.menu.map((m: any) => ({
+                        ...m,
+                        offlinePrice: Number(m.offlinePrice) || 0,
+                        onlinePrice: Number(m.onlinePrice) || 0,
+                        inStock: m.inStock !== undefined ? m.inStock : true,
+                    })) : MOCK_MENU_ITEMS
                 }));
             }
         } catch (error) {}
@@ -71,7 +70,13 @@ function App() {
     
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_jobPosts') || '[]'));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffRequests') || '[]').map((r: any) => ({...r, timestamp: new Date(r.timestamp)})));
-    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => JSON.parse(localStorage.getItem('babuSahabPos_staffApplications') || '[]').map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_staffApplications');
+        if (saved) {
+            return JSON.parse(saved).map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) }));
+        }
+        return [];
+    });
 
     useEffect(() => {
         const handleHashChange = () => { 
@@ -83,6 +88,18 @@ function App() {
 
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'babuSahabPos_staffApplications') {
+                const latest = localStorage.getItem('babuSahabPos_staffApplications');
+                if (latest) {
+                    setStaffApplications(JSON.parse(latest).map((a: any) => ({ ...a, timestamp: new Date(a.timestamp) })));
+                }
+            }
+            if (e.key === 'babuSahabPos_jobPosts') {
+                const latest = localStorage.getItem('babuSahabPos_jobPosts');
+                if (latest) {
+                    setJobPosts(JSON.parse(latest).map((p: any) => ({ ...p, timestamp: new Date(p.timestamp) })));
+                }
+            }
             if (e.key?.startsWith('babuSahabPos_incomingOrder_') && e.newValue) {
                 try {
                     const incomingOrder: OrderStatusItem = JSON.parse(e.newValue);
@@ -107,7 +124,19 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_staffApplications', JSON.stringify(staffApplications)); }, [staffApplications]);
     
     useEffect(() => {
-        if (!loggedInUser) return;
+        if (authState === 'adminLoggedIn') {
+            const totalNotifications = 
+                supportTickets.filter(t => t.status === 'Open').length + 
+                staffRequests.filter(r => !r.isRead).length +
+                staffApplications.filter(a => !a.isRead).length;
+            document.title = totalNotifications > 0 ? `(${totalNotifications}) Admin Panel` : 'Admin Panel';
+        } else {
+            document.title = 'BaBu SAHAB POS';
+        }
+    }, [authState, supportTickets, staffRequests, staffApplications]);
+
+    useEffect(() => {
+        if (!loggedInUser) { setDashboardData({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 }); return; };
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const todaysUserOrders = orders.filter(o => o.restaurantId === loggedInUser.id && new Date(o.timestamp) >= startOfDay);
@@ -121,21 +150,32 @@ function App() {
         setDashboardData(newDashboardData);
     }, [orders, loggedInUser]);
 
-    const handleLogin = (email: string, pass: string) => {
-        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
-            setAuthState('adminLoggedIn'); 
-            localStorage.setItem('babuSahabPos_adminLoggedIn', 'true');
-            return 'admin'; 
-        }
+    useEffect(() => {
+        const today = new Date();
+        const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const usersToAlert = registeredUsers.filter(user => {
+            if (user.status !== UserStatus.Approved) return false;
+            const endDate = new Date(user.subscriptionEndDate);
+            return endDate <= sevenDaysFromNow && endDate >= today;
+        });
+        setAlerts(prevAlerts => {
+            const newAlerts = [...prevAlerts];
+            usersToAlert.forEach(user => {
+                const alertId = `renewal-${user.id}`;
+                if (!newAlerts.some(a => a.id === alertId)) {
+                    newAlerts.push({ id: alertId, userId: user.id, message: 'Subscription Renewal: Your plan is expiring soon.' });
+                }
+            });
+            return newAlerts;
+        });
+    }, [registeredUsers]);
+
+    const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
+        if (email === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         const user = registeredUsers.find(u => u.email === email && u.password === pass);
         if (user) {
-            if (user.status === UserStatus.Approved) { 
-                setAuthState('loggedIn'); 
-                setLoggedInUser(user); 
-                localStorage.setItem('babuSahabPos_loggedInUser', JSON.stringify(user));
-                return 'ok'; 
-            }
-            return user.status === UserStatus.Pending ? 'pending' : 'blocked';
+            if (user.status === UserStatus.Approved) { setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; }
+            return user.status === UserStatus.Pending ? 'pending' : user.status === UserStatus.Blocked ? 'blocked' : user.status === UserStatus.Deleted ? 'deleted' : 'blocked';
         }
         return 'not_found';
     };
@@ -154,33 +194,44 @@ function App() {
                 const currentEndDate = new Date(referrer.subscriptionEndDate);
                 const newEndDate = new Date(currentEndDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
                 updatedUsers[referrerIndex] = { ...referrer, subscriptionEndDate: newEndDate };
+                setAlerts(prev => [...prev, { id: Date.now() + 1, userId: referrer.id, message: 'Congrats! You earned 1 Month Free Subscription!' }]);
             }
         }
 
         const user: RegisteredUser = { 
             ...newUser, 
             id: Date.now(), 
-            status: UserStatus.Approved, 
+            status: UserStatus.Approved, // Set Approved for demo, normally Pending
             lastLogin: 'Never', 
             subscriptionEndDate: getFutureDate(30), 
-            address: '', 
+            address: 'Update in settings', 
             taxRate: 5, 
             deliveryCharge: 30, 
             isDeliveryEnabled: true, 
+            isPrinterEnabled: true, 
             menu: MOCK_MENU_ITEMS, 
             referralCode: generatedReferralCode, 
             referredBy: referrerCodeFound, 
-            socialMedia: {} 
+            socialMedia: { autoPostEnabled: false } 
         };
         setRegisteredUsers([...updatedUsers, user]);
     };
 
-    const handleLogout = () => { 
-        setAuthState('login'); 
-        setLoggedInUser(null); 
-        localStorage.removeItem('babuSahabPos_loggedInUser');
-        localStorage.removeItem('babuSahabPos_adminLoggedIn');
+    const handleForgotPassword = (identifier: string): boolean => {
+        const user = registeredUsers.find(u => u.email === identifier || u.phone === identifier);
+        if (user || identifier === 'diptifoodice@gmail.com') {
+            alert(`A password reset link has been sent. (Simulation)`);
+            return true;
+        }
+        alert("User not found.");
+        return false;
     };
+
+    const handleGuestMessage = (email: string, message: string) => {
+        setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `[Guest] From: ${email} - ${message}` }]);
+    };
+
+    const handleLogout = () => { setAuthState('login'); setLoggedInUser(null); };
 
     const handleKOT = (newOrderData: any) => {
         if (!loggedInUser) return;
@@ -188,16 +239,6 @@ function App() {
         setOrders(prev => [...prev, newOrder]);
         const audio = document.getElementById('notification-sound') as HTMLAudioElement;
         if(audio) audio.play().catch(() => {});
-    };
-
-    const handleStaffRequirementSubmit = (req: string, salary: string) => {
-        if (!loggedInUser) return;
-        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
-        setStaffRequests(prev => [...prev, newReq]);
-    };
-
-    const handleAddStaffPost = (post: any) => {
-        setJobPosts(prev => [...prev, { ...post, id: Date.now(), timestamp: new Date(), status: 'Approved' }]);
     };
 
     const handleCompleteOrder = (orderId: number) => {
@@ -224,49 +265,100 @@ function App() {
 
     const handleUpdateMenu = (newMenu: MenuItem[]) => {
         if (!loggedInUser) return;
-        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, menu: newMenu } : u));
-        setLoggedInUser(prev => prev ? { ...prev, menu: newMenu } : null);
+        const sanitizedMenu = newMenu.map(m => ({ ...m, offlinePrice: Number(m.offlinePrice) || 0, onlinePrice: Number(m.onlinePrice) || 0 }));
+        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, menu: sanitizedMenu } : u));
+        setLoggedInUser(prev => prev ? { ...prev, menu: sanitizedMenu } : null);
     };
 
     const handleSettingsUpdate = (updates: Partial<RegisteredUser>) => {
         if (!loggedInUser) return;
-        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u));
-        setLoggedInUser(prev => prev ? { ...prev, ...updates } : null);
-        localStorage.setItem('babuSahabPos_loggedInUser', JSON.stringify({ ...loggedInUser, ...updates }));
+        const finalUpdates = { ...updates };
+        if (updates.restaurantName && updates.restaurantName !== loggedInUser.restaurantName) {
+             finalUpdates.referralCode = `refer${updates.restaurantName.replace(/\s+/g, '').toLowerCase()}`;
+        }
+        setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...finalUpdates } : u));
+        setLoggedInUser(prev => prev ? { ...prev, ...finalUpdates } : null);
+        alert('Settings updated!');
+    };
+
+    const handleDismissAlert = (alertId: number | string) => {
+        setAlerts(prev => prev.filter(a => a.id !== alertId));
+    };
+
+    const handleStaffRequirementSubmit = (req: string, salary: string) => {
+        if (!loggedInUser) return;
+        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
+        setStaffRequests(prev => [...prev, newReq]);
+    };
+
+    const handleAddStaffPost = (post: any) => {
+        setJobPosts(prev => [...prev, { ...post, id: Date.now(), timestamp: new Date() }]);
+    };
+
+    const handleMarkAppRead = (id: number) => {
+        setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a));
+    };
+
+    const handleApproveRejectUser = (id: number, decision: 'approve' | 'reject') => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: decision === 'approve' ? UserStatus.Approved : UserStatus.Rejected} : u));
+    };
+    const handleBlockUser = (id: number, b: boolean) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: b ? UserStatus.Blocked : UserStatus.Approved} : u));
+    };
+    const handleDeleteUser = (id: number) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === id ? {...u, status: UserStatus.Deleted} : u));
+    };
+    const handleAdminSendMessage = (userId: number | 'all', message: string) => {
+        setAlerts(prev => [...prev, { id: Date.now(), userId, message }]);
+    };
+    const handlePasswordChange = (userId: number, newPass: string) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPass } : u));
+    };
+    const handleUpdateSubscription = (userId: number, newDate: string) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionEndDate: newDate } : u));
+    };
+    const handleAdminUpdateMenu = (userId: number, menu: MenuItem[]) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
+    };
+    const handleTicketReply = (id: number, msg: string) => {
+        setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t));
+    };
+    const handleResolveTicket = (id: number) => {
+        setSupportTickets(prev => prev.map(t => t.id === id ? {...t, status: 'Resolved'} : t));
     };
 
     if (authState === 'customer') return <CustomerOrderPage />;
-    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
+    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={handleForgotPassword} onContactAdmin={handleGuestMessage} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
     
     if (authState === 'adminLoggedIn') {
         const adminPages = {
-            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={() => {}} tickets={supportTickets} staffRequests={staffRequests} staffApplications={staffApplications} jobPosts={jobPosts} staffUsers={[]} />,
-            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />,
-            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} />,
-            [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />,
-            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
-            /**
-             * Added StaffHub entry to resolve indexing errors when currentAdminPage is AdminPage.StaffHub
-             */
-            [AdminPage.StaffHub]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={(id) => setStaffApplications(prev => prev.map(a => a.id === id ? {...a, isRead: true} : a))} />,
+            [AdminPage.Dashboard]: <AdminDashboard users={registeredUsers} onApproveReject={handleApproveRejectUser} />,
+            [AdminPage.UserManagement]: <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleAdminSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription} onUpdateMenu={handleAdminUpdateMenu} onDeleteUser={handleDeleteUser} />,
+            [AdminPage.SupportTickets]: <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleResolveTicket} />,
+            [AdminPage.StaffRequirements]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={handleMarkAppRead} />,
+            [AdminPage.StaffHub]: <AdminStaffRequirements requests={staffRequests} applications={staffApplications} jobPosts={jobPosts} onAddPost={handleAddStaffPost} onDeletePost={(id) => setJobPosts(prev => prev.filter(p => p.id !== id))} onMarkRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? {...r, isRead: true} : r))} onMarkAppRead={handleMarkAppRead} />,
+            [AdminPage.SubscriptionRenewal]: <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />,
         };
-        // Detailed counts for AdminLayout's badge display
         const staffReqsCount = staffRequests.filter(r => !r.isRead).length;
         const staffAppsCount = staffApplications.filter(a => !a.isRead).length;
-        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffReqsCount, staffApps: staffAppsCount }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage as keyof typeof adminPages] || null}</AdminLayout>;
+        return <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, staffReqs: staffReqsCount, staffApps: staffAppsCount }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>{adminPages[currentAdminPage]}</AdminLayout>;
     }
 
     if (authState === 'loggedIn' && loggedInUser) {
+        const userOrders = orders.filter(o => o.restaurantId === loggedInUser.id);
+        const safeMenu = (Array.isArray(loggedInUser.menu) ? loggedInUser.menu : MOCK_MENU_ITEMS).filter(item => item && item.name && item.category);
+
         const pages = {
-            dashboard: <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={loggedInUser.menu} onUpdateOrder={handleUpdateOrder} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
-            billing: <Billing menuItems={loggedInUser.menu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={true} />,
-            online: <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handleKOT} />,
-            menu: <Menu menu={loggedInUser.menu} setMenu={handleUpdateMenu} />,
-            qrMenu: <QrMenu menu={loggedInUser.menu} setMenu={() => {}} loggedInUser={loggedInUser} />,
-            staffRequirements: <StaffRequirements jobPosts={jobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={() => {}} />,
+            dashboard: <Dashboard data={dashboardData} orders={userOrders} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ''} menuItems={safeMenu} onUpdateOrder={handleUpdateOrder} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />,
+            billing: <Billing menuItems={safeMenu} onPrintKOT={handleKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled ?? true} />,
+            online: <OnlineOrders menuItems={safeMenu} onPrintKOT={handleKOT} />,
+            menu: <Menu menu={safeMenu} setMenu={handleUpdateMenu} />,
+            qrMenu: <QrMenu menu={safeMenu} setMenu={handleUpdateMenu} loggedInUser={loggedInUser} />,
+            staff: <Staff />,
+            staffRequirements: <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={handleStaffRequirementSubmit} />,
             inventory: <Inventory />,
-            reports: <Reports />,
+            reports: <Reports orders={userOrders} />,
             social: <SocialMedia user={loggedInUser} />,
             refer: <Referral user={loggedInUser} />,
             settings: <Settings user={loggedInUser} onSave={handleSettingsUpdate} onLogout={handleLogout} />,
@@ -274,10 +366,10 @@ function App() {
             help: <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={handleCreateTicket} />,
         };
 
-        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>{pages[currentPage as keyof typeof pages]}</MainLayout>;
+        return <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={handleDismissAlert} loggedInUser={loggedInUser}>{pages[currentPage]}</MainLayout>;
     }
     
-    return null;
+    return <div>Something went wrong. Please refresh.</div>;
 }
 
 export default App;

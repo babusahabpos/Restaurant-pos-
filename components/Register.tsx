@@ -30,15 +30,15 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [formData, setFormData] = useState({ restaurantName: '', name: '', phone: '', email: '', password: '' });
     const [referralCode, setReferralCode] = useState('');
     const [transactionId, setTransactionId] = useState('');
+    const [userUpiId, setUserUpiId] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'selection' | 'upi' | 'qr' | 'whatsapp'>('selection');
+    const [paymentMethod, setPaymentMethod] = useState<'selection' | 'upi_request' | 'qr'>('selection');
     
     const ADMIN_UPI_ID = "7003548323@ybl";
     const SUBSCRIPTION_AMOUNT = "1"; 
-    const ADMIN_WHATSAPP = "917003548323"; // Dummy admin number
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -57,13 +57,17 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
 
     const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=ID_Activation`;
 
-    const handlePayNow = () => {
-        window.location.href = upiUrl;
-    };
-
-    const copyUpiId = () => {
-        navigator.clipboard.writeText(ADMIN_UPI_ID);
-        alert("UPI ID Copied: " + ADMIN_UPI_ID);
+    const handleUpiRequest = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!userUpiId.includes('@')) {
+            alert("Please enter a valid UPI ID (e.g. name@upi)");
+            return;
+        }
+        setIsVerifying(true);
+        setTimeout(() => {
+            setIsVerifying(false);
+            alert(`Payment request of ₹${SUBSCRIPTION_AMOUNT} sent to ${userUpiId}. Please accept in your UPI app.`);
+        }, 2000);
     };
 
     const handleVerifyAndActivate = (e: React.FormEvent) => {
@@ -89,8 +93,8 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                 {isVerifying && (
                     <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-10 text-center animate-fade-in">
                         <div className="w-16 h-16 border-4 border-lemon border-t-transparent rounded-full animate-spin mb-6"></div>
-                        <h3 className="text-xl font-black text-lemon uppercase tracking-widest">Checking Server</h3>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase mt-2">Verifying Transaction...</p>
+                        <h3 className="text-xl font-black text-lemon uppercase tracking-widest">Processing</h3>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase mt-2">Communicating with Server...</p>
                     </div>
                 )}
 
@@ -126,70 +130,68 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                         {paymentMethod === 'selection' && (
                             <div className="space-y-4">
                                 <div className="bg-lemon text-black py-2.5 rounded-xl text-center font-black uppercase tracking-[0.2em] text-[10px]">
-                                    CHOOSE PAYMENT METHOD
+                                    SELECT PAYMENT METHOD
                                 </div>
                                 
                                 <div className="grid grid-cols-1 gap-3">
-                                    <button onClick={() => setPaymentMethod('upi')} className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
-                                        <div className="bg-lemon/10 p-2 rounded-lg group-hover:bg-lemon/20 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                    <button onClick={() => setPaymentMethod('upi_request')} className="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
+                                        <div className="bg-lemon/10 p-3 rounded-2xl group-hover:bg-lemon/20 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2.5"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                                         </div>
                                         <div className="text-left">
-                                            <p className="text-white font-black text-xs uppercase">Pay via UPI Apps</p>
-                                            <p className="text-gray-500 text-[9px] font-bold uppercase">GPay, PhonePe, Paytm</p>
+                                            <p className="text-white font-black text-xs uppercase">UPI ID Request</p>
+                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Enter ID to get payment request</p>
                                         </div>
                                     </button>
 
-                                    <button onClick={() => setPaymentMethod('qr')} className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
-                                        <div className="bg-lemon/10 p-2 rounded-lg group-hover:bg-lemon/20 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                    <button onClick={() => setPaymentMethod('qr')} className="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
+                                        <div className="bg-lemon/10 p-3 rounded-2xl group-hover:bg-lemon/20 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                                         </div>
                                         <div className="text-left">
                                             <p className="text-white font-black text-xs uppercase">Scan QR Code</p>
-                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Pay from another phone</p>
-                                        </div>
-                                    </button>
-
-                                    <button onClick={() => window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=Hi, I want to activate my BaBu SAHAB POS ID. My restaurant is ${formData.restaurantName}.`, '_blank')} className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex items-center gap-4 hover:border-green-500 transition-all group">
-                                        <div className="bg-green-500/10 p-2 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-11.7 1 1 0 0 1 1 1c0 1.1.9 2 2 2a1 1 0 0 1 1 1v.7c0 .5.4.9.9.9.5 0 .9.4.9.9z"/></svg>
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-white font-black text-xs uppercase">WhatsApp Payment</p>
-                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Talk to Admin directly</p>
+                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Fast & Instant Activation</p>
                                         </div>
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {paymentMethod === 'upi' && (
-                            <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center space-y-4">
-                                <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Instant Activation</h4>
-                                <p className="text-4xl font-black text-white">₹1</p>
-                                <button onClick={handlePayNow} className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-100 shadow-xl border-2 border-white">
-                                    <span className="text-[11px] uppercase tracking-tighter">Open UPI App Now</span>
-                                </button>
-                                <button onClick={() => setPaymentMethod('selection')} className="text-[9px] text-lemon font-black uppercase tracking-widest">Change Method</button>
+                        {paymentMethod === 'upi_request' && (
+                            <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 space-y-4">
+                                <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest text-center">Enter your UPI ID</h4>
+                                <form onSubmit={handleUpiRequest} className="space-y-3">
+                                    <input 
+                                        type="text" 
+                                        placeholder="yourname@upi" 
+                                        value={userUpiId}
+                                        onChange={e => setUserUpiId(e.target.value)}
+                                        className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold text-center text-sm"
+                                    />
+                                    <button type="submit" className="w-full bg-white text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest">
+                                        Request ₹{SUBSCRIPTION_AMOUNT}
+                                    </button>
+                                </form>
+                                <button onClick={() => setPaymentMethod('selection')} className="w-full text-[9px] text-lemon font-black uppercase tracking-widest text-center">Go Back</button>
                             </div>
                         )}
 
                         {paymentMethod === 'qr' && (
                             <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center space-y-4">
                                 <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Scan to Pay</h4>
-                                <div className="bg-white p-2 rounded-xl inline-block">
+                                <div className="bg-white p-2 rounded-xl inline-block border-4 border-lemon">
                                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`} alt="Payment QR" className="w-32 h-32" />
                                 </div>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Scan with any UPI App</p>
-                                <button onClick={() => setPaymentMethod('selection')} className="text-[9px] text-lemon font-black uppercase tracking-widest">Change Method</button>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase">Amount: ₹{SUBSCRIPTION_AMOUNT}</p>
+                                <button onClick={() => setPaymentMethod('selection')} className="w-full text-[9px] text-lemon font-black uppercase tracking-widest">Go Back</button>
                             </div>
                         )}
 
                         <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
-                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">Enter Transaction ID / UTR</p>
+                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">After Payment, Enter UTR / Ref No.</p>
                             <input 
                                 type="text" 
-                                placeholder="UTR / Order ID / Ref No." 
+                                placeholder="UTR / Transaction ID" 
                                 required 
                                 value={transactionId}
                                 onChange={e => setTransactionId(e.target.value)}
@@ -201,7 +203,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                         </form>
 
                         <button onClick={() => setStep(1)} className="w-full text-gray-700 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1">
-                             ← Change Registration Details
+                             ← Back to Details
                         </button>
                     </div>
                 )}
