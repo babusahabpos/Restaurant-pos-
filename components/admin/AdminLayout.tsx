@@ -14,9 +14,8 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
+    { name: AdminPage.Marketplace, key: 'market' },
     { name: AdminPage.SupportTickets, key: 'tickets' },
-    { name: AdminPage.StaffHub, key: 'staff_hub' },
-    { name: AdminPage.StaffRequirements, key: 'staff_reqs' },
     { name: AdminPage.SubscriptionRenewal, key: 'subscriptions' },
 ];
 
@@ -25,14 +24,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
 
     const getBadgeCount = (name: AdminPage) => {
         if (name === AdminPage.SupportTickets) return badgeCounts.tickets || 0;
-        if (name === AdminPage.StaffRequirements) return badgeCounts.staffReqs || 0;
-        if (name === AdminPage.StaffHub) return badgeCounts.staffApps || 0;
+        if (name === AdminPage.Marketplace) return badgeCounts.marketOrders || 0;
         return 0;
     };
 
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden bg-black text-white relative">
-            {/* Top Navigation - Fixed height */}
             <nav className="bg-gray-900 shadow-lg border-b border-gray-800 h-16 px-4 flex-shrink-0 z-[100]">
                 <div className="max-w-7xl mx-auto h-full flex items-center justify-between">
                     <div className="flex-shrink-0">
@@ -72,7 +69,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                 </div>
             </nav>
 
-            {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 bg-black/95 z-[110] lg:hidden animate-fade-in" onClick={() => setMobileMenuOpen(false)}>
                     <div className="bg-gray-900 pt-20 pb-10 px-4 space-y-2 h-full overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -91,7 +87,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                 </div>
             )}
 
-            {/* Main Scrollable Content Area */}
             <main className="flex-1 overflow-y-auto no-scrollbar bg-black p-4 md:p-8">
                 <div className="max-w-7xl mx-auto space-y-6 pb-20">
                     <div className="mb-6">

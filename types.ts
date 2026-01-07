@@ -13,8 +13,7 @@ export type Page =
     'social' | 
     'refer' |
     'staff' | 
-    'market' |
-    'staffRequirements'; 
+    'market'; 
 
 export interface MenuItem {
     id: number;
@@ -57,25 +56,12 @@ export interface DashboardData {
     offlineOrders: number;
 }
 
-export interface InventoryItem {
-    id: number;
-    name: string;
-    category: string;
-    quantity: number;
-    unit: string;
-    lowStockThreshold: number;
-}
-
 export enum AdminPage {
     Dashboard = 'Admin Dashboard',
     UserManagement = 'User Management',
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
-    StaffRequirements = 'Staff Hub',
-    /**
-     * Added StaffHub enum member to resolve property missing errors in components/admin/AdminLayout.tsx
-     */
-    StaffHub = 'Staff Hub Management'
+    Marketplace = 'Marketplace'
 }
 
 export enum UserStatus {
@@ -103,7 +89,6 @@ export interface RegisteredUser {
     status: UserStatus;
     lastLogin: string;
     subscriptionEndDate: string; 
-    
     referralCode?: string;
     referredBy?: string; 
     socialMedia?: {
@@ -137,79 +122,24 @@ export interface AdminAlert {
     message: string;
 }
 
-export interface StaffMember {
+// Marketplace Types
+export interface MarketplaceProduct {
     id: number;
     name: string;
-    role: string;
-    avatar: string;
-    status: 'Clocked In' | 'Clocked Out' | 'On Break';
-    lastAction: string;
+    price: number;
+    description: string;
 }
 
-export interface StaffLogEntry {
-    id: number;
-    staffId: number;
-    staffName: string;
-    action: 'Clock In' | 'Clock Out' | 'Take Break' | 'End Break' | 'Absent';
-    timestamp: Date;
-}
-
-export interface StaffUser {
-    id: number;
-    name: string;
-    phone: string;
-    registeredAt: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    isBlocked: boolean;
-}
-
-export interface StaffRequirementRequest {
+export interface MarketplaceOrder {
     id: number;
     userId: number;
+    userName: string;
     restaurantName: string;
-    requirement: string;
-    salary: string;
+    productId: number;
+    productName: string;
+    price: number;
+    quantity: number;
+    status: 'Pending' | 'Accepted' | 'Cancelled';
+    deliveryDate?: string;
     timestamp: Date;
-    isRead: boolean;
-}
-
-export interface StaffApplication {
-    id: number;
-    staffName: string;
-    phone: string;
-    category: string;
-    location: string;
-    cvDetails: string;
-    timestamp: Date;
-    isRead: boolean;
-}
-
-export interface StaffJobPost {
-    id: number;
-    staffName: string;
-    category: string;
-    phone: string;
-    location: string;
-    cvDetails: string;
-    timestamp: Date;
-    status?: 'Pending' | 'Approved' | 'Rejected';
-}
-
-export interface RestaurantJobPost {
-    id: number;
-    restaurantName: string;
-    address: string;
-    category: string;
-    salary: string;
-    phone: string;
-    timestamp: Date;
-}
-
-export interface StaffMessage {
-    id: number;
-    senderName: string;
-    recipientPhone: string;
-    text: string;
-    timestamp: Date;
-    isRead: boolean;
 }
