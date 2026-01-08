@@ -127,26 +127,19 @@ const BottomNavBar: React.FC<{
                 const isActive = currentPage === item.name;
                 const Icon = item.icon;
 
-                if (item.name === 'dashboard') {
-                    return (
-                        <button
-                            key={item.name}
-                            onClick={() => setCurrentPage(item.name)}
-                            className={`flex items-center justify-center w-14 h-14 -mt-10 rounded-full transition-transform duration-300 shadow-xl shadow-lemon/20 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`}
-                        >
-                            <Icon className="w-7 h-7" />
-                        </button>
-                    );
-                }
+                // Removed -mt-10 to center the dashboard button vertically
+                const buttonClass = item.name === 'dashboard' 
+                    ? `flex items-center justify-center w-14 h-14 rounded-full transition-transform duration-300 shadow-xl shadow-lemon/20 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`
+                    : `flex flex-col items-center p-2 rounded-lg transition-colors ${isActive ? 'text-lemon' : 'text-gray-500'}`;
 
                 return (
                     <button
                         key={item.name}
                         onClick={() => setCurrentPage(item.name)}
-                        className={`flex flex-col items-center p-2 rounded-lg transition-colors ${isActive ? 'text-lemon' : 'text-gray-500'}`}
+                        className={buttonClass}
                     >
                         <Icon className="w-6 h-6" />
-                        <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">{item.name}</span>
+                        {item.name !== 'dashboard' && <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">{item.name}</span>}
                     </button>
                 );
             })}
@@ -199,8 +192,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Attendance' :
                          currentPage === 'market' ? 'Marketing Hub' : 
-                         currentPage === 'staffRequirements' ? 'Staff Hub' : 
-                         currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+                         currentPage === 'staffRequirements' ? 'Staff Hub' : currentPage}
                     </h1>
                     <div className="flex items-center gap-3">
                          <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-[10px] font-bold">

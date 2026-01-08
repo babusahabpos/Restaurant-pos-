@@ -2,7 +2,6 @@ import { Page, MenuItem, RegisteredUser, UserStatus, SupportTicket, InventoryIte
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'dashboard', icon: 'dashboard' },
-    { name: 'market', icon: 'market' }, // Prominent position
     { name: 'billing', icon: 'billing' },
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
@@ -10,6 +9,7 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'inventory', icon: 'inventory' },
     { name: 'staffRequirements', icon: 'staff' },
     { name: 'staff', icon: 'staff' },
+    { name: 'market', icon: 'market' }, // Moved below staff
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 
     { name: 'refer', icon: 'refer' }, 

@@ -475,21 +475,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 <QrOrdersSection orders={incomingQrOrders} onAccept={handleAcceptQrOrder} onPrint={handlePrintKOT} onNavigateToQrMenu={onNavigateToQrMenu} />
-                
-                {onNavigateToMarket && (
-                    <div 
-                        onClick={onNavigateToMarket}
-                        className="bg-gray-900 border border-lemon/30 p-6 rounded-2xl flex flex-col justify-center items-center gap-2 cursor-pointer active:scale-95 hover:bg-lemon/5 transition-all shadow-xl"
-                    >
-                        <div className="bg-lemon text-black p-3 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        </div>
-                        <p className="text-white font-black uppercase text-sm tracking-widest mt-2">Marketing Hub</p>
-                        <p className="text-lemon/50 text-[9px] font-bold uppercase">Order supplies & growth tools</p>
-                    </div>
-                )}
             </div>
 
             <div className="bg-black border border-gray-800 p-5 rounded-2xl mb-10">
