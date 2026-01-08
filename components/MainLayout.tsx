@@ -127,9 +127,9 @@ const BottomNavBar: React.FC<{
                 const isActive = currentPage === item.name;
                 const Icon = item.icon;
 
-                // Removed -mt-10 to center the dashboard button vertically
+                // Center the button vertically by removing -mt-10
                 const buttonClass = item.name === 'dashboard' 
-                    ? `flex items-center justify-center w-14 h-14 rounded-full transition-transform duration-300 shadow-xl shadow-lemon/20 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`
+                    ? `flex items-center justify-center w-12 h-12 rounded-full transition-transform duration-300 shadow-xl shadow-lemon/20 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`
                     : `flex flex-col items-center p-2 rounded-lg transition-colors ${isActive ? 'text-lemon' : 'text-gray-500'}`;
 
                 return (
