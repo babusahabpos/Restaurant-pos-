@@ -9,7 +9,7 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'inventory', icon: 'inventory' },
     { name: 'staffRequirements', icon: 'staff' },
     { name: 'staff', icon: 'staff' },
-    { name: 'market', icon: 'market' }, // Moved below staff
+    { name: 'market', icon: 'market' }, // Marketing Hub under Staff
     { name: 'reports', icon: 'reports' },
     { name: 'social', icon: 'social' }, 
     { name: 'refer', icon: 'refer' }, 
