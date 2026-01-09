@@ -2,19 +2,19 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
 
-console.log("SYSTEM: Boot Sequence Initiated (Legacy Mode).");
+console.log("SYSTEM: Boot Sequence Initiated (Strict Legacy Mode v17).");
 
 const initializeApp = () => {
     const container = document.getElementById('root');
     if (!container) {
-        console.error("SYSTEM: Root container not found.");
+        console.error("SYSTEM: Root container not found in DOM.");
         return;
     }
 
     try {
         console.log("SYSTEM: Mounting React tree (v17)...");
         
-        // Use React 17 Render Style
+        // React 17 Render Style - Strictly for maximum stability
         ReactDOM.render(
             <React.StrictMode>
                 <App />
@@ -38,12 +38,13 @@ const initializeApp = () => {
         console.error("SYSTEM: Fatal Mount Error", err);
         const status = document.getElementById('loader-status');
         if (status) {
-            status.innerText = "FAILED TO START: CHECK CONSOLE";
+            status.innerText = "FAILED TO START: " + (err instanceof Error ? err.message : "Panic");
             status.style.color = "#ff4444";
         }
     }
 };
 
+// Start initialization once DOM is interactive
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initializeApp();
 } else {
