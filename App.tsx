@@ -210,14 +210,15 @@ function App() {
 
     // --- Handlers ---
     const handleLogin = (email: string, pass: string): 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted' => {
-        // Explicit Admin Credentials Match
-        if (email.toLowerCase() === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
-            console.log("Admin handshake successful.");
+        const trimmedEmail = email.trim().toLowerCase();
+        
+        // Final Admin Verification Check
+        if (trimmedEmail === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
             setAuthState('adminLoggedIn'); 
             return 'admin'; 
         }
 
-        const user = registeredUsers.find(u => u.email === email && u.password === pass);
+        const user = registeredUsers.find(u => u.email.trim().toLowerCase() === trimmedEmail && u.password === pass);
         if (user) {
             if (user.status === UserStatus.Approved) { 
                 setAuthState('loggedIn'); 
