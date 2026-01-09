@@ -1,8 +1,8 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom';
 import App from './App';
 
-console.log("SYSTEM: Boot Sequence Initiated.");
+console.log("SYSTEM: Boot Sequence Initiated (Legacy Mode).");
 
 const initializeApp = () => {
     const container = document.getElementById('root');
@@ -12,12 +12,14 @@ const initializeApp = () => {
     }
 
     try {
-        console.log("SYSTEM: Mounting React tree (v18)...");
-        const root = createRoot(container);
-        root.render(
+        console.log("SYSTEM: Mounting React tree (v17)...");
+        
+        // Use React 17 Render Style
+        ReactDOM.render(
             <React.StrictMode>
                 <App />
-            </React.StrictMode>
+            </React.StrictMode>,
+            container
         );
         
         // Finalize loading process
