@@ -1,25 +1,23 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 
-console.log("SYSTEM: Boot Sequence Initiated (Legacy Mode).");
+console.log("SYSTEM: Boot Sequence Initiated.");
 
 const initializeApp = () => {
     const container = document.getElementById('root');
     if (!container) {
-        console.error("SYSTEM: Error - Root container not found in DOM.");
+        console.error("SYSTEM: Root container not found.");
         return;
     }
 
     try {
-        console.log("SYSTEM: Mounting React tree (v17)...");
-        
-        // React 17 Render Style
-        ReactDOM.render(
+        console.log("SYSTEM: Mounting React tree (v18)...");
+        const root = createRoot(container);
+        root.render(
             <React.StrictMode>
                 <App />
-            </React.StrictMode>,
-            container
+            </React.StrictMode>
         );
         
         // Finalize loading process
@@ -38,13 +36,12 @@ const initializeApp = () => {
         console.error("SYSTEM: Fatal Mount Error", err);
         const status = document.getElementById('loader-status');
         if (status) {
-            status.innerText = "FAILED TO START: " + (err instanceof Error ? err.message : "Unknown Panic");
+            status.innerText = "FAILED TO START: CHECK CONSOLE";
             status.style.color = "#ff4444";
         }
     }
 };
 
-// Start initialization once DOM is interactive
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initializeApp();
 } else {
