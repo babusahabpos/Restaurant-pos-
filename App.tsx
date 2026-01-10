@@ -58,7 +58,6 @@ function App() {
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(MOCK_USERS);
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
     const [alerts, setAlerts] = useState<AdminAlert[]>([]);
-    const [inventoryItems, setInventoryItems] = useState<any[]>([]);
 
     const handleAiQuery = async (query: string) => {
         if (!query.trim()) return;
