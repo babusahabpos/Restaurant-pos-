@@ -55,54 +55,18 @@
         animation: spin 1s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .panic-btn {
-        margin-top: 30px;
-        padding: 10px 20px;
-        background: #111;
-        color: #555;
-        border: 1px solid #222;
-        border-radius: 12px;
-        font-size: 9px;
-        font-family: monospace;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .panic-btn:hover { background: #222; color: #ff4444; border-color: #ff4444; }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@17.0.2",
-    "react-dom": "https://esm.sh/react-dom@17.0.2",
-    "react/jsx-runtime": "https://esm.sh/react@17.0.2/jsx-runtime",
-    "recharts": "https://esm.sh/recharts@2.12.7?deps=react@17.0.2,react-dom@17.0.2",
-    "@google/genai": "https://esm.sh/@google/genai@1.33.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
-</script>
-<script>
-    window.onerror = function(msg, url, line) {
-        console.error("BOOT_ERROR:", msg);
-        const status = document.getElementById('loader-status');
-        if (status) {
-            status.innerText = "Error: " + msg;
-            status.style.color = "#ff4444";
-        }
-    };
-    
-    function resetSystemCache() {
-        if(confirm("সতর্কবার্তা: এটি আপনার সমস্ত তথ্য মুছে ফেলবে। আপনি কি নিশ্চিত?")) {
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.reload();
-        }
-    }
 </script>
 </head>
   <body class="bg-black text-white">
@@ -111,7 +75,6 @@
         <div class="loader-spinner"></div>
         <p style="color: #FFFF00; font-family: sans-serif; font-weight: 900; margin-top: 16px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;">BaBu SAHAB POS</p>
         <p id="loader-status" style="color: #444; font-family: sans-serif; font-weight: 900; margin-top: 8px; font-size: 8px; text-transform: uppercase;">BOOTING KERNEL...</p>
-        <button class="panic-btn" onclick="resetSystemCache()">[ RESET SYSTEM ]</button>
     </div>
     <audio id="notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
     <script type="module" src="./index.tsx"></script>

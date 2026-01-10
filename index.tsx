@@ -1,8 +1,8 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 
-console.log("SYSTEM: Boot Sequence Initiated (Strict Legacy Mode v17).");
+console.log("SYSTEM: Boot Sequence Initiated (React 18).");
 
 const initializeApp = () => {
     const container = document.getElementById('root');
@@ -12,14 +12,12 @@ const initializeApp = () => {
     }
 
     try {
-        console.log("SYSTEM: Mounting React tree (v17)...");
-        
-        // React 17 Render Style - Strictly for maximum stability
-        ReactDOM.render(
+        console.log("SYSTEM: Mounting React tree...");
+        const root = createRoot(container);
+        root.render(
             <React.StrictMode>
                 <App />
-            </React.StrictMode>,
-            container
+            </React.StrictMode>
         );
         
         // Finalize loading process
@@ -44,12 +42,8 @@ const initializeApp = () => {
     }
 };
 
-// Start initialization once DOM is interactive
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initializeApp();
 } else {
     window.addEventListener('load', initializeApp);
 }
-
-// Exposure for manual recovery if needed
-(window as any).forceAppReload = initializeApp;
