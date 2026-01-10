@@ -65,17 +65,16 @@ function App() {
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
         try {
-            // New instance per call as per guidelines
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: "You are 'BaBu SAHAB AI Assistant', an expert in restaurant POS and business management. Keep answers very concise. Query: " + query,
+                contents: "You are 'BaBu SAHAB AI Assistant'. Answer this restaurant business query concisely: " + query,
             });
-            const aiText = response.text || "Sorry, I am unable to process that.";
+            const aiText = response.text || "I'm sorry, I couldn't generate a response.";
             setAiMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
             console.error("AI Error:", error);
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Service is temporarily unavailable." }]);
         } finally {
             setIsAiLoading(false);
         }
@@ -153,7 +152,7 @@ function App() {
                 </MainLayout>
             )}
 
-            {/* AI Assistant Button */}
+            {/* AI Assistant UI */}
             <div className="fixed bottom-20 right-4 z-[200]">
                 {!isAiOpen ? (
                     <button onClick={() => setIsAiOpen(true)} className="w-14 h-14 bg-lemon text-black rounded-full shadow-2xl flex items-center justify-center animate-bounce">
@@ -162,7 +161,7 @@ function App() {
                 ) : (
                     <div className="bg-gray-900 w-80 h-96 rounded-3xl border border-lemon shadow-2xl flex flex-col overflow-hidden animate-fade-in">
                         <div className="bg-lemon p-4 flex justify-between items-center">
-                            <h3 className="text-black font-black text-xs uppercase">Business AI</h3>
+                            <h3 className="text-black font-black text-xs uppercase">BaBu AI</h3>
                             <button onClick={() => setIsAiOpen(false)} className="text-black font-bold">✕</button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
@@ -173,12 +172,12 @@ function App() {
                                     </div>
                                 </div>
                             ))}
-                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4 text-center italic">Thinking...</div>}
+                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4 text-center italic">Processing...</div>}
                         </div>
                         <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
                             <input 
                                 type="text" 
-                                placeholder="Ask AI anything..." 
+                                placeholder="Ask about your business..." 
                                 className="flex-1 bg-gray-900 text-white text-[11px] p-3 rounded-xl outline-none focus:border-lemon border border-transparent"
                                 onKeyDown={e => { if(e.key === 'Enter') { handleAiQuery((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }}
                             />
