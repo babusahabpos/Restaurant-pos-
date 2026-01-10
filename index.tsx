@@ -8,11 +8,12 @@ const initializeApp = () => {
     const container = document.getElementById('root');
     if (!container) {
         console.error("SYSTEM: Root container not found in DOM.");
+        const status = document.getElementById('loader-status');
+        if (status) status.innerText = "FATAL: DOM ROOT MISSING";
         return;
     }
 
     try {
-        console.log("SYSTEM: Mounting React tree...");
         const root = createRoot(container);
         root.render(
             <React.StrictMode>
@@ -20,23 +21,23 @@ const initializeApp = () => {
             </React.StrictMode>
         );
         
-        // Finalize loading process
+        // Hide loader after a short delay to ensure React has rendered the first frame
         setTimeout(() => {
             const loader = document.getElementById('initial-loader');
             if (loader) {
                 loader.style.opacity = '0';
                 setTimeout(() => {
                     if (loader.parentNode) loader.remove();
-                    console.log("SYSTEM: Boot Sequence Complete. App Online.");
+                    console.log("SYSTEM: Boot Sequence Complete.");
                 }, 500);
             }
-        }, 600);
+        }, 800);
 
     } catch (err) {
         console.error("SYSTEM: Fatal Mount Error", err);
         const status = document.getElementById('loader-status');
         if (status) {
-            status.innerText = "FAILED TO START: " + (err instanceof Error ? err.message : "Panic");
+            status.innerText = "ERROR: " + (err instanceof Error ? err.message : "PANIC");
             status.style.color = "#ff4444";
         }
     }
