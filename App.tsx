@@ -65,16 +65,17 @@ function App() {
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
         try {
+            // New instance per call as per guidelines
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: "You are 'BaBu SAHAB AI Assistant', a helpful POS and restaurant business expert. Answer the following user query concisely: " + query,
+                contents: "You are 'BaBu SAHAB AI Assistant', an expert in restaurant POS and business management. Keep answers very concise. Query: " + query,
             });
-            const aiText = response.text || "Sorry, I couldn't process that.";
+            const aiText = response.text || "Sorry, I am unable to process that.";
             setAiMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
             console.error("AI Error:", error);
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error. Check your connection or API key." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error." }]);
         } finally {
             setIsAiLoading(false);
         }
@@ -114,6 +115,10 @@ function App() {
         setRegisteredUsers([...registeredUsers, user]);
     };
 
+    const onUpdateOrder = (updatedOrder: OrderStatusItem) => {
+        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+    };
+
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -139,7 +144,7 @@ function App() {
                     onDismissAlert={() => {}} 
                     loggedInUser={loggedInUser!}
                 >
-                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders} onCompleteOrder={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai="" menuItems={loggedInUser!.menu} onUpdateOrder={() => {}} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
+                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders} onCompleteOrder={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai="" menuItems={loggedInUser!.menu} onUpdateOrder={onUpdateOrder} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
                     {currentPage === 'billing' && <Billing menuItems={loggedInUser!.menu} onPrintKOT={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} isPrinterEnabled={true} />}
                     {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={() => {}} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={() => {}} onLogout={() => setAuthState('login')} />}
