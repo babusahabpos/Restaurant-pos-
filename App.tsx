@@ -66,16 +66,15 @@ function App() {
         setIsAiLoading(true);
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-            const context = `System: You are 'BaBu SAHAB AI Assistant'...`;
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: context + "\nUser: " + query,
+                contents: "You are 'BaBu SAHAB AI Assistant', a helpful POS and restaurant business expert. Answer the following user query concisely: " + query,
             });
             const aiText = response.text || "Sorry, I couldn't process that.";
             setAiMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
             console.error("AI Error:", error);
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error. Check your connection or API key." }]);
         } finally {
             setIsAiLoading(false);
         }
@@ -115,55 +114,6 @@ function App() {
         setRegisteredUsers([...registeredUsers, user]);
     };
 
-    const renderAdminPage = () => {
-        switch (currentAdminPage) {
-            case AdminPage.Dashboard:
-                return <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />;
-            case AdminPage.UserManagement:
-                return <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />;
-            case AdminPage.UserOrders:
-                return <MarketManagement products={marketProducts} orders={marketOrders} onAddProduct={(name, price, desc, image) => {
-                    const newProd = { id: Date.now(), name, price, description: desc, image };
-                    const updated = [...marketProducts, newProd];
-                    setMarketProducts(updated);
-                    localStorage.setItem('babuSahabPos_marketProducts', JSON.stringify(updated));
-                }} onDeleteProduct={(id) => {
-                    const updated = marketProducts.filter(p => p.id !== id);
-                    setMarketProducts(updated);
-                    localStorage.setItem('babuSahabPos_marketProducts', JSON.stringify(updated));
-                }} onMessageUser={() => {}} />;
-            case AdminPage.SupportTickets:
-                return <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} onDelete={() => {}} />;
-            case AdminPage.SubscriptionRenewal:
-                return <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />;
-            case AdminPage.StaffHub:
-                return <AdminStaffRequirements 
-                            requests={staffRequests} 
-                            applications={staffApplications} 
-                            jobPosts={jobPosts} 
-                            onAddPost={(post) => {
-                                const newPost = { ...post, id: Date.now(), timestamp: new Date(), status: 'Approved' };
-                                const updated = [...jobPosts, newPost as any];
-                                setJobPosts(updated);
-                                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
-                            }} 
-                            onDeletePost={(id) => {
-                                const updated = jobPosts.filter(p => p.id !== id);
-                                setJobPosts(updated);
-                                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
-                            }} 
-                            onMarkRead={(id) => {
-                                const updated = staffRequests.map(r => r.id === id ? { ...r, isRead: true } : r);
-                                setStaffRequests(updated);
-                                localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(updated));
-                            }} 
-                            onMarkAppRead={() => {}} 
-                        />;
-            default:
-                return <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />;
-        }
-    };
-
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -177,7 +127,8 @@ function App() {
                     setCurrentPage={setCurrentAdminPage} 
                     handleLogout={() => setAuthState('login')}
                 >
-                    {renderAdminPage()}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />}
                 </AdminLayout>
             ) : (
                 <MainLayout 
@@ -191,42 +142,22 @@ function App() {
                     {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders} onCompleteOrder={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai="" menuItems={loggedInUser!.menu} onUpdateOrder={() => {}} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
                     {currentPage === 'billing' && <Billing menuItems={loggedInUser!.menu} onPrintKOT={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} isPrinterEnabled={true} />}
                     {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={() => {}} />}
-                    {currentPage === 'inventory' && <Inventory />}
-                    {currentPage === 'reports' && <Reports orders={orders} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={() => {}} onLogout={() => setAuthState('login')} />}
-                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={(req, sal) => {
-                        const newReq = { id: Date.now(), userId: loggedInUser!.id, restaurantName: loggedInUser!.restaurantName, requirement: req, salary: sal, timestamp: new Date(), isRead: false };
-                        const updated = [...staffRequests, newReq];
-                        setStaffRequests(updated);
-                        localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(updated));
-                    }} onMessageStaff={() => {}} />}
-                    {currentPage === 'market' && <Market products={marketProducts} onPlaceOrder={(pid, pname, pprice, pqty) => {
-                        const newOrder = { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, restaurantName: loggedInUser!.restaurantName, productId: pid, productName: pname, price: pprice, quantity: pqty, status: 'Pending', timestamp: new Date() };
-                        const updated = [...marketOrders, newOrder as any];
-                        setMarketOrders(updated);
-                    }} user={loggedInUser!} />}
-                    {currentPage === 'staff' && <Staff />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser!.menu} setMenu={() => {}} loggedInUser={loggedInUser!} />}
-                    {currentPage === 'social' && <SocialMedia user={loggedInUser!} />}
-                    {currentPage === 'refer' && <Referral user={loggedInUser!} />}
-                    {currentPage === 'subscription' && <Subscription />}
                     {currentPage === 'help' && <HelpAndSupport userTickets={[]} onCreateTicket={() => {}} />}
                 </MainLayout>
             )}
 
-            {/* Floating AI Assistant */}
+            {/* AI Assistant Button */}
             <div className="fixed bottom-20 right-4 z-[200]">
                 {!isAiOpen ? (
-                    <button 
-                        onClick={() => setIsAiOpen(true)}
-                        className="w-14 h-14 bg-lemon text-black rounded-full shadow-2xl flex items-center justify-center animate-bounce hover:scale-110 transition-transform"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                    <button onClick={() => setIsAiOpen(true)} className="w-14 h-14 bg-lemon text-black rounded-full shadow-2xl flex items-center justify-center animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
                     </button>
                 ) : (
                     <div className="bg-gray-900 w-80 h-96 rounded-3xl border border-lemon shadow-2xl flex flex-col overflow-hidden animate-fade-in">
-                        <div className="bg-lemon p-4 flex justify-between items-center shrink-0">
-                            <h3 className="text-black font-black text-xs uppercase tracking-widest">Business AI</h3>
+                        <div className="bg-lemon p-4 flex justify-between items-center">
+                            <h3 className="text-black font-black text-xs uppercase">Business AI</h3>
                             <button onClick={() => setIsAiOpen(false)} className="text-black font-bold">✕</button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
@@ -237,14 +168,14 @@ function App() {
                                     </div>
                                 </div>
                             ))}
-                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4">Thinking...</div>}
+                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4 text-center italic">Thinking...</div>}
                         </div>
                         <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
                             <input 
                                 type="text" 
-                                placeholder="Type message..." 
+                                placeholder="Ask AI anything..." 
                                 className="flex-1 bg-gray-900 text-white text-[11px] p-3 rounded-xl outline-none focus:border-lemon border border-transparent"
-                                onKeyDown={e => e.key === 'Enter' && handleAiQuery((e.target as HTMLInputElement).value)}
+                                onKeyDown={e => { if(e.key === 'Enter') { handleAiQuery((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }}
                             />
                         </div>
                     </div>
