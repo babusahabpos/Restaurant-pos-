@@ -65,17 +65,17 @@ function App() {
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
         try {
-            // Instantiate right before use as per guidelines
+            // Instantiate AI inside the handler to ensure the latest API Key
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: "You are the BaBu SAHAB AI Assistant for restaurant management. Keep your response very concise and helpful. Query: " + query,
+                contents: "You are the BaBu SAHAB AI Assistant for restaurant management. Keep your response very concise and helpful. User Query: " + query,
             });
-            const aiText = response.text || "Sorry, I am unable to respond at the moment.";
+            const aiText = response.text || "Sorry, I am unable to process that right now.";
             setAiMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
             console.error("AI Error:", error);
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI connection failed. Please check your API configuration." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Service error. Please try again later." }]);
         } finally {
             setIsAiLoading(false);
         }
@@ -178,7 +178,7 @@ function App() {
                         <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
                             <input 
                                 type="text" 
-                                placeholder="Type a message..." 
+                                placeholder="Ask a business question..." 
                                 className="flex-1 bg-gray-900 text-white text-[11px] p-3 rounded-xl outline-none focus:border-lemon border border-transparent"
                                 onKeyDown={e => { if(e.key === 'Enter') { handleAiQuery((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }}
                             />
