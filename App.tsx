@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import Login from './components/Login';
@@ -27,7 +26,6 @@ import SupportTickets from './components/admin/SupportTickets';
 import MarketManagement from './components/admin/MarketManagement';
 import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
-import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, StaffRequirementRequest, StaffApplication, RestaurantJobPost, StaffUser, StaffMessage } from './types';
 
@@ -57,9 +55,6 @@ function App() {
     const [jobPosts, setJobPosts] = useState<StaffJobPost[]>([]);
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>([]);
     const [staffApplications, setStaffApplications] = useState<StaffApplication[]>([]);
-    const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>([]);
-    const [registeredStaff, setRegisteredStaff] = useState<StaffUser[]>([]);
-    const [staffMessages, setStaffMessages] = useState<StaffMessage[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(MOCK_USERS);
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
     const [alerts, setAlerts] = useState<AdminAlert[]>([]);
@@ -70,44 +65,26 @@ function App() {
         const newMsg = { role: 'user' as const, text: query };
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
-
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-            
-            // Create Context for AI
-            const context = `
-                System: You are 'BaBu SAHAB AI Assistant' for a restaurant owner. 
-                Owner Name: ${loggedInUser?.name}
-                Restaurant: ${loggedInUser?.restaurantName}
-                Today's Stats: Offline Sales ₹${dashboardData.offlineSales}, Online Sales ₹${dashboardData.onlineSales}.
-                Total Orders: ${dashboardData.offlineOrders + dashboardData.onlineOrders}.
-                Inventory: ${inventoryItems.map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ')}.
-                Recent Orders: ${orders.slice(-5).map(o => o.sourceInfo).join(', ')}.
-                Rule: Keep answers short, professional, and helpful. Use Bengali if the user asks in Bengali.
-            `;
-
+            const context = `System: You are 'BaBu SAHAB AI Assistant'...`;
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: context + "\nUser: " + query,
             });
-
             const aiText = response.text || "Sorry, I couldn't process that.";
             setAiMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (error) {
             console.error("AI Error:", error);
-            setAiMessages(prev => [...prev, { role: 'ai', text: "Error: Could not connect to BaBu SAHAB AI. Please check your internet or API key." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Connection Error." }]);
         } finally {
             setIsAiLoading(false);
         }
     };
 
-    // Initialization logic...
     useEffect(() => {
         const savedOrders = localStorage.getItem('babuSahabPos_orders');
         if (savedOrders) setOrders(JSON.parse(savedOrders));
-        
-        const savedInventory = localStorage.getItem('babuSahabPos_inventoryItems');
-        if (savedInventory) setInventoryItems(JSON.parse(savedInventory));
         
         const savedMarket = localStorage.getItem('babuSahabPos_marketProducts');
         if (savedMarket) setMarketProducts(JSON.parse(savedMarket));
@@ -254,9 +231,6 @@ function App() {
                             <button onClick={() => setIsAiOpen(false)} className="text-black font-bold">✕</button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-                            {aiMessages.length === 0 && (
-                                <p className="text-gray-500 text-[10px] text-center mt-10 uppercase font-bold">Ask me about your sales, stock, or marketing!</p>
-                            )}
                             {aiMessages.map((m, i) => (
                                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[80%] p-3 rounded-2xl text-[11px] font-bold ${m.role === 'user' ? 'bg-gray-800 text-white' : 'bg-lemon/10 text-lemon border border-lemon/20'}`}>
@@ -264,7 +238,7 @@ function App() {
                                     </div>
                                 </div>
                             ))}
-                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse">Thinking...</div>}
+                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4">Thinking...</div>}
                         </div>
                         <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
                             <input 

@@ -1,4 +1,3 @@
-
 import React, { useState, ReactNode } from 'react';
 import { AdminPage } from '../../types';
 import { LogoutIcon } from '../Icons';
@@ -15,7 +14,7 @@ const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
     { name: AdminPage.UserOrders, key: 'market' },
-    { name: AdminPage.StaffHub, key: 'staff' },
+    { name: AdminPage.StaffHub, key: 'staff' }, // Corrected: Added to Nav
     { name: AdminPage.SupportTickets, key: 'tickets' },
     { name: AdminPage.SubscriptionRenewal, key: 'subscriptions' },
 ];
@@ -52,7 +51,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                                 >
                                     {item.name}
                                     {badge > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-gray-900 animate-pulse">
+                                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-gray-900">
                                             {badge}
                                         </span>
                                     )}

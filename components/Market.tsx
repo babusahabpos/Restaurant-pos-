@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MarketplaceProduct, RegisteredUser } from '../types';
 
@@ -35,10 +34,14 @@ const Market: React.FC<MarketProps> = ({ products, onPlaceOrder, user }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-20">
-                {products.length > 0 ? products.map(product => (
+                {products.map(product => (
                     <div key={product.id} className="bg-gray-900 border border-gray-800 p-5 rounded-[2rem] flex flex-col sm:flex-row justify-between items-center gap-6 group hover:border-lemon/30 transition-all shadow-lg">
                         <div className="flex-1 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-                            {product.image && <img src={product.image} className="w-24 h-24 object-cover rounded-3xl" />}
+                            {product.image ? (
+                                <img src={product.image} className="w-28 h-28 object-cover rounded-3xl shadow-xl border border-white/5" />
+                            ) : (
+                                <div className="w-28 h-28 bg-black/40 rounded-3xl flex items-center justify-center text-gray-700 font-black text-xs">NO PIC</div>
+                            )}
                             <div>
                                 <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{product.name}</h3>
                                 <p className="text-lemon font-black text-lg mt-1 tracking-widest">₹{product.price}</p>
@@ -60,11 +63,7 @@ const Market: React.FC<MarketProps> = ({ products, onPlaceOrder, user }) => {
                             </button>
                         </div>
                     </div>
-                )) : (
-                    <div className="py-20 flex flex-col items-center justify-center opacity-30 grayscale">
-                        <p className="text-gray-500 font-black uppercase text-xs tracking-widest">Check back later for new offers</p>
-                    </div>
-                )}
+                ))}
             </div>
         </div>
     );
