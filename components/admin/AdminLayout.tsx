@@ -15,6 +15,7 @@ const NAV_ITEMS = [
     { name: AdminPage.Dashboard, key: 'dashboard' },
     { name: AdminPage.UserManagement, key: 'users' },
     { name: AdminPage.UserOrders, key: 'market' },
+    { name: AdminPage.StaffHub, key: 'staff' },
     { name: AdminPage.SupportTickets, key: 'tickets' },
     { name: AdminPage.SubscriptionRenewal, key: 'subscriptions' },
 ];

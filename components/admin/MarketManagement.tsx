@@ -5,7 +5,7 @@ import { MarketplaceProduct, MarketplaceOrder } from '../../types';
 interface MarketManagementProps {
     products: MarketplaceProduct[];
     orders: MarketplaceOrder[];
-    onAddProduct: (name: string, price: number, desc: string) => void;
+    onAddProduct: (name: string, price: number, desc: string, image?: string) => void;
     onDeleteProduct: (id: number) => void;
     onMessageUser: (userId: number, message: string) => void;
 }
@@ -15,15 +15,27 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
     const [desc, setDesc] = useState('');
+    const [image, setImage] = useState<string | undefined>(undefined);
     
     const [msgModal, setMsgModal] = useState<{ id: number; name: string } | null>(null);
     const [msgText, setMsgText] = useState('');
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
         if (name && price) {
-            onAddProduct(name, parseFloat(price), desc);
-            setName(''); setPrice(''); setDesc('');
+            onAddProduct(name, parseFloat(price), desc, image);
+            setName(''); setPrice(''); setDesc(''); setImage(undefined);
             alert('Product added successfully!');
         }
     };
@@ -55,6 +67,15 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                             <input placeholder="Product Name" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={name} onChange={e => setName(e.target.value)} required />
                             <input placeholder="Price (₹)" type="number" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={price} onChange={e => setPrice(e.target.value)} required />
                             <textarea placeholder="Short Description" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold" value={desc} onChange={e => setDesc(e.target.value)} rows={3} />
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Product Photo</label>
+                                <div className="flex flex-col items-center gap-4">
+                                    {image && <img src={image} className="w-20 h-20 object-cover rounded-xl border border-lemon" />}
+                                    <input type="file" accept="image/*" onChange={handleImageChange} className="w-full text-[10px] text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-gray-800 file:text-lemon hover:file:bg-gray-700" />
+                                </div>
+                            </div>
+
                             <button type="submit" className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase text-xs tracking-widest">Publish Product</button>
                         </form>
                     </div>
@@ -62,10 +83,13 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                     <div className="lg:col-span-2 space-y-4">
                         {products.length > 0 ? products.map(p => (
                             <div key={p.id} className="bg-black p-5 rounded-3xl border border-gray-800 flex justify-between items-center group">
-                                <div>
-                                    <h4 className="text-white font-black uppercase text-lg">{p.name}</h4>
-                                    <p className="text-lemon font-black tracking-widest mt-1">₹{p.price}</p>
-                                    <p className="text-gray-500 text-[10px] mt-2 font-bold uppercase">{p.description}</p>
+                                <div className="flex items-center gap-4">
+                                    {p.image && <img src={p.image} className="w-16 h-16 object-cover rounded-2xl" />}
+                                    <div>
+                                        <h4 className="text-white font-black uppercase text-lg">{p.name}</h4>
+                                        <p className="text-lemon font-black tracking-widest mt-1">₹{p.price}</p>
+                                        <p className="text-gray-500 text-[10px] mt-2 font-bold uppercase">{p.description}</p>
+                                    </div>
                                 </div>
                                 <button onClick={() => onDeleteProduct(p.id)} className="text-red-500 hover:bg-red-500/10 p-4 rounded-2xl transition-all">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

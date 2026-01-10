@@ -63,7 +63,6 @@ export enum AdminPage {
     SupportTickets = 'Support Tickets',
     SubscriptionRenewal = 'Subscription Renewal',
     UserOrders = 'User Orders',
-    StaffRequirements = 'Staff Requirements',
     StaffHub = 'Staff Hub'
 }
 
@@ -131,6 +130,7 @@ export interface MarketplaceProduct {
     name: string;
     price: number;
     description: string;
+    image?: string;
 }
 
 export interface MarketplaceOrder {

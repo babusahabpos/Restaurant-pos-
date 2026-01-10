@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import Login from './components/Login';
@@ -60,7 +61,7 @@ function App() {
     const [registeredStaff, setRegisteredStaff] = useState<StaffUser[]>([]);
     const [staffMessages, setStaffMessages] = useState<StaffMessage[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(MOCK_USERS);
-    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
     const [alerts, setAlerts] = useState<AdminAlert[]>([]);
     const [inventoryItems, setInventoryItems] = useState<any[]>([]);
 
@@ -102,12 +103,20 @@ function App() {
 
     // Initialization logic...
     useEffect(() => {
-        // Mock data loading or local storage loading
         const savedOrders = localStorage.getItem('babuSahabPos_orders');
         if (savedOrders) setOrders(JSON.parse(savedOrders));
         
         const savedInventory = localStorage.getItem('babuSahabPos_inventoryItems');
         if (savedInventory) setInventoryItems(JSON.parse(savedInventory));
+        
+        const savedMarket = localStorage.getItem('babuSahabPos_marketProducts');
+        if (savedMarket) setMarketProducts(JSON.parse(savedMarket));
+
+        const savedJobPosts = localStorage.getItem('babuSahabPos_jobPosts');
+        if (savedJobPosts) setJobPosts(JSON.parse(savedJobPosts));
+
+        const savedRequests = localStorage.getItem('babuSahabPos_staffRequests');
+        if (savedRequests) setStaffRequests(JSON.parse(savedRequests));
     }, []);
 
     const handleLogin = (email: string, pass: string) => {
@@ -130,6 +139,55 @@ function App() {
         setRegisteredUsers([...registeredUsers, user]);
     };
 
+    const renderAdminPage = () => {
+        switch (currentAdminPage) {
+            case AdminPage.Dashboard:
+                return <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />;
+            case AdminPage.UserManagement:
+                return <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />;
+            case AdminPage.UserOrders:
+                return <MarketManagement products={marketProducts} orders={marketOrders} onAddProduct={(name, price, desc, image) => {
+                    const newProd = { id: Date.now(), name, price, description: desc, image };
+                    const updated = [...marketProducts, newProd];
+                    setMarketProducts(updated);
+                    localStorage.setItem('babuSahabPos_marketProducts', JSON.stringify(updated));
+                }} onDeleteProduct={(id) => {
+                    const updated = marketProducts.filter(p => p.id !== id);
+                    setMarketProducts(updated);
+                    localStorage.setItem('babuSahabPos_marketProducts', JSON.stringify(updated));
+                }} onMessageUser={() => {}} />;
+            case AdminPage.SupportTickets:
+                return <SupportTickets tickets={supportTickets} onReply={() => {}} onResolve={() => {}} onDelete={() => {}} />;
+            case AdminPage.SubscriptionRenewal:
+                return <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={() => {}} />;
+            case AdminPage.StaffHub:
+                return <AdminStaffRequirements 
+                            requests={staffRequests} 
+                            applications={staffApplications} 
+                            jobPosts={jobPosts} 
+                            onAddPost={(post) => {
+                                const newPost = { ...post, id: Date.now(), timestamp: new Date(), status: 'Approved' };
+                                const updated = [...jobPosts, newPost as any];
+                                setJobPosts(updated);
+                                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+                            }} 
+                            onDeletePost={(id) => {
+                                const updated = jobPosts.filter(p => p.id !== id);
+                                setJobPosts(updated);
+                                localStorage.setItem('babuSahabPos_jobPosts', JSON.stringify(updated));
+                            }} 
+                            onMarkRead={(id) => {
+                                const updated = staffRequests.map(r => r.id === id ? { ...r, isRead: true } : r);
+                                setStaffRequests(updated);
+                                localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(updated));
+                            }} 
+                            onMarkAppRead={() => {}} 
+                        />;
+            default:
+                return <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />;
+        }
+    };
+
     if (authState === 'customer') return <CustomerOrderPage />;
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
@@ -138,12 +196,12 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout 
-                    badgeCounts={{ tickets: 0, marketOrders: 0 }} 
+                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} 
                     currentPage={currentAdminPage} 
                     setCurrentPage={setCurrentAdminPage} 
                     handleLogout={() => setAuthState('login')}
                 >
-                    <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />
+                    {renderAdminPage()}
                 </AdminLayout>
             ) : (
                 <MainLayout 
@@ -160,6 +218,23 @@ function App() {
                     {currentPage === 'inventory' && <Inventory />}
                     {currentPage === 'reports' && <Reports orders={orders} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={() => {}} onLogout={() => setAuthState('login')} />}
+                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={jobPosts} onSubmitRequirement={(req, sal) => {
+                        const newReq = { id: Date.now(), userId: loggedInUser!.id, restaurantName: loggedInUser!.restaurantName, requirement: req, salary: sal, timestamp: new Date(), isRead: false };
+                        const updated = [...staffRequests, newReq];
+                        setStaffRequests(updated);
+                        localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(updated));
+                    }} onMessageStaff={() => {}} />}
+                    {currentPage === 'market' && <Market products={marketProducts} onPlaceOrder={(pid, pname, pprice, pqty) => {
+                        const newOrder = { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, restaurantName: loggedInUser!.restaurantName, productId: pid, productName: pname, price: pprice, quantity: pqty, status: 'Pending', timestamp: new Date() };
+                        const updated = [...marketOrders, newOrder as any];
+                        setMarketOrders(updated);
+                    }} user={loggedInUser!} />}
+                    {currentPage === 'staff' && <Staff />}
+                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser!.menu} setMenu={() => {}} loggedInUser={loggedInUser!} />}
+                    {currentPage === 'social' && <SocialMedia user={loggedInUser!} />}
+                    {currentPage === 'refer' && <Referral user={loggedInUser!} />}
+                    {currentPage === 'subscription' && <Subscription />}
+                    {currentPage === 'help' && <HelpAndSupport userTickets={[]} onCreateTicket={() => {}} />}
                 </MainLayout>
             )}
 

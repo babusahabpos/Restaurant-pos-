@@ -37,10 +37,13 @@ const Market: React.FC<MarketProps> = ({ products, onPlaceOrder, user }) => {
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-20">
                 {products.length > 0 ? products.map(product => (
                     <div key={product.id} className="bg-gray-900 border border-gray-800 p-5 rounded-[2rem] flex flex-col sm:flex-row justify-between items-center gap-6 group hover:border-lemon/30 transition-all shadow-lg">
-                        <div className="flex-1 text-center sm:text-left">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{product.name}</h3>
-                            <p className="text-lemon font-black text-lg mt-1 tracking-widest">₹{product.price}</p>
-                            <p className="text-gray-500 text-xs mt-2 font-bold uppercase leading-relaxed italic">"{product.description}"</p>
+                        <div className="flex-1 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                            {product.image && <img src={product.image} className="w-24 h-24 object-cover rounded-3xl" />}
+                            <div>
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{product.name}</h3>
+                                <p className="text-lemon font-black text-lg mt-1 tracking-widest">₹{product.price}</p>
+                                <p className="text-gray-500 text-xs mt-2 font-bold uppercase leading-relaxed italic">"{product.description}"</p>
+                            </div>
                         </div>
                         
                         <div className="flex flex-col items-center gap-4 bg-black/40 p-4 rounded-3xl border border-gray-800 w-full sm:w-auto">
