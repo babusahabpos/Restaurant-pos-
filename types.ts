@@ -112,6 +112,7 @@ export interface SupportTicket {
     id: number;
     userId: number;
     userName: string;
+    restaurantName: string;
     subject: string;
     messages: TicketMessage[];
     status: 'Open' | 'Pending' | 'Resolved';
@@ -142,7 +143,7 @@ export interface MarketplaceOrder {
     productName: string;
     price: number;
     quantity: number;
-    status: 'Pending' | 'Accepted' | 'Cancelled';
+    status: 'Pending' | 'Accepted' | 'Cancelled' | 'Out of Stock' | 'Delivered';
     deliveryDate?: string;
     timestamp: Date;
 }

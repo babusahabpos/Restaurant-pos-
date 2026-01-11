@@ -8,9 +8,11 @@ interface MarketManagementProps {
     onAddProduct: (name: string, price: number, desc: string, image?: string) => void;
     onDeleteProduct: (id: number) => void;
     onMessageUser: (userId: number, message: string) => void;
+    onUpdateStatus: (orderId: number, status: MarketplaceOrder['status']) => void;
+    onDeleteOrder: (orderId: number) => void;
 }
 
-const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, onAddProduct, onDeleteProduct, onMessageUser }) => {
+const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, onAddProduct, onDeleteProduct, onMessageUser, onUpdateStatus, onDeleteOrder }) => {
     const [view, setView] = useState<'products' | 'orders'>('products');
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
@@ -96,7 +98,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-[8px] bg-lemon text-black px-2.5 py-1 rounded-full font-black uppercase tracking-tighter">{order.status}</span>
+                                            <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-tighter ${order.status === 'Pending' ? 'bg-lemon text-black' : order.status === 'Out of Stock' ? 'bg-red-600 text-white' : order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>{order.status}</span>
                                             <span className="text-[9px] text-gray-500 font-black uppercase">{new Date(order.timestamp).toLocaleString()}</span>
                                         </div>
                                         <h4 className="text-2xl font-black text-white uppercase leading-tight tracking-tighter">{order.productName}</h4>
@@ -113,9 +115,17 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-2 w-full md:w-48 shrink-0">
-                                    <button onClick={() => onMessageUser(order.userId, `Regarding your market order for ${order.productName}: `)} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl text-[10px] uppercase shadow-lg shadow-blue-900/20 active:scale-95 transition-all">Send Notice</button>
-                                    <a href={`tel:${order.id}`} className="w-full bg-gray-800 text-white font-black py-4 rounded-2xl text-[10px] text-center uppercase border border-gray-700 active:scale-95 transition-all">Call Owner</a>
+                                <div className="flex flex-col gap-2 w-full md:w-56 shrink-0">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => onMessageUser(order.userId, `Regarding ${order.productName}: `)} className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all">Message</button>
+                                        <button onClick={() => onUpdateStatus(order.id, 'Delivered')} className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all">Delivery</button>
+                                        <button onClick={() => { onUpdateStatus(order.id, 'Out of Stock'); onMessageUser(order.userId, `Sorry, ${order.productName} is currently out of stock.`); }} className="bg-orange-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-orange-700 active:scale-95 transition-all">Out Stock</button>
+                                        <button onClick={() => { if(window.confirm('Delete this order?')) onDeleteOrder(order.id); }} className="bg-red-900/30 text-red-500 font-black py-3 rounded-xl text-[9px] uppercase border border-red-900/50 active:scale-95 transition-all">Delete</button>
+                                    </div>
+                                    <a href={`tel:${order.id}`} className="w-full bg-lemon text-black font-black py-3.5 rounded-xl text-[10px] text-center uppercase shadow-lg shadow-lemon/10 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                        Call Owner
+                                    </a>
                                 </div>
                             </div>
                         );

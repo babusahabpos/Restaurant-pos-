@@ -25,7 +25,7 @@ const TicketDetailsModal: React.FC<{
                         {ticket.status === 'Resolved' ? 'Closed' : 'Active'}
                     </span>
                 </div>
-                <p className="text-[10px] text-gray-500 font-bold uppercase mb-4 tracking-widest border-b border-gray-700 pb-2">User: {ticket.userName} (ID: {ticket.userId})</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mb-4 tracking-widest border-b border-gray-700 pb-2">User: {ticket.restaurantName} (ID: {ticket.userId})</p>
 
                 <div className="flex-grow bg-black/40 p-4 rounded-2xl overflow-y-auto space-y-4 mb-4 no-scrollbar border border-gray-700">
                    {ticket.messages.map((msg, index) => (
@@ -108,7 +108,7 @@ const SupportTickets: React.FC<{
                             <tr key={ticket.id} className="hover:bg-white/5 transition-colors group">
                                 <td className="px-6 py-4">{getStatusChip(ticket.status)}</td>
                                 <td className="px-6 py-4">
-                                    <p className="text-white font-black uppercase text-xs">{ticket.userName}</p>
+                                    <p className="text-white font-black uppercase text-xs">{ticket.restaurantName}</p>
                                     <p className="text-[9px] text-gray-500 font-bold uppercase">ID: {ticket.userId}</p>
                                 </td>
                                 <td className="px-6 py-4">

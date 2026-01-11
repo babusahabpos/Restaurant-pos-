@@ -1,3 +1,4 @@
+
 import { Page, MenuItem, RegisteredUser, UserStatus, SupportTicket, InventoryItem, StaffMember } from './types';
 
 export const NAV_ITEMS: { name: Page; icon: string }[] = [
@@ -50,7 +51,7 @@ export const MOCK_USERS: RegisteredUser[] = [
 ];
 
 export const MOCK_TICKETS: SupportTicket[] = [
-    { id: 1, userId: 1, userName: 'Anil Kumar', subject: 'Billing Issue', messages: [
+    { id: 1, userId: 1, userName: 'Anil Kumar', restaurantName: 'BaBu SAHAB', subject: 'Billing Issue', messages: [
         { sender: 'user', text: 'My billing page is not loading correctly.', timestamp: new Date(Date.now() - 3600000) },
         { sender: 'admin', text: 'We are looking into it.', timestamp: new Date(Date.now() - 1800000) }
     ], status: 'Pending', lastUpdate: new Date(Date.now() - 1800000) },
