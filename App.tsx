@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import Login from './components/Login';
 import Register from './components/Register';
 import MainLayout from './components/MainLayout';
@@ -44,9 +43,6 @@ function App() {
     const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
-    const [isAiOpen, setIsAiOpen] = useState(false);
-    const [aiMessages, setAiMessages] = useState<{role: 'user' | 'ai', text: string}[]>([]);
-    const [isAiLoading, setIsAiLoading] = useState(false);
 
     // --- Persistent Data States ---
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => {
@@ -104,19 +100,6 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_staffJobPosts', JSON.stringify(staffJobPosts)); }, [staffJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobs', JSON.stringify(restaurantJobs)); }, [restaurantJobs]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
-
-    const handleAiQuery = async (query: string) => {
-        if (!query.trim()) return;
-        setAiMessages(prev => [...prev, { role: 'user', text: query }]);
-        setIsAiLoading(true);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: query });
-            setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "I am currently processing your request." }]);
-        } catch (e) {
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI System temporary offline." }]);
-        } finally { setIsAiLoading(false); }
-    };
 
     const handleLogin = (email: string, pass: string) => {
         const trimmedEmail = email.trim().toLowerCase();
@@ -210,40 +193,6 @@ function App() {
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} />}
                 </MainLayout>
             )}
-
-            {/* AI Assistant FAB */}
-            <div className="fixed bottom-20 right-4 z-[200]">
-                {!isAiOpen ? (
-                    <button onClick={() => setIsAiOpen(true)} className="w-14 h-14 bg-lemon text-black rounded-full shadow-2xl flex items-center justify-center animate-bounce">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
-                    </button>
-                ) : (
-                    <div className="bg-gray-900 w-80 h-96 rounded-3xl border border-lemon shadow-2xl flex flex-col overflow-hidden animate-fade-in">
-                        <div className="bg-lemon p-4 flex justify-between items-center">
-                            <h3 className="text-black font-black text-xs uppercase">BaBu AI</h3>
-                            <button onClick={() => setIsAiOpen(false)} className="text-black font-bold">✕</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-                            {aiMessages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-[11px] font-bold ${m.role === 'user' ? 'bg-gray-800 text-white' : 'bg-lemon/10 text-lemon border border-lemon/20'}`}>
-                                        {m.text}
-                                    </div>
-                                </div>
-                            ))}
-                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4 text-center italic">Processing...</div>}
-                        </div>
-                        <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
-                            <input 
-                                type="text" 
-                                placeholder="Ask me something..." 
-                                className="flex-1 bg-gray-900 text-white text-[11px] p-3 rounded-xl outline-none focus:border-lemon border border-transparent"
-                                onKeyDown={e => { if(e.key === 'Enter') { handleAiQuery((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }
