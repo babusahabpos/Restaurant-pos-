@@ -19,6 +19,8 @@ import Market from './components/Market';
 import StaffRequirements from './components/StaffRequirements';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral';
+// Added missing Subscription import
+import Subscription from './components/Subscription';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -27,7 +29,7 @@ import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
 import MarketManagement from './components/admin/MarketManagement';
 import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
@@ -88,6 +90,11 @@ function App() {
         return saved ? JSON.parse(saved) : [];
     });
 
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_staffRequests');
+        return saved ? JSON.parse(saved) : [];
+    });
+
     // --- Save to LocalStorage ---
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
@@ -97,6 +104,7 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_marketOrders', JSON.stringify(marketOrders)); }, [marketOrders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffJobPosts', JSON.stringify(staffJobPosts)); }, [staffJobPosts]);
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobs', JSON.stringify(restaurantJobs)); }, [restaurantJobs]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
 
     // --- AI Handler ---
     const handleAiQuery = async (query: string) => {
@@ -104,11 +112,13 @@ function App() {
         setAiMessages(prev => [...prev, { role: 'user', text: query }]);
         setIsAiLoading(true);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+            // Using correct initialization as per guidelines
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: query,
             });
+            // Accessing .text property directly from GenerateContentResponse
             setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "No response." }]);
         } catch (e) {
             setAiMessages(prev => [...prev, { role: 'ai', text: "AI Service error." }]);
@@ -190,6 +200,16 @@ function App() {
 
     const handleStaffRequirementSubmit = (req: string, salary: string) => {
         if (!loggedInUser) return;
+        const newReq: StaffRequirementRequest = {
+            id: Date.now(),
+            userId: loggedInUser.id,
+            restaurantName: loggedInUser.restaurantName,
+            requirement: req,
+            salary,
+            timestamp: new Date(),
+            isRead: false
+        };
+        setStaffRequests(prev => [...prev, newReq]);
         alert("Your requirement has been sent to the Admin Hub for approval.");
     };
 
@@ -236,11 +256,12 @@ function App() {
                     {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={(m) => handleUpdateMenu(loggedInUser!.id, m)} />}
                     {currentPage === 'inventory' && <Inventory />}
                     {currentPage === 'staff' && <Staff />}
-                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={(ph, txt) => alert("Message sent to worker!")} />}
+                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={(ph, txt) => alert("Inquiry sent to worker!")} />}
                     {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={handlePlaceMarketOrder} user={loggedInUser!} />}
                     {currentPage === 'reports' && <Reports orders={orders.filter(o => o.restaurantId === loggedInUser?.id)} />}
                     {currentPage === 'social' && <SocialMedia user={loggedInUser!} />}
                     {currentPage === 'refer' && <Referral user={loggedInUser!} />}
+                    {currentPage === 'subscription' && <Subscription />}
                     {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser!.id ? { ...u, ...updates } : u))} onLogout={() => setAuthState('login')} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser!.menu} setMenu={(m) => handleUpdateMenu(loggedInUser!.id, m)} loggedInUser={loggedInUser!} />}
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} />}

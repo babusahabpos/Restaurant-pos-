@@ -180,7 +180,7 @@ const UserManagement: React.FC<{
                     className="w-full md:w-auto bg-red-600 text-white font-black py-3 px-6 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg shadow-red-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
-                    Broadcast Notice to All
+                    Broadcast Notice
                 </button>
             </div>
 
@@ -189,8 +189,8 @@ const UserManagement: React.FC<{
                     <thead className="text-xs text-gray-300 uppercase bg-gray-800">
                         <tr>
                             <th scope="col" className="px-6 py-3">Restaurant</th>
-                            <th scope="col" className="px-6 py-3">Owner</th>
-                            <th scope="col" className="px-6 py-3">Subscription End</th>
+                            <th scope="col" className="px-6 py-3">Owner & Contact</th>
+                            <th scope="col" className="px-6 py-3">Subscription</th>
                             <th scope="col" className="px-6 py-3">Status</th>
                             <th scope="col" className="px-6 py-3">Actions</th>
                         </tr>
@@ -198,9 +198,18 @@ const UserManagement: React.FC<{
                     <tbody>
                         {users.map(user => (
                             <tr key={user.id} className="bg-gray-900 border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
-                                <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap uppercase">{user.restaurantName}</th>
-                                <td className="px-6 py-4 font-bold">{user.name}</td>
-                                <td className="px-6 py-4 font-mono">{user.subscriptionEndDate}</td>
+                                <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap uppercase">
+                                    {user.restaurantName}
+                                    <p className="text-[9px] text-gray-500 lowercase mt-1 tracking-tight">{user.address}</p>
+                                </th>
+                                <td className="px-6 py-4">
+                                    <p className="font-bold text-white">{user.name}</p>
+                                    <p className="text-[10px] text-lemon">{user.phone}</p>
+                                    <p className="text-[10px] text-gray-500 lowercase">{user.email}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <p className="font-mono text-xs text-gray-300">{user.subscriptionEndDate}</p>
+                                </td>
                                 <td className="px-6 py-4">{getStatusChip(user.status)}</td>
                                 <td className="px-6 py-4 space-x-2 whitespace-nowrap">
                                     {user.status !== UserStatus.Deleted && (
@@ -208,8 +217,8 @@ const UserManagement: React.FC<{
                                             {user.status === UserStatus.Approved && <button onClick={() => onBlockUser(user.id, true)} className="font-bold text-lemon hover:underline uppercase text-[9px]">Block</button>}
                                             {user.status === UserStatus.Blocked && <button onClick={() => onBlockUser(user.id, false)} className="font-bold text-green-500 hover:underline uppercase text-[9px]">Unblock</button>}
                                             <button onClick={() => setMessagingUser(user)} className="font-bold text-blue-500 hover:underline uppercase text-[9px]">Message</button>
-                                            <button onClick={() => setPasswordUser(user)} className="font-bold text-lemon hover:underline uppercase text-[9px]">Password</button>
-                                            <button onClick={() => setSubscriptionUser(user)} className="font-bold text-teal-500 hover:underline uppercase text-[9px]">Plan</button>
+                                            <button onClick={() => setPasswordUser(user)} className="font-bold text-lemon hover:underline uppercase text-[9px]">Pass</button>
+                                            <button onClick={() => setSubscriptionUser(user)} className="font-bold text-teal-500 hover:underline uppercase text-[9px]">Date</button>
                                             <button onClick={() => setMenuUser(user)} className="font-bold text-yellow-500 hover:underline uppercase text-[9px]">Menu</button>
                                             <button onClick={() => onDeleteUser(user.id)} className="font-bold text-red-500 hover:underline uppercase text-[9px]">Del</button>
                                         </>
