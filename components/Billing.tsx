@@ -87,6 +87,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
 
     return (
         <div className="flex flex-col h-full bg-black overflow-hidden relative">
+            {/* MENU SECTION */}
             <div className="h-[45%] flex flex-col p-2 border-b border-gray-800 overflow-hidden shrink-0">
                 <div className="flex justify-between items-center mb-2 px-1">
                     <div className="flex gap-1.5 overflow-x-auto no-scrollbar shrink-0 items-center h-10">
@@ -115,7 +116,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onToggleStock?.(item.id); }}
                                 className="absolute top-1 right-1 w-5 h-5 bg-black/80 rounded-full flex items-center justify-center border border-white/10"
-                                title="Toggle In-Stock"
+                                title="Toggle Stock"
                             >
                                 <div className={`w-2 h-2 rounded-full ${item.inStock ? 'bg-green-500' : 'bg-red-500'}`}></div>
                             </button>
@@ -124,6 +125,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                 </div>
             </div>
 
+            {/* CART SECTION */}
             <div className="flex-1 flex flex-col p-2 bg-gray-950 overflow-hidden pb-[120px]">
                 <div className="flex items-center justify-between mb-2 shrink-0">
                     <div className="flex gap-1">
@@ -145,7 +147,11 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                         currentOrder.map(item => (
                             <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5 group">
                                 <div className="w-[40%] flex items-center gap-2">
-                                    <button onClick={() => removeFromOrder(item.id)} className="text-red-500 hover:text-red-400 p-1">
+                                    <button 
+                                        onClick={() => removeFromOrder(item.id)} 
+                                        className="text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title="Delete Item"
+                                    >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                     </button>
                                     <div>
@@ -165,10 +171,10 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                 </div>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gray-900 border-t border-gray-800 flex flex-col gap-2 z-40">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gray-900 border-t border-gray-800 flex flex-col gap-2 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-500 font-black uppercase">Discount:</span>
+                        <span className="text-[9px] text-gray-500 font-black uppercase">Disc:</span>
                         <input type="number" value={discount || ''} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} placeholder="0" className="w-14 bg-black text-lemon text-[11px] font-black p-1 rounded border border-gray-700 text-center focus:border-lemon outline-none" />
                     </div>
                     <div className="text-right">
@@ -178,7 +184,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                 </div>
                 <button 
                     onClick={handleSendToKitchen} 
-                    className="w-full bg-lemon text-black font-black py-4 rounded-2xl text-[12px] uppercase active:scale-95 disabled:opacity-20"
+                    className="w-full bg-lemon text-black font-black py-4 rounded-2xl text-[12px] uppercase active:scale-95 disabled:opacity-20 transition-all shadow-lg shadow-lemon/10"
                     disabled={currentOrder.length === 0}
                 >
                     GENERATE KOT

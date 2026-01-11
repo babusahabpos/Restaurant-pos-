@@ -84,7 +84,7 @@ function App() {
         return saved ? JSON.parse(saved) : [];
     });
 
-    // --- Save to LocalStorage ---
+    // --- Save to LocalStorage Whenever States Change ---
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
@@ -103,11 +103,11 @@ function App() {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
-                contents: query,
+                contents: "User asks: " + query,
             });
-            setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "No response." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "I'm not sure how to answer that." }]);
         } catch (e) {
-            setAiMessages(prev => [...prev, { role: 'ai', text: "Service error." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Service error." }]);
         } finally { setIsAiLoading(false); }
     };
 
@@ -145,7 +145,7 @@ function App() {
         setRegisteredUsers(prev => [...prev, user]);
     };
 
-    // --- Actions ---
+    // --- Action Handlers ---
     const handleBlockUser = (userId: number, shouldBlock: boolean) => {
         setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : u));
     };
@@ -169,7 +169,13 @@ function App() {
 
     const handleUpdateMenu = (userId: number, menu: MenuItem[]) => {
         setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
-        if (loggedInUser?.id === userId) setLoggedInUser(prev => prev ? { ...prev, menu } : null);
+        if (loggedInUser?.id === userId) {
+            setLoggedInUser(prev => prev ? { ...prev, menu } : null);
+        }
+    };
+
+    const handleUpdateSubscription = (userId: number, newDate: string) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionEndDate: newDate } : u));
     };
 
     const handleCompleteOrder = (orderId: number) => {
@@ -187,7 +193,7 @@ function App() {
         setOrders(prev => [...prev, newOrder]);
     };
 
-    // Dashboard Calculations
+    // Dashboard Data Calculation
     const dashboardData: DashboardData = {
         onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
         offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
@@ -209,9 +215,9 @@ function App() {
                     handleLogout={() => setAuthState('login')}
                 >
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u))} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleSendMessage} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, password: p } : u))} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} onUpdateMenu={handleUpdateMenu} onDeleteUser={handleDeleteUser} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleSendMessage} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, password: p } : u))} onUpdateSubscription={handleUpdateSubscription} onUpdateMenu={handleUpdateMenu} onDeleteUser={handleDeleteUser} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved' } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
-                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} />}
+                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={handleSendMessage} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => handleSendMessage('all', `To ${ph}: ${txt}`)} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} />}
                 </AdminLayout>
