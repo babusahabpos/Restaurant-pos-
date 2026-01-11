@@ -85,26 +85,50 @@ const MenuUploadModal: React.FC<{
 }> = ({ user, onClose, onSave }) => {
     const [menu, setMenu] = useState<MenuItem[]>(user.menu || []);
     const [menuText, setMenuText] = useState('');
+    const [uploadMode, setUploadMode] = useState<'offline' | 'online'>('offline');
+
     const handleProcessText = () => {
         const lines = menuText.split('\n');
-        const newItems: MenuItem[] = [];
+        let updatedMenu = [...menu];
+        
         lines.forEach((line: string, index: number) => {
             const trimmed = line.trim();
             if (!trimmed) return;
+            
+            // Regex matches "Item Name ... 123.45"
             const match = trimmed.match(/^(.+?)[\s\.\-]+(\d+(\.\d{1,2})?)$/);
             if (match) {
-                newItems.push({ 
-                    id: Date.now() + index, 
-                    name: match[1].trim().toUpperCase(), 
-                    category: 'IMPORTED', 
-                    offlinePrice: parseFloat(match[2]), 
-                    onlinePrice: parseFloat(match[2]), 
-                    inStock: true 
-                });
+                const itemName = match[1].trim().toUpperCase();
+                const itemPrice = parseFloat(match[2]);
+                
+                const existingIndex = updatedMenu.findIndex(m => m.name.toUpperCase() === itemName);
+                
+                if (existingIndex > -1) {
+                    // Update existing item based on mode
+                    if (uploadMode === 'offline') {
+                        updatedMenu[existingIndex].offlinePrice = itemPrice;
+                    } else {
+                        updatedMenu[existingIndex].onlinePrice = itemPrice;
+                    }
+                } else {
+                    // Create new item
+                    updatedMenu.push({ 
+                        id: Date.now() + index + Math.random(), 
+                        name: itemName, 
+                        category: 'IMPORTED', 
+                        // If new, set both or just one? Usually better to set both to price if creating new from scratch
+                        offlinePrice: uploadMode === 'offline' ? itemPrice : itemPrice,
+                        onlinePrice: uploadMode === 'online' ? itemPrice : itemPrice,
+                        inStock: true 
+                    });
+                }
             }
         });
-        if (newItems.length > 0) { setMenu(prev => [...prev, ...newItems]); setMenuText(''); }
+        
+        setMenu(updatedMenu);
+        setMenuText('');
     };
+
     return (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex justify-center items-center z-[250] p-4">
             <div className="bg-gray-900 p-8 rounded-[3rem] shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col border border-gray-800">
@@ -114,17 +138,48 @@ const MenuUploadModal: React.FC<{
                 </div>
                 <div className="flex flex-col md:flex-row gap-8 overflow-hidden flex-1">
                     <div className="flex-1 bg-black p-6 rounded-[2rem] border border-gray-800 flex flex-col gap-4">
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest px-2">Paste Format: Item Name ... Price</p>
-                        <textarea value={menuText} onChange={e => setMenuText(e.target.value)} placeholder="Pizza ... 250&#10;Burger ... 120" className="flex-1 bg-gray-900 text-lemon p-4 rounded-2xl border border-gray-800 outline-none font-mono text-xs leading-relaxed" />
-                        <button onClick={handleProcessText} className="bg-lemon text-black font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-lemon/10">Process Bulk Menu</button>
+                        <div className="flex gap-2 mb-2 p-1 bg-gray-900 rounded-xl border border-gray-800">
+                            <button 
+                                onClick={() => setUploadMode('offline')}
+                                className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${uploadMode === 'offline' ? 'bg-lemon text-black' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Offline Menu
+                            </button>
+                            <button 
+                                onClick={() => setUploadMode('online')}
+                                className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${uploadMode === 'online' ? 'bg-lemon text-black' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Online Menu
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest px-2">
+                            Mode: <span className="text-lemon">{uploadMode.toUpperCase()}</span> | Format: Item Name ... Price
+                        </p>
+                        <textarea 
+                            value={menuText} 
+                            onChange={e => setMenuText(e.target.value)} 
+                            placeholder="Pizza ... 250&#10;Burger ... 120" 
+                            className="flex-1 bg-gray-900 text-lemon p-4 rounded-2xl border border-gray-800 outline-none font-mono text-xs leading-relaxed" 
+                        />
+                        <button onClick={handleProcessText} className="bg-lemon text-black font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-lemon/10">Process {uploadMode} Menu</button>
                     </div>
                     <div className="flex-1 bg-black p-6 rounded-[2rem] border border-gray-800 overflow-y-auto no-scrollbar">
                          <h4 className="text-white font-black uppercase text-xs tracking-widest mb-4 sticky top-0 bg-black py-2">Preview ({menu.length} Items)</h4>
                          <div className="space-y-2">
                              {menu.slice().reverse().map(item => (
-                                <div key={item.id} className="flex justify-between items-center bg-gray-900 p-3 rounded-xl border border-gray-800">
-                                    <div><p className="text-white font-bold text-xs uppercase">{item.name}</p><p className="text-lemon font-black text-[10px]">₹{item.offlinePrice}</p></div>
-                                    <button onClick={() => setMenu(menu.filter(m => m.id !== item.id))} className="text-red-500 p-2"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                                <div key={item.id} className="bg-gray-900 p-3 rounded-xl border border-gray-800 group">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex-1 min-w-0 pr-4">
+                                            <p className="text-white font-bold text-xs uppercase truncate">{item.name}</p>
+                                            <div className="flex gap-4 mt-1">
+                                                <p className={`text-[9px] font-black uppercase ${uploadMode === 'offline' ? 'text-lemon' : 'text-gray-600'}`}>Off: ₹{item.offlinePrice}</p>
+                                                <p className={`text-[9px] font-black uppercase ${uploadMode === 'online' ? 'text-lemon' : 'text-gray-600'}`}>On: ₹{item.onlinePrice}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setMenu(menu.filter(m => m.id !== item.id))} className="text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </div>
                                 </div>
                              ))}
                          </div>
