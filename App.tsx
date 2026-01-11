@@ -12,22 +12,13 @@ import Staff from './components/Staff';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
 import QrMenu from './components/QrMenu';
-import Subscription from './components/Subscription';
 import HelpAndSupport from './components/HelpAndSupport';
-import SocialMedia from './components/SocialMedia';
-import Referral from './components/Referral'; 
 import CustomerOrderPage from './components/CustomerOrderPage'; 
-import Market from './components/Market';
-import StaffRequirements from './components/StaffRequirements';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
-import SupportTickets from './components/admin/SupportTickets';
-import MarketManagement from './components/admin/MarketManagement';
-import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
-import AdminStaffRequirements from './components/admin/AdminStaffRequirements';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, StaffRequirementRequest, StaffApplication, RestaurantJobPost, StaffUser, StaffMessage } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, StaffRequirementRequest, StaffApplication } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
@@ -50,11 +41,6 @@ function App() {
     // --- Data States ---
     const [orders, setOrders] = useState<OrderStatusItem[]>([]);
     const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-    const [marketProducts, setMarketProducts] = useState<MarketplaceProduct[]>([]);
-    const [marketOrders, setMarketOrders] = useState<MarketplaceOrder[]>([]);
-    const [jobPosts, setJobPosts] = useState<StaffJobPost[]>([]);
-    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>([]);
-    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(MOCK_USERS);
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
     const [alerts, setAlerts] = useState<AdminAlert[]>([]);
@@ -65,6 +51,7 @@ function App() {
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
         try {
+            // Instantiate AI directly with the provided API key
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
@@ -83,15 +70,6 @@ function App() {
     useEffect(() => {
         const savedOrders = localStorage.getItem('babuSahabPos_orders');
         if (savedOrders) setOrders(JSON.parse(savedOrders));
-        
-        const savedMarket = localStorage.getItem('babuSahabPos_marketProducts');
-        if (savedMarket) setMarketProducts(JSON.parse(savedMarket));
-
-        const savedJobPosts = localStorage.getItem('babuSahabPos_jobPosts');
-        if (savedJobPosts) setJobPosts(JSON.parse(savedJobPosts));
-
-        const savedRequests = localStorage.getItem('babuSahabPos_staffRequests');
-        if (savedRequests) setStaffRequests(JSON.parse(savedRequests));
     }, []);
 
     const handleLogin = (email: string, pass: string) => {
@@ -126,12 +104,12 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout 
-                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} 
+                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: 0 }} 
                     currentPage={currentAdminPage} 
                     setCurrentPage={setCurrentAdminPage} 
                     handleLogout={() => setAuthState('login')}
                 >
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={[]} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />}
                 </AdminLayout>
             ) : (
