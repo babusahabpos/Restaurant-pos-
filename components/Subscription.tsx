@@ -75,7 +75,7 @@ const Subscription: React.FC<SubscriptionProps> = ({ user, onRequestRenewal }) =
                          </div>
                          <div className="mt-8">
                             <p className="text-xs text-gray-500 uppercase font-black tracking-widest">Monthly Rate</p>
-                            <p className="text-4xl font-black text-white tracking-tighter mt-1">₹30 <span className="text-sm text-gray-600">/mo</span></p>
+                            <p className="text-4xl font-black text-white tracking-tighter mt-1">₹99 <span className="text-sm text-gray-600">/mo</span></p>
                          </div>
                     </div>
                 </div>

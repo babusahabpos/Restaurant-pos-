@@ -38,7 +38,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [paymentMethod, setPaymentMethod] = useState<'selection' | 'upi_request' | 'qr'>('selection');
     
     const ADMIN_UPI_ID = "7003548323@ybl";
-    const SUBSCRIPTION_AMOUNT = "1"; 
+    const SUBSCRIPTION_AMOUNT = "99"; 
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -120,7 +120,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                             </button>
                         </div>
                         
-                        <button type="submit" className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] hover:bg-lemon-dark transition shadow-xl shadow-lemon/10 uppercase text-xs tracking-widest mt-4">
+                        <button type="submit" className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] hover:bg-lemon-dark transition shadow-xl shadow-lemon/20 uppercase text-xs tracking-widest mt-4">
                             Proceed to Payment
                         </button>
                         <p className="text-center text-[10px] text-lemon font-black uppercase tracking-widest cursor-pointer mt-4" onClick={onNavigateToLogin}>Log in to existing account</p>
@@ -140,7 +140,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                         </div>
                                         <div className="text-left">
                                             <p className="text-white font-black text-xs uppercase">UPI ID Request</p>
-                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Enter ID to get payment request</p>
+                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Get payment request for ₹{SUBSCRIPTION_AMOUNT}</p>
                                         </div>
                                     </button>
 
@@ -150,7 +150,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                         </div>
                                         <div className="text-left">
                                             <p className="text-white font-black text-xs uppercase">Scan QR Code</p>
-                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Fast & Instant Activation</p>
+                                            <p className="text-gray-500 text-[9px] font-bold uppercase">Pay ₹{SUBSCRIPTION_AMOUNT} for Instant Activation</p>
                                         </div>
                                     </button>
                                 </div>
@@ -182,7 +182,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                 <div className="bg-white p-2 rounded-xl inline-block border-4 border-lemon">
                                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`} alt="Payment QR" className="w-32 h-32" />
                                 </div>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Amount: ₹{SUBSCRIPTION_AMOUNT}</p>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Total Amount: ₹{SUBSCRIPTION_AMOUNT}</p>
                                 <button onClick={() => setPaymentMethod('selection')} className="w-full text-[9px] text-lemon font-black uppercase tracking-widest">Go Back</button>
                             </div>
                         )}

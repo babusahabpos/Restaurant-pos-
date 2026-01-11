@@ -156,6 +156,15 @@ function App() {
         setCurrentPage('help');
     };
 
+    const handleUserReplyToTicket = (ticketId: number, message: string) => {
+        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { 
+            ...t, 
+            status: 'Open', 
+            lastUpdate: new Date(),
+            messages: [...t.messages, { sender: 'user', text: message, timestamp: new Date() }] 
+        } : t));
+    };
+
     const dashboardData: DashboardData = {
         onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
         offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
@@ -215,7 +224,11 @@ function App() {
                     {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={handleRequestRenewal} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u))} onLogout={() => setAuthState('login')} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => handleUpdateMenu(loggedInUser.id, m)} loggedInUser={loggedInUser} />}
-                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} />}
+                    {currentPage === 'help' && <HelpAndSupport 
+                        userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} 
+                        onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} 
+                        onReplyToTicket={handleUserReplyToTicket}
+                    />}
                 </MainLayout>
                 )
             )}
