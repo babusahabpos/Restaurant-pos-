@@ -19,7 +19,6 @@ import Market from './components/Market';
 import StaffRequirements from './components/StaffRequirements';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral';
-// Added missing Subscription import
 import Subscription from './components/Subscription';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -106,114 +105,59 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobs', JSON.stringify(restaurantJobs)); }, [restaurantJobs]);
     useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
 
-    // --- AI Handler ---
     const handleAiQuery = async (query: string) => {
         if (!query.trim()) return;
         setAiMessages(prev => [...prev, { role: 'user', text: query }]);
         setIsAiLoading(true);
         try {
-            // Using correct initialization as per guidelines
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: query,
-            });
-            // Accessing .text property directly from GenerateContentResponse
-            setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "No response." }]);
+            const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: query });
+            setAiMessages(prev => [...prev, { role: 'ai', text: response.text || "I don't know." }]);
         } catch (e) {
-            setAiMessages(prev => [...prev, { role: 'ai', text: "AI Service error." }]);
+            setAiMessages(prev => [...prev, { role: 'ai', text: "AI error." }]);
         } finally { setIsAiLoading(false); }
     };
 
-    // --- Auth Logic ---
     const handleLogin = (email: string, pass: string) => {
         const trimmedEmail = email.trim().toLowerCase();
-        if (trimmedEmail === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
-            setAuthState('adminLoggedIn'); 
-            return 'admin'; 
-        }
+        if (trimmedEmail === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         const user = registeredUsers.find(u => u.email.trim().toLowerCase() === trimmedEmail && u.password === pass);
         if (user) {
             if (user.status === UserStatus.Blocked) return 'blocked';
             if (user.status === UserStatus.Deleted) return 'deleted';
-            setAuthState('loggedIn'); 
-            setLoggedInUser(user); 
-            return 'ok'; 
+            setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; 
         }
         return 'not_found';
     };
 
     const handleRegister = (newUser: any) => {
-        const user: RegisteredUser = { 
-            ...newUser, 
-            id: Date.now(), 
-            status: UserStatus.Approved, 
-            lastLogin: 'Just Now', 
-            subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
-            menu: MOCK_MENU_ITEMS,
-            taxRate: 5,
-            deliveryCharge: 30,
-            isDeliveryEnabled: true,
-            isPrinterEnabled: true,
-            referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase()
-        };
+        const user: RegisteredUser = { ...newUser, id: Date.now(), status: UserStatus.Approved, lastLogin: 'Just Now', subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase() };
         setRegisteredUsers(prev => [...prev, user]);
     };
 
-    // --- Action Handlers ---
     const handleUpdateMenu = (userId: number, menu: MenuItem[]) => {
         setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
         if (loggedInUser?.id === userId) setLoggedInUser(prev => prev ? { ...prev, menu } : null);
     };
 
-    const handleCompleteOrder = (orderId: number) => {
-        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Completed' } : o));
-    };
-
     const handlePrintKOT = (newOrderData: any) => {
-        const newOrder: OrderStatusItem = {
-            ...newOrderData,
-            id: Date.now(),
-            restaurantId: loggedInUser?.id || 0,
-            status: 'Preparation',
-            timestamp: new Date()
-        };
+        const newOrder: OrderStatusItem = { ...newOrderData, id: Date.now(), restaurantId: loggedInUser?.id || 0, status: 'Preparation', timestamp: new Date() };
         setOrders(prev => [...prev, newOrder]);
     };
 
     const handlePlaceMarketOrder = (productId: number, productName: string, price: number, quantity: number) => {
         if (!loggedInUser) return;
-        const newOrder: MarketplaceOrder = {
-            id: Date.now(),
-            userId: loggedInUser.id,
-            userName: loggedInUser.name,
-            restaurantName: loggedInUser.restaurantName,
-            productId,
-            productName,
-            price,
-            quantity,
-            status: 'Pending',
-            timestamp: new Date()
-        };
+        const newOrder: MarketplaceOrder = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId, productName, price, quantity, status: 'Pending', timestamp: new Date() };
         setMarketOrders(prev => [...prev, newOrder]);
     };
 
     const handleStaffRequirementSubmit = (req: string, salary: string) => {
         if (!loggedInUser) return;
-        const newReq: StaffRequirementRequest = {
-            id: Date.now(),
-            userId: loggedInUser.id,
-            restaurantName: loggedInUser.restaurantName,
-            requirement: req,
-            salary,
-            timestamp: new Date(),
-            isRead: false
-        };
+        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
         setStaffRequests(prev => [...prev, newReq]);
-        alert("Your requirement has been sent to the Admin Hub for approval.");
+        alert("Request sent to Admin!");
     };
 
-    // Dashboard Calculations
     const dashboardData: DashboardData = {
         onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
         offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
@@ -239,7 +183,7 @@ function App() {
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending' } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved' } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
                     {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} />}
-                    {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} />}
+                    {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} staffRequests={staffRequests} onMarkRequestRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? { ...r, isRead: true } : r))} />}
                 </AdminLayout>
             ) : (
                 <MainLayout 
@@ -250,13 +194,13 @@ function App() {
                     onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} 
                     loggedInUser={loggedInUser!}
                 >
-                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser?.id)} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser?.taxRate || 5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai={loggedInUser?.fssai || ""} menuItems={loggedInUser!.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(p => p.id === o.id ? o : p))} isPrinterEnabled={loggedInUser?.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
+                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser?.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o))} taxRate={loggedInUser?.taxRate || 5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai={loggedInUser?.fssai || ""} menuItems={loggedInUser!.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(p => p.id === o.id ? o : p))} isPrinterEnabled={loggedInUser?.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
                     {currentPage === 'billing' && <Billing menuItems={loggedInUser!.menu} onPrintKOT={handlePrintKOT} taxRate={loggedInUser?.taxRate || 5} restaurantName={loggedInUser!.restaurantName} isPrinterEnabled={loggedInUser?.isPrinterEnabled || true} onToggleStock={(id) => handleUpdateMenu(loggedInUser!.id, loggedInUser!.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m))} />}
                     {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser!.menu} onPrintKOT={handlePrintKOT} />}
                     {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={(m) => handleUpdateMenu(loggedInUser!.id, m)} />}
                     {currentPage === 'inventory' && <Inventory />}
                     {currentPage === 'staff' && <Staff />}
-                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={(ph, txt) => alert("Inquiry sent to worker!")} />}
+                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={(ph, txt) => alert("Message sent!")} />}
                     {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={handlePlaceMarketOrder} user={loggedInUser!} />}
                     {currentPage === 'reports' && <Reports orders={orders.filter(o => o.restaurantId === loggedInUser?.id)} />}
                     {currentPage === 'social' && <SocialMedia user={loggedInUser!} />}
@@ -267,40 +211,6 @@ function App() {
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} />}
                 </MainLayout>
             )}
-
-            {/* AI Assistant FAB */}
-            <div className="fixed bottom-20 right-4 z-[200]">
-                {!isAiOpen ? (
-                    <button onClick={() => setIsAiOpen(true)} className="w-14 h-14 bg-lemon text-black rounded-full shadow-2xl flex items-center justify-center animate-bounce">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>
-                    </button>
-                ) : (
-                    <div className="bg-gray-900 w-80 h-96 rounded-3xl border border-lemon shadow-2xl flex flex-col overflow-hidden animate-fade-in">
-                        <div className="bg-lemon p-4 flex justify-between items-center">
-                            <h3 className="text-black font-black text-xs uppercase">BaBu AI</h3>
-                            <button onClick={() => setIsAiOpen(false)} className="text-black font-bold">✕</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-                            {aiMessages.map((m, i) => (
-                                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-[11px] font-bold ${m.role === 'user' ? 'bg-gray-800 text-white' : 'bg-lemon/10 text-lemon border border-lemon/20'}`}>
-                                        {m.text}
-                                    </div>
-                                </div>
-                            ))}
-                            {isAiLoading && <div className="text-lemon text-[10px] animate-pulse p-4 text-center italic">Processing...</div>}
-                        </div>
-                        <div className="p-3 bg-black border-t border-gray-800 flex gap-2">
-                            <input 
-                                type="text" 
-                                placeholder="Ask me something..." 
-                                className="flex-1 bg-gray-900 text-white text-[11px] p-3 rounded-xl outline-none focus:border-lemon border border-transparent"
-                                onKeyDown={e => { if(e.key === 'Enter') { handleAiQuery((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }}
-                            />
-                        </div>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }

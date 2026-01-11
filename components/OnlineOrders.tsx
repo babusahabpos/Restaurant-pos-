@@ -54,7 +54,7 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
             sourceInfo: `${platform} #${orderId}`
         };
         onPrintKOT(newOrderData);
-        alert('Online KOT Sent to Kitchen!');
+        alert('Online KOT Sent!');
         setCurrentOrder([]);
         setOrderId('');
     };
@@ -63,79 +63,63 @@ const OnlineOrders: React.FC<OnlineOrdersProps> = ({ onPrintKOT, menuItems = [] 
 
     return (
         <div className="flex flex-col h-full bg-black overflow-hidden relative">
-            <div className="h-[42%] flex flex-col p-2 border-b border-gray-800 overflow-hidden shrink-0">
-                <div className="flex gap-1 mb-1.5 overflow-x-auto no-scrollbar items-center h-8">
+            <div className="h-[45%] flex flex-col p-1 border-b border-gray-800 overflow-hidden shrink-0">
+                <div className="flex gap-1 mb-1 overflow-x-auto no-scrollbar items-center h-7 px-1">
                     {categories.map(category => (
                         <button 
                             key={category} 
                             onClick={() => setActiveCategory(category)}
-                            className={`px-3 h-6 text-[8px] font-black rounded-full whitespace-nowrap transition-all uppercase ${activeCategory === category ? 'bg-lemon text-black' : 'bg-gray-800 text-lemon border border-gray-700'}`}
+                            className={`px-2.5 h-5 text-[7px] font-black rounded-full whitespace-nowrap transition-all uppercase ${activeCategory === category ? 'bg-lemon text-black' : 'bg-gray-800 text-lemon border border-gray-700'}`}
                         >
                             {category}
                         </button>
                     ))}
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-1 overflow-y-auto no-scrollbar flex-1 pb-1">
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1 overflow-y-auto no-scrollbar flex-1 pb-1">
                     {filteredMenuItems.map(item => (
-                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-1.5 rounded-lg text-center cursor-pointer border border-gray-800 active:bg-gray-700 transition-all flex flex-col justify-center min-h-[50px] shadow-lg">
-                           <p className="text-[8px] text-white font-black leading-tight line-clamp-2 uppercase tracking-tighter">{item.name}</p>
-                           <p className="text-lemon text-[9px] font-black">₹{item.onlinePrice}</p>
+                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-1 rounded-md text-center cursor-pointer border border-gray-800 active:bg-gray-700 transition-all flex flex-col justify-center min-h-[45px] shadow-sm">
+                           <p className="text-[7px] text-white font-black leading-none line-clamp-2 mb-0.5 uppercase tracking-tighter">{item.name}</p>
+                           <p className="text-lemon text-[8px] font-black">₹{item.onlinePrice}</p>
                         </div>
                     ))}
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col p-2 bg-gray-950 overflow-hidden pb-[110px]">
-                <div className="flex gap-1.5 mb-2 shrink-0">
-                    <select 
-                        value={platform}
-                        onChange={e => setPlatform(e.target.value as 'Swiggy' | 'Zomato')}
-                        className="flex-1 bg-gray-900 text-lemon text-[9px] font-black p-2 rounded-lg border border-gray-800 outline-none focus:border-lemon uppercase"
-                    >
+            <div className="flex-1 flex flex-col p-2 bg-gray-950 overflow-hidden pb-[100px]">
+                <div className="flex gap-1 mb-1 shrink-0">
+                    <select value={platform} onChange={e => setPlatform(e.target.value as 'Swiggy' | 'Zomato')} className="flex-1 bg-gray-900 text-lemon text-[9px] font-black p-1.5 rounded border border-gray-800 outline-none uppercase">
                         <option>Swiggy</option>
                         <option>Zomato</option>
                     </select>
-                    <input 
-                        type="text" 
-                        placeholder="ORDER ID" 
-                        value={orderId}
-                        onChange={e => setOrderId(e.target.value)}
-                        className="flex-1 bg-gray-900 text-lemon text-[9px] font-bold p-2 rounded-lg border border-gray-800 outline-none focus:border-lemon uppercase" 
-                    />
+                    <input type="text" placeholder="ID" value={orderId} onChange={e => setOrderId(e.target.value)} className="flex-1 bg-gray-900 text-lemon text-[9px] font-bold p-1.5 rounded border border-gray-800 outline-none uppercase" />
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-1 bg-black/40 rounded-xl p-1 no-scrollbar border border-gray-900">
+                <div className="flex-1 overflow-y-auto space-y-0.5 bg-black/40 rounded-md p-1 no-scrollbar border border-gray-900">
                     {currentOrder.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-lemon opacity-10 italic text-[10px] uppercase font-black">Empty</div>
+                        <div className="h-full flex items-center justify-center text-lemon opacity-10 text-[8px] font-black">Cart Empty</div>
                     ) : (
                         currentOrder.map(item => (
-                            <div key={item.id} className="flex items-center justify-between bg-white/5 p-1.5 rounded-lg border border-white/5">
-                                <div className="min-w-0 flex-1 pr-2">
-                                    <p className="text-[9px] text-lemon font-bold truncate uppercase">{item.name}</p>
-                                    <p className="text-[7px] text-gray-500 font-mono">₹{item.onlinePrice}</p>
+                            <div key={item.id} className="flex items-center justify-between bg-white/5 p-1 rounded border border-white/5">
+                                <div className="min-w-0 flex-1 pr-1">
+                                    <p className="text-[8px] text-lemon font-bold truncate uppercase">{item.name}</p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-6 h-6 flex items-center justify-center rounded-md bg-gray-800 text-white text-[10px]">-</button>
-                                    <span className="text-[9px] text-lemon font-black min-w-[12px] text-center">{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-6 h-6 rounded-md bg-gray-800 text-white text-[10px]">+</button>
+                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-800 text-white text-[8px]">-</button>
+                                    <span className="text-[9px] text-lemon font-black min-w-[10px] text-center">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-5 h-5 rounded bg-gray-800 text-white text-[8px]">+</button>
                                 </div>
-                                <p className="text-[9px] text-lemon font-black min-w-[30px] text-right tracking-tighter">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
+                                <p className="text-[9px] text-lemon font-black min-w-[25px] text-right">₹{(item.onlinePrice * item.quantity).toFixed(0)}</p>
                             </div>
                         ))
                     )}
                 </div>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gray-900 border-t border-gray-800 flex flex-col gap-1.5 z-40">
-                <div className="flex items-center justify-between px-1">
-                    <div className="flex flex-col">
-                        <span className="text-[7px] text-gray-500 uppercase font-black mb-0.5">EST. TOTAL</span>
-                        <span className="text-xl text-lemon font-black tracking-tighter">₹{total.toFixed(0)}</span>
-                    </div>
-                </div>
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gray-900 border-t border-gray-800 flex flex-col gap-1 z-40">
+                <p className="text-center text-lemon font-black text-xs">TOTAL: ₹{total.toFixed(0)}</p>
                 <button 
                     onClick={handleSendToKitchen} 
-                    className="w-full bg-lemon text-black font-black py-3 rounded-xl text-[10px] uppercase active:scale-95 disabled:opacity-20"
+                    className="w-full bg-lemon text-black font-black py-2.5 rounded-lg text-[9px] uppercase active:scale-95 disabled:opacity-20"
                     disabled={currentOrder.length === 0 || !orderId.trim()}
                 >
                     GENERATE ONLINE KOT
