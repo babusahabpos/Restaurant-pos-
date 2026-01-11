@@ -17,46 +17,51 @@ const TicketDetailsModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
-            <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col" style={{height: '90vh'}}>
-                <h3 className="text-xl font-semibold text-white mb-2">Ticket #{ticket.id} - {ticket.subject}</h3>
-                <p className="text-sm text-gray-400 mb-4">From: {ticket.userName}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-[200] p-4">
+            <div className="bg-gray-800 p-6 rounded-[2rem] shadow-xl w-full max-w-2xl flex flex-col border border-gray-700 animate-fade-in" style={{height: '85vh'}}>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">Chat: {ticket.subject}</h3>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${ticket.status === 'Resolved' ? 'bg-gray-700 text-gray-400' : 'bg-lemon text-black'}`}>
+                        {ticket.status === 'Resolved' ? 'Closed' : 'Active'}
+                    </span>
+                </div>
+                <p className="text-[10px] text-gray-500 font-bold uppercase mb-4 tracking-widest border-b border-gray-700 pb-2">User: {ticket.userName} (ID: {ticket.userId})</p>
 
-                <div className="flex-grow bg-gray-900 p-4 rounded-lg overflow-y-auto space-y-4 mb-4">
+                <div className="flex-grow bg-black/40 p-4 rounded-2xl overflow-y-auto space-y-4 mb-4 no-scrollbar border border-gray-700">
                    {ticket.messages.map((msg, index) => (
-                       <div key={index} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                           <div className={`max-w-md p-3 rounded-lg ${msg.sender === 'admin' ? 'bg-lemon/20' : 'bg-gray-700'}`}>
-                               <p className="text-sm text-white">{msg.text}</p>
+                       <div key={index} className={`flex flex-col ${msg.sender === 'admin' ? 'items-end' : 'items-start'}`}>
+                           <div className={`max-w-[85%] p-4 rounded-2xl ${msg.sender === 'admin' ? 'bg-lemon text-black rounded-tr-none' : 'bg-gray-800 text-white rounded-tl-none'}`}>
+                               <p className="text-xs font-bold leading-relaxed">{msg.text}</p>
                                {msg.attachment && (
-                                    <div className="mt-3 border-t border-gray-600 pt-2">
+                                    <div className="mt-3 border-t border-black/10 pt-2">
                                         {msg.attachmentType === 'image' ? (
                                             <a href={msg.attachment} target="_blank" rel="noopener noreferrer">
-                                                <img src={msg.attachment} alt="Attachment" className="max-h-48 rounded border border-gray-500" />
+                                                <img src={msg.attachment} alt="Attachment" className="max-h-48 rounded-xl shadow-lg" />
                                             </a>
                                         ) : (
-                                            <a href={msg.attachment} download="attachment.pdf" className="text-blue-400 text-xs">Download PDF</a>
+                                            <a href={msg.attachment} download="attachment.pdf" className="text-[10px] font-black uppercase underline">View PDF</a>
                                         )}
                                     </div>
                                )}
-                               <p className="text-[10px] text-gray-400 text-right mt-1">{new Date(msg.timestamp).toLocaleString()}</p>
                            </div>
+                           <p className="text-[8px] text-gray-500 font-black uppercase mt-1 px-1">{new Date(msg.timestamp).toLocaleString()}</p>
                        </div>
                    ))}
                 </div>
                 
                 {ticket.status !== 'Resolved' && (
-                    <div className="mt-auto">
-                        <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your reply..." rows={3} className="w-full bg-gray-700 text-white p-2 rounded outline-none focus:border-lemon border border-transparent"/>
-                        <div className="flex justify-between items-center mt-4">
-                             <button onClick={() => { onResolve(ticket.id); onClose(); }} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Mark Resolved</button>
-                            <div>
-                                <button onClick={onClose} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg mr-2">Close</button>
-                                <button onClick={handleSendReply} disabled={!reply.trim()} className="bg-lemon text-black font-bold py-2 px-4 rounded-lg">Send</button>
-                            </div>
+                    <div className="mt-auto space-y-3">
+                        <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Type your response..." rows={3} className="w-full bg-black text-lemon p-4 rounded-2xl outline-none focus:border-lemon border border-gray-700 font-bold text-sm"/>
+                        <div className="grid grid-cols-2 gap-3">
+                             <button onClick={() => { if(window.confirm('Close this chat? User will no longer be able to reply.')) { onResolve(ticket.id); onClose(); } }} className="bg-red-600/10 text-red-500 border border-red-600/30 font-black py-4 rounded-xl text-[10px] uppercase tracking-widest active:scale-95">Close Chat</button>
+                             <button onClick={handleSendReply} disabled={!reply.trim()} className="bg-lemon text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest active:scale-95 shadow-lg shadow-lemon/10">Send Reply</button>
                         </div>
                     </div>
                 )}
-                {ticket.status === 'Resolved' && <button onClick={onClose} className="w-full bg-gray-700 text-white font-bold py-3 rounded-xl mt-4">Back</button>}
+                
+                {ticket.status === 'Resolved' && (
+                    <button onClick={onClose} className="w-full bg-gray-700 text-white font-black py-4 rounded-xl text-[10px] uppercase tracking-widest">Back to Inbox</button>
+                )}
             </div>
         </div>
     );
@@ -73,45 +78,56 @@ const SupportTickets: React.FC<{
     
     const getStatusChip = (status: SupportTicket['status']) => {
         switch (status) {
-            case 'Open': return <span className="bg-blue-800 text-blue-300 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">Open</span>;
-            case 'Pending': return <span className="bg-lemon/20 text-lemon text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">Pending</span>;
-            case 'Resolved': return <span className="bg-gray-700 text-gray-300 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">Resolved</span>;
+            case 'Open': return <span className="bg-blue-600/20 text-blue-400 text-[8px] font-black px-2 py-0.5 rounded uppercase">New Message</span>;
+            case 'Pending': return <span className="bg-yellow-600/20 text-yellow-400 text-[8px] font-black px-2 py-0.5 rounded uppercase">Waiting</span>;
+            case 'Resolved': return <span className="bg-gray-800 text-gray-500 text-[8px] font-black px-2 py-0.5 rounded uppercase">Closed</span>;
         }
     };
 
     return (
         <>
         {selectedTicket && <TicketDetailsModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onReply={onReply} onResolve={onResolve} />}
-        <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 shadow-xl">
-             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h3 className="text-xl font-black text-white uppercase tracking-tight">Support Tickets ({tickets.length})</h3>
+        <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 shadow-xl overflow-hidden">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-white uppercase tracking-tight">Support & Communication Hub</h3>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Global Inbox: {tickets.length}</p>
             </div>
-             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-400">
-                    <thead className="text-xs text-gray-300 uppercase bg-black/50">
-                        <tr>
-                            <th className="px-6 py-4">ID</th>
-                            <th className="px-6 py-4">User</th>
-                            <th className="px-6 py-4">Subject</th>
+             <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-sm text-left">
+                    <thead>
+                        <tr className="bg-black/50 text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-gray-800">
                             <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Action</th>
+                            <th className="px-6 py-4">Ordering User</th>
+                            <th className="px-6 py-4">Topic / Subject</th>
+                            <th className="px-6 py-4">Last Update</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                        {tickets.map(ticket => (
-                            <tr key={ticket.id} className="hover:bg-white/5">
-                                <td className="px-6 py-4 font-mono">#{ticket.id.toString().slice(-4)}</td>
-                                <td className="px-6 py-4 text-white font-bold">{ticket.userName}</td>
-                                <td className="px-6 py-4">{ticket.subject}</td>
+                        {tickets.slice().reverse().map(ticket => (
+                            <tr key={ticket.id} className="hover:bg-white/5 transition-colors group">
                                 <td className="px-6 py-4">{getStatusChip(ticket.status)}</td>
-                                <td className="px-6 py-4 flex gap-4 items-center">
-                                    <button onClick={() => setSelectedTicket(ticket)} className="text-lemon font-black uppercase text-[10px] hover:underline">View</button>
-                                    <button onClick={() => { if(window.confirm('Delete this ticket?')) onDelete(ticket.id); }} className="text-red-500 font-black uppercase text-[10px] hover:underline">Delete</button>
+                                <td className="px-6 py-4">
+                                    <p className="text-white font-black uppercase text-xs">{ticket.userName}</p>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase">ID: {ticket.userId}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <p className={`text-xs font-bold uppercase tracking-tighter ${ticket.subject === 'Renewal Request' ? 'text-lemon' : 'text-white'}`}>{ticket.subject}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <p className="text-[9px] text-gray-500 font-black uppercase">{new Date(ticket.lastUpdate).toLocaleString()}</p>
+                                </td>
+                                <td className="px-6 py-4 text-right whitespace-nowrap">
+                                    <div className="flex justify-end gap-3">
+                                        <button onClick={() => setSelectedTicket(ticket)} className="text-[10px] font-black uppercase bg-lemon text-black px-4 py-1.5 rounded-lg hover:bg-lemon-dark transition-all">Chat</button>
+                                        <button onClick={() => { if(window.confirm('Delete this message thread permanently?')) onDelete(ticket.id); }} className="text-[10px] font-black text-red-500 uppercase p-1.5 bg-red-600/10 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                {tickets.length === 0 && <div className="py-24 text-center text-gray-600 font-black uppercase text-xs tracking-widest opacity-50">Global Inbox Empty</div>}
             </div>
         </div>
         </>

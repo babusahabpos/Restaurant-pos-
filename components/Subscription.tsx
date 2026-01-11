@@ -1,7 +1,21 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { RegisteredUser } from '../types';
 
-const Subscription: React.FC = () => {
+interface SubscriptionProps {
+    user: RegisteredUser;
+    onRequestRenewal: () => void;
+}
+
+const Subscription: React.FC<SubscriptionProps> = ({ user, onRequestRenewal }) => {
+    const daysRemaining = useMemo(() => {
+        const end = new Date(user.subscriptionEndDate);
+        const now = new Date();
+        const diffTime = end.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+    }, [user.subscriptionEndDate]);
+
     return (
         <div className="bg-black p-4 md:p-8 h-full overflow-y-auto no-scrollbar">
             <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
@@ -24,10 +38,22 @@ const Subscription: React.FC = () => {
                             <p className="text-gray-400 font-bold text-sm mt-2">Full access to Cloud Billing, QR Menu, and Inventory Hub.</p>
                         </div>
                         <div className="text-center md:text-right">
-                            <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Next Renewal</p>
-                            <p className="text-2xl font-black text-lemon mt-1 tracking-tighter">30 Days Remaining</p>
+                            <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Time Remaining</p>
+                            <p className="text-4xl font-black text-lemon mt-1 tracking-tighter">{daysRemaining} Days</p>
+                            <p className="text-[10px] text-gray-600 font-bold uppercase mt-1">Ends: {user.subscriptionEndDate}</p>
                         </div>
                     </div>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                    <button 
+                        onClick={onRequestRenewal}
+                        className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] hover:bg-lemon-dark transition shadow-xl shadow-lemon/20 uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                        Request Plan Renewal
+                    </button>
+                    <p className="text-center text-[9px] text-gray-500 font-black uppercase tracking-widest">A renewal message will be sent to the Admin Hub.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
