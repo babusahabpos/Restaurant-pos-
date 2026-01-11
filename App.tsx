@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import Login from './components/Login';
@@ -17,8 +18,12 @@ import CustomerOrderPage from './components/CustomerOrderPage';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
+import SupportTickets from './components/admin/SupportTickets';
+import SubscriptionRenewal from './components/admin/SubscriptionRenewal';
+import MarketManagement from './components/admin/MarketManagement';
+import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, StaffRequirementRequest, StaffApplication } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, StaffRequirementRequest, StaffApplication, RestaurantJobPost, StaffUser, StaffMessage } from './types';
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
@@ -38,20 +43,58 @@ function App() {
     const [aiMessages, setAiMessages] = useState<{role: 'user' | 'ai', text: string}[]>([]);
     const [isAiLoading, setIsAiLoading] = useState(false);
 
-    // --- Data States ---
-    const [orders, setOrders] = useState<OrderStatusItem[]>([]);
-    const [dashboardData, setDashboardData] = useState<DashboardData>({ onlineSales: 0, offlineSales: 0, onlineOrders: 0, offlineOrders: 0 });
-    const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(MOCK_USERS);
-    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(MOCK_TICKETS);
-    const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+    // --- Persistent Data States ---
+    const [orders, setOrders] = useState<OrderStatusItem[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_orders');
+        return saved ? JSON.parse(saved) : [];
+    });
+    
+    const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_users');
+        return saved ? JSON.parse(saved) : MOCK_USERS;
+    });
 
+    const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_tickets');
+        return saved ? JSON.parse(saved) : MOCK_TICKETS;
+    });
+
+    const [alerts, setAlerts] = useState<AdminAlert[]>(() => {
+        const saved = localStorage.getItem('babuSahabPos_alerts');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const [marketplaceProducts, setMarketplaceProducts] = useState<MarketplaceProduct[]>([]);
+    const [marketOrders, setMarketOrders] = useState<MarketplaceOrder[]>([]);
+    const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>([]);
+    const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>([]);
+    const [staffRequirementRequests, setStaffRequirementRequests] = useState<StaffRequirementRequest[]>([]);
+    const [staffApplications, setStaffApplications] = useState<StaffApplication[]>([]);
+
+    // --- Save to LocalStorage ---
+    useEffect(() => {
+        localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders));
+    }, [orders]);
+    
+    useEffect(() => {
+        localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers));
+    }, [registeredUsers]);
+
+    useEffect(() => {
+        localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets));
+    }, [supportTickets]);
+
+    useEffect(() => {
+        localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts));
+    }, [alerts]);
+
+    // --- AI Handler ---
     const handleAiQuery = async (query: string) => {
         if (!query.trim()) return;
         const newMsg = { role: 'user' as const, text: query };
         setAiMessages(prev => [...prev, newMsg]);
         setIsAiLoading(true);
         try {
-            // Instantiate AI directly with the provided API key
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
@@ -67,11 +110,7 @@ function App() {
         }
     };
 
-    useEffect(() => {
-        const savedOrders = localStorage.getItem('babuSahabPos_orders');
-        if (savedOrders) setOrders(JSON.parse(savedOrders));
-    }, []);
-
+    // --- Auth Logic ---
     const handleLogin = (email: string, pass: string) => {
         const trimmedEmail = email.trim().toLowerCase();
         if (trimmedEmail === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 
@@ -80,6 +119,10 @@ function App() {
         }
         const user = registeredUsers.find(u => u.email.trim().toLowerCase() === trimmedEmail && u.password === pass);
         if (user) {
+            if (user.status === UserStatus.Blocked) return 'blocked';
+            if (user.status === UserStatus.Deleted) return 'deleted';
+            if (user.status === UserStatus.Pending) return 'pending';
+            
             setAuthState('loggedIn'); 
             setLoggedInUser(user); 
             return 'ok'; 
@@ -88,12 +131,92 @@ function App() {
     };
 
     const handleRegister = (newUser: any) => {
-        const user: RegisteredUser = { ...newUser, id: Date.now(), status: UserStatus.Approved, lastLogin: 'Just Now', subscriptionEndDate: '2025-12-31', menu: MOCK_MENU_ITEMS };
-        setRegisteredUsers([...registeredUsers, user]);
+        const user: RegisteredUser = { 
+            ...newUser, 
+            id: Date.now(), 
+            status: UserStatus.Approved, 
+            lastLogin: 'Just Now', 
+            subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+            menu: MOCK_MENU_ITEMS,
+            taxRate: 5,
+            deliveryCharge: 30,
+            isDeliveryEnabled: true,
+            isPrinterEnabled: true
+        };
+        setRegisteredUsers(prev => [...prev, user]);
     };
 
+    // --- Order Handlers ---
     const onUpdateOrder = (updatedOrder: OrderStatusItem) => {
         setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+    };
+
+    const handleCompleteOrder = (orderId: number) => {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Completed' } : o));
+    };
+
+    const handlePrintKOT = (newOrderData: any) => {
+        const newOrder: OrderStatusItem = {
+            ...newOrderData,
+            id: Date.now(),
+            restaurantId: loggedInUser?.id || 0,
+            status: 'Preparation',
+            timestamp: new Date()
+        };
+        setOrders(prev => [...prev, newOrder]);
+    };
+
+    // --- Admin Handlers ---
+    const handleBlockUser = (userId: number, shouldBlock: boolean) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, status: shouldBlock ? UserStatus.Blocked : UserStatus.Approved } : u));
+    };
+
+    const handleDeleteUser = (userId: number) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, status: UserStatus.Deleted } : u));
+    };
+
+    const handleSendMessage = (userId: number | 'all', message: string) => {
+        const newAlert: AdminAlert = { id: Date.now(), userId, message };
+        setAlerts(prev => [...prev, newAlert]);
+        alert("Message dispatched.");
+    };
+
+    const handlePasswordChange = (userId: number, newPass: string) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPass } : u));
+    };
+
+    const handleUpdateSubscription = (userId: number, newDate: string) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, subscriptionEndDate: newDate } : u));
+    };
+
+    const handleUpdateMenu = (userId: number, menu: MenuItem[]) => {
+        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
+        if (loggedInUser?.id === userId) setLoggedInUser(prev => prev ? { ...prev, menu } : null);
+    };
+
+    const handleTicketReply = (ticketId: number, message: string) => {
+        setSupportTickets(prev => prev.map(t => t.id === ticketId ? {
+            ...t,
+            status: 'Pending',
+            messages: [...t.messages, { sender: 'admin', text: message, timestamp: new Date() }],
+            lastUpdate: new Date()
+        } : t));
+    };
+
+    const handleTicketResolve = (ticketId: number) => {
+        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t));
+    };
+
+    const handleDeleteTicket = (ticketId: number) => {
+        setSupportTickets(prev => prev.filter(t => t.id !== ticketId));
+    };
+
+    // --- Dashboard Calculations ---
+    const dashboardData: DashboardData = {
+        onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
+        offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
+        onlineOrders: orders.filter(o => o.type === 'Online' && o.status === 'Completed').length,
+        offlineOrders: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').length,
     };
 
     if (authState === 'customer') return <CustomerOrderPage />;
@@ -104,29 +227,33 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout 
-                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: 0 }} 
+                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} 
                     currentPage={currentAdminPage} 
                     setCurrentPage={setCurrentAdminPage} 
                     handleLogout={() => setAuthState('login')}
                 >
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={[]} onApproveReject={() => {}} onApproveMarketOrder={() => {}} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={() => {}} onSendMessage={() => {}} onPasswordChange={() => {}} onUpdateSubscription={() => {}} onUpdateMenu={() => {}} onDeleteUser={() => {}} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u))} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={handleBlockUser} onSendMessage={handleSendMessage} onPasswordChange={handlePasswordChange} onUpdateSubscription={handleUpdateSubscription} onUpdateMenu={handleUpdateMenu} onDeleteUser={handleDeleteUser} />}
+                    {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={handleTicketReply} onResolve={handleTicketResolve} onDelete={handleDeleteTicket} />}
+                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={handleUpdateSubscription} />}
+                    {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={handleSendMessage} />}
+                    {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => handleSendMessage('all', `To ${ph}: ${txt}`)} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} />}
                 </AdminLayout>
             ) : (
                 <MainLayout 
                     currentPage={currentPage} 
                     setCurrentPage={setCurrentPage} 
                     handleLogout={() => setAuthState('login')} 
-                    alerts={alerts} 
-                    onDismissAlert={() => {}} 
+                    alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser?.id)} 
+                    onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} 
                     loggedInUser={loggedInUser!}
                 >
-                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders} onCompleteOrder={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai="" menuItems={loggedInUser!.menu} onUpdateOrder={onUpdateOrder} isPrinterEnabled={true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
-                    {currentPage === 'billing' && <Billing menuItems={loggedInUser!.menu} onPrintKOT={() => {}} taxRate={5} restaurantName={loggedInUser!.restaurantName} isPrinterEnabled={true} />}
-                    {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={() => {}} />}
-                    {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={() => {}} onLogout={() => setAuthState('login')} />}
-                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser!.menu} setMenu={() => {}} loggedInUser={loggedInUser!} />}
-                    {currentPage === 'help' && <HelpAndSupport userTickets={[]} onCreateTicket={() => {}} />}
+                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser?.id)} onCompleteOrder={handleCompleteOrder} taxRate={loggedInUser?.taxRate || 5} restaurantName={loggedInUser!.restaurantName} address={loggedInUser!.address} fssai={loggedInUser?.fssai || ""} menuItems={loggedInUser!.menu} onUpdateOrder={onUpdateOrder} isPrinterEnabled={loggedInUser?.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
+                    {currentPage === 'billing' && <Billing menuItems={loggedInUser!.menu} onPrintKOT={handlePrintKOT} taxRate={loggedInUser?.taxRate || 5} restaurantName={loggedInUser!.restaurantName} isPrinterEnabled={loggedInUser?.isPrinterEnabled || true} onToggleStock={(id) => handleUpdateMenu(loggedInUser!.id, loggedInUser!.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m))} />}
+                    {currentPage === 'menu' && <Menu menu={loggedInUser!.menu} setMenu={(m) => handleUpdateMenu(loggedInUser!.id, m)} />}
+                    {currentPage === 'settings' && <Settings user={loggedInUser!} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser!.id ? { ...u, ...updates } : u))} onLogout={() => setAuthState('login')} />}
+                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser!.menu} setMenu={(m) => handleUpdateMenu(loggedInUser!.id, m)} loggedInUser={loggedInUser!} />}
+                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser?.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser!.id, userName: loggedInUser!.name, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} />}
                 </MainLayout>
             )}
 

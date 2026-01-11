@@ -8,9 +8,10 @@ interface BillingProps {
     taxRate: number;
     restaurantName: string;
     isPrinterEnabled: boolean;
+    onToggleStock?: (id: number) => void;
 }
 
-const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, restaurantName, isPrinterEnabled }) => {
+const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, restaurantName, isPrinterEnabled, onToggleStock }) => {
     const validMenuItems = useMemo(() => (menuItems || []).filter(item => item && item.name && item.category), [menuItems]);
     const categories = useMemo(() => ['All', ...new Set(validMenuItems.map(item => item.category))], [validMenuItems]);
     
@@ -24,12 +25,15 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
     const [discount, setDiscount] = useState<number>(0);
 
     const filteredMenuItems = validMenuItems.filter(item => 
-        item.inStock &&
         (activeCategory === 'All' || item.category === activeCategory) &&
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const addToOrder = (item: MenuItem) => {
+        if (!item.inStock) {
+            alert('Item is currently Out of Stock.');
+            return;
+        }
         const existingItem = currentOrder.find(orderItem => orderItem.id === item.id);
         if (existingItem) {
             updateQuantity(item.id, existingItem.quantity + 1);
@@ -85,23 +89,38 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
     return (
         <div className="flex flex-col h-full bg-black overflow-hidden relative">
             {/* MENU SECTION (TOP) */}
-            <div className="h-[40%] flex flex-col p-2 border-b border-gray-800 overflow-hidden shrink-0">
-                <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar scroll-smooth shrink-0 items-center h-10">
-                    {categories.map(category => (
-                        <button 
-                            key={category} 
-                            onClick={() => setActiveCategory(category)}
-                            className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-lemon border border-gray-700'}`}
-                        >
-                            {category}
-                        </button>
-                    ))}
+            <div className="h-[45%] flex flex-col p-2 border-b border-gray-800 overflow-hidden shrink-0">
+                <div className="flex justify-between items-center mb-2 px-1">
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar shrink-0 items-center h-10">
+                        {categories.map(category => (
+                            <button 
+                                key={category} 
+                                onClick={() => setActiveCategory(category)}
+                                className={`px-4 h-8 text-[10px] font-black rounded-full whitespace-nowrap transition-all uppercase flex items-center justify-center shrink-0 ${activeCategory === category ? 'bg-lemon text-black ring-2 ring-white/10' : 'bg-gray-800 text-lemon border border-gray-700'}`}
+                            >
+                                {category}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-1 pb-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-1 pb-2">
                     {filteredMenuItems.map(item => (
-                        <div key={item.id} onClick={() => addToOrder(item)} className="bg-gray-900 p-2 rounded-xl text-center cursor-pointer border border-gray-800 active:bg-gray-700 active:scale-95 transition-all flex flex-col justify-center min-h-[65px] shadow-lg">
-                           <p className="text-[9px] text-white font-bold leading-tight line-clamp-2 mb-1 uppercase tracking-tighter">{item.name}</p>
-                           <p className="text-lemon text-[10px] font-black">₹{item.offlinePrice}</p>
+                        <div key={item.id} className="relative">
+                            <div 
+                                onClick={() => addToOrder(item)} 
+                                className={`h-full p-2 rounded-xl text-center cursor-pointer border transition-all flex flex-col justify-center min-h-[75px] shadow-lg ${item.inStock ? 'bg-gray-900 border-gray-800 active:bg-gray-700 active:scale-95' : 'bg-gray-950 border-gray-900 opacity-60 grayscale'}`}
+                            >
+                                <p className="text-[9px] text-white font-bold leading-tight line-clamp-2 mb-1 uppercase tracking-tighter">{item.name}</p>
+                                <p className="text-lemon text-[10px] font-black">₹{item.offlinePrice}</p>
+                                {!item.inStock && <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-red-500 uppercase bg-black/40 rounded-xl">Sold Out</span>}
+                            </div>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onToggleStock?.(item.id); }}
+                                className="absolute top-1 right-1 w-5 h-5 bg-black/80 rounded-full flex items-center justify-center border border-white/10"
+                                title="Toggle In-Stock"
+                            >
+                                <div className={`w-2 h-2 rounded-full ${item.inStock ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -114,7 +133,7 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                         <button onClick={() => setOrderSource('Takeaway')} className={`px-4 py-1.5 text-[10px] font-black rounded-lg uppercase ${orderSource === 'Takeaway' ? 'bg-lemon text-black' : 'bg-gray-800 text-lemon'}`}>Takeaway</button>
                         <button onClick={() => setOrderSource('Dine-in')} className={`px-4 py-1.5 text-[10px] font-black rounded-lg uppercase ${orderSource === 'Dine-in' ? 'bg-lemon text-black' : 'bg-gray-800 text-lemon'}`}>Dine-in</button>
                     </div>
-                    <button onClick={resetOrder} className="text-[10px] text-red-500 font-black uppercase px-2">Reset</button>
+                    <button onClick={resetOrder} className="text-[10px] text-red-500 font-black uppercase px-2 hover:underline">Clear Order</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mb-2 shrink-0">
@@ -141,10 +160,15 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
                         </div>
                     ) : (
                         currentOrder.map(item => (
-                            <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5">
-                                <div className="w-[45%]">
-                                    <p className="text-[10px] text-lemon font-bold truncate uppercase">{item.name}</p>
-                                    <p className="text-[9px] text-gray-500 font-mono">₹{item.offlinePrice}</p>
+                            <div key={item.id} className="flex items-center justify-between bg-white/5 p-2 rounded-xl border border-white/5 group">
+                                <div className="w-[40%] flex items-center gap-2">
+                                    <button onClick={() => removeFromOrder(item.id)} className="text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                    <div>
+                                        <p className="text-[10px] text-lemon font-bold truncate uppercase">{item.name}</p>
+                                        <p className="text-[9px] text-gray-500 font-mono">₹{item.offlinePrice}</p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-white active:bg-lemon active:text-black">-</button>
