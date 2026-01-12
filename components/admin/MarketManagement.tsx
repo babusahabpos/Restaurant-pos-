@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { MarketplaceProduct, MarketplaceOrder } from '../../types';
+import { MarketplaceProduct, MarketplaceOrder, RegisteredUser } from '../../types';
 
 interface MarketManagementProps {
     products: MarketplaceProduct[];
     orders: MarketplaceOrder[];
+    users: RegisteredUser[];
     onAddProduct: (name: string, price: number, desc: string, image?: string) => void;
     onDeleteProduct: (id: number) => void;
     onMessageUser: (userId: number, message: string) => void;
@@ -12,7 +13,7 @@ interface MarketManagementProps {
     onDeleteOrder: (orderId: number) => void;
 }
 
-const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, onAddProduct, onDeleteProduct, onMessageUser, onUpdateStatus, onDeleteOrder }) => {
+const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, users, onAddProduct, onDeleteProduct, onMessageUser, onUpdateStatus, onDeleteOrder }) => {
     const [view, setView] = useState<'products' | 'orders'>('products');
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
@@ -35,6 +36,11 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
             setName(''); setPrice(''); setDesc(''); setImage(undefined);
             alert('Product Published to Market!');
         }
+    };
+
+    const getUserPhone = (userId: number) => {
+        const user = users.find(u => u.id === userId);
+        return user?.phone || '';
     };
 
     return (
@@ -72,7 +78,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                                     <p className="text-lemon font-black text-base mt-0.5">₹{p.price}</p>
                                     <p className="text-gray-600 text-[9px] font-bold mt-1 uppercase line-clamp-2">"{p.description}"</p>
                                 </div>
-                                <button onClick={() => onDeleteProduct(p.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-3 bg-red-900/10 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                                <button onClick={() => { if(window.confirm('Delete this product?')) onDeleteProduct(p.id); }} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-3 bg-red-900/10 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                             </div>
                         ))}
                     </div>
@@ -83,6 +89,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                 <div className="space-y-4 pb-10">
                     {orders.length > 0 ? orders.slice().reverse().map(order => {
                         const product = products.find(p => p.id === order.productId);
+                        const userPhone = getUserPhone(order.userId);
                         return (
                             <div key={order.id} className="bg-gray-900 border border-gray-800 p-6 rounded-[3rem] flex flex-col md:flex-row justify-between items-center gap-8 group hover:border-lemon/30 transition-all shadow-2xl relative overflow-hidden">
                                 <div className="flex items-center gap-6 flex-1 w-full">
@@ -117,12 +124,53 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, o
                                 </div>
                                 <div className="flex flex-col gap-2 w-full md:w-56 shrink-0">
                                     <div className="grid grid-cols-2 gap-2">
-                                        <button onClick={() => onMessageUser(order.userId, `Regarding ${order.productName}: `)} className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all">Message</button>
-                                        <button onClick={() => onUpdateStatus(order.id, 'Delivered')} className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all">Delivery</button>
-                                        <button onClick={() => { onUpdateStatus(order.id, 'Out of Stock'); onMessageUser(order.userId, `Sorry, ${order.productName} is currently out of stock.`); }} className="bg-orange-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-orange-700 active:scale-95 transition-all">Out Stock</button>
-                                        <button onClick={() => { if(window.confirm('Delete this order?')) onDeleteOrder(order.id); }} className="bg-red-900/30 text-red-500 font-black py-3 rounded-xl text-[9px] uppercase border border-red-900/50 active:scale-95 transition-all">Delete</button>
+                                        <button 
+                                            onClick={() => {
+                                                const msg = window.prompt("Enter notice for user:", `Regarding ${order.productName}: `);
+                                                if (msg) {
+                                                    onMessageUser(order.userId, msg);
+                                                    alert("Notice sent to user dashboard!");
+                                                }
+                                            }} 
+                                            className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all"
+                                        >
+                                            Message
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                onUpdateStatus(order.id, 'Delivered');
+                                                alert("Order marked as Delivered!");
+                                            }} 
+                                            className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all"
+                                        >
+                                            Delivery
+                                        </button>
+                                        <button 
+                                            onClick={() => { 
+                                                onUpdateStatus(order.id, 'Out of Stock'); 
+                                                onMessageUser(order.userId, `Sorry, your order for ${order.productName} is currently out of stock.`); 
+                                                alert("Order marked Out of Stock and user notified!");
+                                            }} 
+                                            className="bg-orange-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-orange-700 active:scale-95 transition-all"
+                                        >
+                                            Out Stock
+                                        </button>
+                                        <button 
+                                            onClick={() => { 
+                                                if(window.confirm('Delete this order permanently?')) {
+                                                    onDeleteOrder(order.id);
+                                                    alert("Order deleted.");
+                                                }
+                                            }} 
+                                            className="bg-red-900/30 text-red-500 font-black py-3 rounded-xl text-[9px] uppercase border border-red-900/50 active:scale-95 transition-all"
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
-                                    <a href={`tel:${order.id}`} className="w-full bg-lemon text-black font-black py-3.5 rounded-xl text-[10px] text-center uppercase shadow-lg shadow-lemon/10 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                    <a 
+                                        href={`tel:${userPhone}`} 
+                                        className={`w-full bg-lemon text-black font-black py-3.5 rounded-xl text-[10px] text-center uppercase shadow-lg shadow-lemon/10 active:scale-95 transition-all flex items-center justify-center gap-2 ${!userPhone ? 'opacity-50 pointer-events-none' : ''}`}
+                                    >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                                         Call Owner
                                     </a>
