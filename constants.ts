@@ -7,6 +7,7 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'online', icon: 'online' },
     { name: 'menu', icon: 'menu' },
     { name: 'qrMenu', icon: 'qrCode' },
+    { name: 'customerOffer', icon: 'customerOffer' },
     { name: 'inventory', icon: 'inventory' },
     { name: 'staffRequirements', icon: 'staff' },
     { name: 'staff', icon: 'staff' },

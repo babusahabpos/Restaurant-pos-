@@ -19,6 +19,7 @@ import StaffRequirements from './components/StaffRequirements';
 import SocialMedia from './components/SocialMedia';
 import Referral from './components/Referral';
 import Subscription from './components/Subscription';
+import CustomerOffer from './components/CustomerOffer';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -223,6 +224,7 @@ function App() {
                     {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
                     {currentPage === 'refer' && <Referral user={loggedInUser} />}
                     {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={handleRequestRenewal} />}
+                    {currentPage === 'customerOffer' && <CustomerOffer orders={orders.filter(o => o.restaurantId === loggedInUser.id)} restaurantName={loggedInUser.restaurantName} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u))} onLogout={() => setAuthState('login')} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => handleUpdateMenu(loggedInUser.id, m)} loggedInUser={loggedInUser} />}
                     {currentPage === 'help' && <HelpAndSupport 

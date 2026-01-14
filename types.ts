@@ -14,7 +14,8 @@ export type Page =
     'refer' |
     'staff' | 
     'staffRequirements' |
-    'market'; 
+    'market' |
+    'customerOffer'; 
 
 export interface MenuItem {
     id: number;

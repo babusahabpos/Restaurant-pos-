@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useState } from 'react';
 import { Page, AdminAlert, RegisteredUser } from '../types';
 import { NAV_ITEMS } from '../constants';
@@ -29,6 +30,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     social: Icons.SocialIcon,
     refer: Icons.ReferIcon,
     market: Icons.MarketIcon,
+    customerOffer: Icons.CustomerOfferIcon,
 };
 
 const GlobalNotice: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
@@ -80,6 +82,7 @@ const Sidebar: React.FC<{
                                       item.name === 'staff' ? 'Attendance' :
                                       item.name === 'market' ? 'Marketing Hub' : 
                                       item.name === 'staffRequirements' ? 'Staff Hub' : 
+                                      item.name === 'customerOffer' ? 'Customer Offer' :
                                       item.name.charAt(0).toUpperCase() + item.name.slice(1);
 
                         return (
@@ -193,6 +196,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                          currentPage === 'staff' ? 'Attendance' :
                          currentPage === 'market' ? 'Marketing Hub' : 
                          currentPage === 'staffRequirements' ? 'Staff Hub' : 
+                         currentPage === 'customerOffer' ? 'Customer Offer' :
                          currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
                     </h1>
                     <div className="flex items-center gap-3">
