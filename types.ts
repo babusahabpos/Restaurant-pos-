@@ -15,7 +15,8 @@ export type Page =
     'staff' | 
     'staffRequirements' |
     'market' |
-    'customerOffer'; 
+    'customerOffer' |
+    'payment'; 
 
 export interface MenuItem {
     id: number;
@@ -235,4 +236,21 @@ export interface StaffMessage {
     text: string;
     timestamp: Date;
     isRead: boolean;
+}
+
+// Payment Hub Types
+export interface PaymentMember {
+    id: number;
+    userId: number;
+    name: string;
+    category: string;
+    type: 'staff' | 'seller';
+}
+
+export interface PaymentRecord {
+    id: number;
+    memberId: number;
+    paid: number;
+    due: number;
+    date: string;
 }

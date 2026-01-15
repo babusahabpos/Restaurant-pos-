@@ -9,15 +9,19 @@ export const NAV_ITEMS: { name: Page; icon: string }[] = [
     { name: 'qrMenu', icon: 'qrCode' },
     { name: 'customerOffer', icon: 'customerOffer' },
     { name: 'inventory', icon: 'inventory' },
+    { name: 'reports', icon: 'reports' },
+];
+
+export const HUB_NAV_ITEMS: { name: Page; icon: string }[] = [
+    { name: 'payment', icon: 'payment' },
+    { name: 'market', icon: 'market' },
     { name: 'staffRequirements', icon: 'staff' },
     { name: 'staff', icon: 'staff' },
-    { name: 'market', icon: 'market' }, // Marketing Hub strictly under Staff (Attendance)
-    { name: 'reports', icon: 'reports' },
-    { name: 'social', icon: 'social' }, 
-    { name: 'refer', icon: 'refer' }, 
-    { name: 'subscription', icon: 'subscription' },
-    { name: 'help', icon: 'help' },
     { name: 'settings', icon: 'settings' },
+    { name: 'help', icon: 'help' },
+    { name: 'subscription', icon: 'subscription' },
+    { name: 'refer', icon: 'refer' },
+    { name: 'social', icon: 'social' },
 ];
 
 export const MOCK_MENU_ITEMS: MenuItem[] = [

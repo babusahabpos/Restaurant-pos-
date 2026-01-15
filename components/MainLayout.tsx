@@ -1,7 +1,7 @@
 
 import React, { ReactNode, useState } from 'react';
 import { Page, AdminAlert, RegisteredUser } from '../types';
-import { NAV_ITEMS } from '../constants';
+import { NAV_ITEMS, HUB_NAV_ITEMS } from '../constants';
 import * as Icons from './Icons';
 
 interface MainLayoutProps {
@@ -31,6 +31,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
     refer: Icons.ReferIcon,
     market: Icons.MarketIcon,
     customerOffer: Icons.CustomerOfferIcon,
+    payment: Icons.PaymentIcon,
 };
 
 const GlobalNotice: React.FC<{ alert: AdminAlert; onDismiss: (id: number | string) => void }> = ({ alert, onDismiss }) => (
@@ -66,50 +67,69 @@ const Sidebar: React.FC<{
     currentPage: Page;
     setCurrentPage: (page: Page) => void;
     restaurantName: string;
-}> = ({ currentPage, setCurrentPage, restaurantName }) => {
+    items: { name: Page; icon: string }[];
+    bottomItems?: { name: Page; icon: string }[];
+    title: string;
+    onClose?: () => void;
+    isRight?: boolean;
+    footer?: React.ReactNode;
+}> = ({ currentPage, setCurrentPage, restaurantName, items, bottomItems, title, onClose, isRight, footer }) => {
+    const renderNavItem = (item: { name: Page; icon: string }) => {
+        const Icon = iconMap[item.icon] || Icons.DashboardIcon;
+        const label = item.name === 'qrMenu' ? 'QR Menu' : 
+                      item.name === 'refer' ? 'Refer & Earn' : 
+                      item.name === 'staff' ? 'Attendance' :
+                      item.name === 'market' ? 'Marketing Hub' : 
+                      item.name === 'staffRequirements' ? 'Staff Hub' : 
+                      item.name === 'customerOffer' ? 'Customer Offer' :
+                      item.name.charAt(0).toUpperCase() + item.name.slice(1);
+
+        return (
+            <a
+                key={item.name}
+                href="#"
+                onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(item.name);
+                }}
+                className={`flex items-center justify-between py-2.5 px-4 rounded transition duration-200 ${
+                    currentPage === item.name
+                        ? 'bg-lemon text-black font-bold'
+                        : 'hover:bg-gray-800'
+                }`}
+            >
+                <div className="flex items-center space-x-2">
+                    <Icon className="w-6 h-6" />
+                    <span className="capitalize font-semibold text-xs font-black">
+                        {label}
+                    </span>
+                </div>
+            </a>
+        );
+    };
+
     return (
-        <aside className="bg-black text-white w-64 space-y-6 py-7 px-2 h-full flex flex-col border-r border-gray-800">
-            <div>
-                <a href="#" className="flex items-center space-x-2 px-4 mb-8">
-                    <span className="text-2xl font-extrabold text-white break-words">{restaurantName || 'BaBu SAHAB'}</span>
-                </a>
-
-                <nav className="space-y-1 overflow-y-auto max-h-[80vh] no-scrollbar">
-                    {NAV_ITEMS.map((item) => {
-                        const Icon = iconMap[item.icon] || Icons.DashboardIcon;
-                        const label = item.name === 'qrMenu' ? 'QR Menu' : 
-                                      item.name === 'refer' ? 'Refer & Earn' : 
-                                      item.name === 'staff' ? 'Attendance' :
-                                      item.name === 'market' ? 'Marketing Hub' : 
-                                      item.name === 'staffRequirements' ? 'Staff Hub' : 
-                                      item.name === 'customerOffer' ? 'Customer Offer' :
-                                      item.name.charAt(0).toUpperCase() + item.name.slice(1);
-
-                        return (
-                            <a
-                                key={item.name}
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setCurrentPage(item.name);
-                                }}
-                                className={`flex items-center justify-between py-2.5 px-4 rounded transition duration-200 ${
-                                    currentPage === item.name
-                                        ? 'bg-lemon text-black font-bold'
-                                        : 'hover:bg-gray-800'
-                                }`}
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <Icon className="w-6 h-6" />
-                                    <span className="capitalize font-semibold text-xs font-black">
-                                        {label}
-                                    </span>
-                                </div>
-                            </a>
-                        );
-                    })}
-                </nav>
+        <aside className={`bg-black text-white w-64 py-7 px-2 h-full flex flex-col ${isRight ? 'border-l' : 'border-r'} border-gray-800 overflow-hidden`}>
+            <div className="flex items-center justify-between px-4 mb-8 shrink-0">
+                <span className="text-2xl font-extrabold text-white break-words uppercase tracking-tighter">{title || restaurantName}</span>
+                {onClose && (
+                    <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                )}
             </div>
+
+            <nav className="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+                {items.map(renderNavItem)}
+            </nav>
+
+            {(bottomItems && bottomItems.length > 0) && (
+                <nav className="space-y-1 pt-4 border-t border-gray-800 mt-2 shrink-0">
+                    {bottomItems.map(renderNavItem)}
+                </nav>
+            )}
+
+            {footer && <div className="pt-4 shrink-0 px-2">{footer}</div>}
         </aside>
     );
 };
@@ -130,7 +150,6 @@ const BottomNavBar: React.FC<{
                 const isActive = currentPage === item.name;
                 const Icon = item.icon;
 
-                // Vertically centered buttons without large negative margins
                 const buttonClass = item.name === 'dashboard' 
                     ? `flex items-center justify-center w-12 h-12 rounded-full transition-transform duration-300 shadow-xl shadow-lemon/20 ${isActive ? 'bg-lemon text-black scale-110' : 'bg-gray-800 text-white'}`
                     : `flex flex-col items-center p-2 rounded-lg transition-colors ${isActive ? 'text-lemon' : 'text-gray-500'}`;
@@ -152,28 +171,64 @@ const BottomNavBar: React.FC<{
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurrentPage, handleLogout, alerts, onDismissAlert, loggedInUser }) => {
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isHubOpen, setHubOpen] = useState(false);
 
     const handleSetCurrentPage = (page: Page) => {
         setCurrentPage(page);
         setMobileMenuOpen(false);
+        setHubOpen(false);
     };
 
     const globalNotice = alerts.find(a => a.userId === 'all');
     const personalAlerts = alerts.filter(a => a.userId !== 'all');
+
+    // Split Hub items into main and bottom sections
+    const hubMainItems = HUB_NAV_ITEMS.filter(item => item.name !== 'help' && item.name !== 'settings');
+    const hubBottomItems = HUB_NAV_ITEMS.filter(item => item.name === 'help' || item.name === 'settings');
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
             {globalNotice && <GlobalNotice alert={globalNotice} onDismiss={onDismissAlert} />}
             {personalAlerts.map(alert => <AlertPopup key={alert.id} alert={alert} onDismiss={onDismissAlert} />)}
 
+            {/* Sidebar Desktop Left */}
             <div className="hidden md:block h-full">
                 <Sidebar 
                     currentPage={currentPage} 
                     setCurrentPage={handleSetCurrentPage} 
                     restaurantName={loggedInUser.restaurantName}
+                    items={NAV_ITEMS}
+                    title={loggedInUser.restaurantName}
                 />
             </div>
 
+            {/* HUB Sidebar Overlay (Styled as Sidebar) */}
+            {isHubOpen && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex justify-end animate-fade-in" onClick={() => setHubOpen(false)}>
+                    <div onClick={e => e.stopPropagation()}>
+                        <Sidebar 
+                            currentPage={currentPage}
+                            setCurrentPage={handleSetCurrentPage}
+                            restaurantName="HUB PANEL"
+                            items={hubMainItems}
+                            bottomItems={hubBottomItems}
+                            title="HUB PANEL"
+                            onClose={() => setHubOpen(false)}
+                            isRight={true}
+                            footer={
+                                <button 
+                                    onClick={() => { if(window.confirm('Logout?')) handleLogout(); }} 
+                                    className="w-full bg-red-600/10 text-red-500 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest border border-red-600/20 active:scale-95 transition-all"
+                                >
+                                    Sign Out
+                                </button>
+                            }
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Mobile Menu Sidebar Left */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 bg-black/80 z-[60] md:hidden" onClick={() => setMobileMenuOpen(false)}>
                     <div className="w-64 h-full" onClick={e => e.stopPropagation()}>
@@ -181,6 +236,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                             currentPage={currentPage} 
                             setCurrentPage={handleSetCurrentPage} 
                             restaurantName={loggedInUser.restaurantName}
+                            items={NAV_ITEMS}
+                            title={loggedInUser.restaurantName}
                         />
                     </div>
                 </div>
@@ -188,10 +245,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
 
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 <header className="h-14 flex items-center justify-between px-4 border-b border-gray-800 bg-black z-10 shrink-0">
-                    <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-lemon font-black text-[11px] tracking-[0.2em] px-3 py-1.5 bg-gray-900/50 rounded-lg active:scale-95 transition-all border border-gray-800">
+                        MENU
                     </button>
-                    <h1 className="text-sm font-black uppercase tracking-widest text-lemon">
+                    <h1 className="text-sm font-black uppercase tracking-widest text-lemon truncate max-w-[40%] text-center">
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Attendance' :
                          currentPage === 'market' ? 'Marketing Hub' : 
@@ -200,9 +257,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                          currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
                     </h1>
                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-[10px] font-bold">
-                           {loggedInUser.name.substring(0, 1).toUpperCase()}
-                        </div>
+                         <button 
+                            onClick={() => setHubOpen(true)}
+                            className="bg-gray-800 hover:bg-gray-700 text-lemon border border-gray-700 px-4 py-1.5 rounded-full flex items-center gap-2 transition-all active:scale-95 shadow-lg"
+                         >
+                            <span className="text-[10px] font-black uppercase tracking-widest">HUB</span>
+                            <div className="w-5 h-5 bg-lemon text-black rounded-full flex items-center justify-center text-[9px] font-black">
+                               {loggedInUser.name.substring(0, 1).toUpperCase()}
+                            </div>
+                         </button>
                     </div>
                 </header>
 
