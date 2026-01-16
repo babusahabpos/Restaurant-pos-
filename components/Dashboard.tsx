@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardData, OrderStatusItem, MenuItem, OrderItem } from '../types';
 
@@ -134,7 +135,7 @@ const SettleBillModal: React.FC<{
     const paymentMethods = ['Cash', 'PhonePe', 'Google Pay'];
     return (
         <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-sm border border-gray-800">
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-sm:max-w-full max-w-sm border border-gray-800">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-black uppercase text-lemon tracking-widest">Final Bill</h3>
                     <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
@@ -266,68 +267,74 @@ const TodaysOrdersModal: React.FC<{ orders: OrderStatusItem[]; onClose: () => vo
 };
 
 const PendingOrdersModal: React.FC<{ 
-    onlineOrders: OrderStatusItem[]; 
-    offlineOrders: OrderStatusItem[]; 
+    allPendingOrders: OrderStatusItem[]; 
     onClose: () => void;
     onCompleteOrder: (orderId: number) => void;
     onInitiateSettle: (order: OrderStatusItem) => void;
     onEditOrder: (order: OrderStatusItem) => void;
     onPrintKOT: (order: OrderStatusItem) => void;
-}> = ({ onlineOrders, offlineOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder, onPrintKOT }) => {
-    const [activeTab, setActiveTab] = useState<'Online' | 'Offline'>('Online');
-    const ordersToShow = activeTab === 'Online' ? onlineOrders : offlineOrders;
+}> = ({ allPendingOrders, onClose, onCompleteOrder, onInitiateSettle, onEditOrder, onPrintKOT }) => {
     
+    const getOrderSourceBadge = (order: OrderStatusItem) => {
+        const info = order.sourceInfo.toLowerCase();
+        let label = "Other";
+        let color = "bg-gray-800 text-gray-400";
+
+        if (info.includes('swiggy')) { label = "Swiggy"; color = "bg-orange-600/20 text-orange-500"; }
+        else if (info.includes('zomato')) { label = "Zomato"; color = "bg-red-600/20 text-red-500"; }
+        else if (info.includes('table')) { label = "Table Order"; color = "bg-lemon/10 text-lemon"; }
+        else if (info.includes('takeaway')) { label = "Takeaway"; color = "bg-blue-600/20 text-blue-400"; }
+        else if (info.includes('delivery')) { label = "Delivery"; color = "bg-purple-600/20 text-purple-400"; }
+        else if (order.type === 'Online') { label = "QR Order"; color = "bg-green-600/20 text-green-500"; }
+
+        return <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${color}`}>{label}</span>;
+    };
+
     return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
-            <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-gray-800">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-black uppercase text-white tracking-widest">Kitchen Pipeline</h3>
-                    <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
-                </div>
-                
-                <div className="flex gap-2 border-b border-gray-800 mb-6 pb-2">
-                    <button 
-                        onClick={() => setActiveTab('Online')}
-                        className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all rounded-lg ${activeTab === 'Online' ? 'bg-lemon text-black shadow-lg' : 'text-gray-500'}`}
-                    >
-                        Online ({onlineOrders.length})
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('Offline')}
-                        className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all rounded-lg ${activeTab === 'Offline' ? 'bg-lemon text-black shadow-lg' : 'text-gray-500'}`}
-                    >
-                        Offline ({offlineOrders.length})
-                    </button>
+        <div className="fixed inset-0 bg-black/95 flex justify-center items-center z-[60] p-4">
+            <div className="bg-gray-900 p-6 rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-gray-800">
+                <div className="flex justify-between items-center mb-6 shrink-0">
+                    <div>
+                        <h3 className="text-2xl font-black uppercase text-white tracking-tighter italic">PENDING ORDERS</h3>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Live Kitchen Status • Total: {allPendingOrders.length}</p>
+                    </div>
+                    <button onClick={onClose} className="bg-gray-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-black text-xl hover:bg-lemon hover:text-black transition-all">&times;</button>
                 </div>
 
-                <div className="overflow-y-auto no-scrollbar space-y-4">
-                    {ordersToShow.length > 0 ? (
-                        ordersToShow.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
-                            <div key={order.id} className="bg-black/50 border border-gray-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between gap-4">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-lemon font-black uppercase text-xs">{order.sourceInfo}</span>
-                                        <span className="text-[9px] text-gray-600 font-bold uppercase">{new Date(order.timestamp).toLocaleTimeString()}</span>
+                <div className="overflow-y-auto no-scrollbar space-y-3 pb-6 flex-1">
+                    {allPendingOrders.length > 0 ? (
+                        allPendingOrders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
+                            <div key={order.id} className="bg-black/50 border border-gray-800 p-5 rounded-2xl flex flex-col sm:flex-row justify-between gap-6 hover:border-lemon/20 transition-all group">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                                        {getOrderSourceBadge(order)}
+                                        <span className="text-white font-black uppercase text-xs truncate">{order.sourceInfo}</span>
+                                        <span className="text-[9px] text-gray-600 font-bold uppercase ml-auto">{new Date(order.timestamp).toLocaleTimeString()}</span>
                                     </div>
-                                    <div className="space-y-1">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
                                         {order.items.map((i, idx) => (
-                                            <p key={idx} className="text-[11px] text-white font-bold uppercase">• {i.name} <span className="text-lemon">x{i.quantity}</span></p>
+                                            <p key={idx} className="text-[11px] text-gray-300 font-bold uppercase truncate">• {i.name} <span className="text-lemon">x{i.quantity}</span></p>
                                         ))}
                                     </div>
                                 </div>
-                                <div className="flex gap-2 items-center">
-                                    <button onClick={() => onPrintKOT(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-gray-800 text-lemon border border-lemon/20 text-[10px] font-black uppercase">Re-Print KOT</button>
-                                    <button onClick={() => onEditOrder(order)} className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-600/50 text-[10px] font-black uppercase">Edit</button>
-                                    {activeTab === 'Offline' ? (
-                                        <button onClick={() => onInitiateSettle(order)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-lemon text-black text-[10px] font-black uppercase shadow-lg">Final Bill</button>
+                                <div className="flex gap-2 items-center justify-end">
+                                    <button onClick={() => onPrintKOT(order)} className="p-2.5 rounded-xl bg-gray-800 text-lemon border border-lemon/10 active:scale-95 transition-transform" title="Re-Print KOT">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                                    </button>
+                                    <button onClick={() => onEditOrder(order)} className="px-4 py-2.5 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-600/20 text-[10px] font-black uppercase active:scale-95 transition-transform">Edit</button>
+                                    {order.type === 'Offline' ? (
+                                        <button onClick={() => onInitiateSettle(order)} className="px-6 py-2.5 rounded-xl bg-lemon text-black text-[10px] font-black uppercase shadow-xl shadow-lemon/10 active:scale-95 transition-transform">Settle Bill</button>
                                     ) : (
-                                        <button onClick={() => onCompleteOrder(order.id)} className="flex-1 sm:flex-none px-6 py-2 rounded-lg bg-green-600 text-white text-[10px] font-black uppercase shadow-lg">Done</button>
+                                        <button onClick={() => onCompleteOrder(order.id)} className="px-6 py-2.5 rounded-xl bg-green-600 text-white text-[10px] font-black uppercase shadow-xl shadow-green-900/10 active:scale-95 transition-transform">Done</button>
                                     )}
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <p className="text-center py-20 text-gray-700 font-bold uppercase text-[10px]">No active KOTs in this section</p>
+                        <div className="py-24 text-center opacity-30 flex flex-col items-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                             <p className="font-black uppercase text-xs tracking-widest italic">All orders are cleared!</p>
+                        </div>
                     )}
                 </div>
             </div>
@@ -358,8 +365,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
 
     const incomingQrOrders = orders.filter(o => o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
-    const pendingOnlineOrders = pendingOrders.filter(o => o.type === 'Online');
-    const pendingOfflineOrders = pendingOrders.filter(o => o.type === 'Offline');
     
     const todaysOrdersProcessed = orders.filter(o => {
       const d = new Date(o.timestamp); const t = new Date();
@@ -377,7 +382,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     
     const handleAcceptQrOrder = (orderId: number) => {
         const order = orders.find(o => o.id === orderId);
-        if (order) onUpdateOrder({ ...order, status: 'Preparation', type: 'Offline' });
+        if (order) onUpdateOrder({ ...order, status: 'Preparation' });
     };
 
     const handlePrintKOT = (order: OrderStatusItem) => {
@@ -428,7 +433,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     return (
         <div className="space-y-8 animate-fade-in h-full overflow-y-auto no-scrollbar pb-10">
             {showTodaysOrders && <TodaysOrdersModal orders={todaysOrdersProcessed} onClose={() => setShowTodaysOrders(false)} />}
-            {showPendingOrdersModal && <PendingOrdersModal onlineOrders={pendingOnlineOrders} offlineOrders={pendingOfflineOrders} onClose={() => setShowPendingOrdersModal(false)} onCompleteOrder={onCompleteOrder} onInitiateSettle={setSettlingOrder} onEditOrder={setEditingOrder} onPrintKOT={handlePrintKOT} />}
+            {showPendingOrdersModal && (
+                <PendingOrdersModal 
+                    allPendingOrders={pendingOrders} 
+                    onClose={() => setShowPendingOrdersModal(false)} 
+                    onCompleteOrder={onCompleteOrder} 
+                    onInitiateSettle={setSettlingOrder} 
+                    onEditOrder={setEditingOrder} 
+                    onPrintKOT={handlePrintKOT} 
+                />
+            )}
             
             {editingOrder && (
                 <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
@@ -468,7 +482,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                 />
                 <StatCard 
                     onClick={() => setShowPendingOrdersModal(true)}
-                    title="Kitchen Pipe" 
+                    title="PENDING ORDERS" 
                     value={pendingOrders.length.toString()} 
                     subtext="Active KOTs" 
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>} 

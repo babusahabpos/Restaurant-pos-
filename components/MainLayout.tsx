@@ -114,7 +114,7 @@ const Sidebar: React.FC<{
                 <span className="text-2xl font-extrabold text-white break-words uppercase tracking-tighter">{title || restaurantName}</span>
                 {onClose && (
                     <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="18" x2="18" y2="18"></line></svg>
                     </button>
                 )}
             </div>
@@ -245,9 +245,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
 
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 <header className="h-14 flex items-center justify-between px-4 border-b border-gray-800 bg-black z-10 shrink-0">
-                    <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-lemon font-black text-[11px] tracking-[0.2em] px-3 py-1.5 bg-gray-900/50 rounded-lg active:scale-95 transition-all border border-gray-800">
-                        MENU
+                    {/* Symmetrical Left Toggle - Lemon Yellow with Bold Black Text */}
+                    <button 
+                        onClick={() => setMobileMenuOpen(true)} 
+                        className="md:hidden bg-lemon text-black px-4 py-1.5 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-md shadow-lemon/10"
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">MENU</span>
                     </button>
+                    
+                    {/* Centered Title */}
+                    <h1 className="text-xs font-black uppercase tracking-widest text-white/40 truncate max-w-[30%] hidden md:block">
+                        BaBu SAHAB POS
+                    </h1>
+
                     <h1 className="text-sm font-black uppercase tracking-widest text-lemon truncate max-w-[40%] text-center">
                         {currentPage === 'qrMenu' ? 'QR Menu' : 
                          currentPage === 'staff' ? 'Attendance' :
@@ -256,15 +266,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, setCurre
                          currentPage === 'customerOffer' ? 'Customer Offer' :
                          currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
                     </h1>
+
+                    {/* Symmetrical Right Toggle - Lemon Yellow with Bold Black Text */}
                     <div className="flex items-center gap-3">
                          <button 
                             onClick={() => setHubOpen(true)}
-                            className="bg-gray-800 hover:bg-gray-700 text-lemon border border-gray-700 px-4 py-1.5 rounded-full flex items-center gap-2 transition-all active:scale-95 shadow-lg"
+                            className="bg-lemon hover:bg-lemon-dark text-black px-4 py-1.5 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-md shadow-lemon/10"
                          >
-                            <span className="text-[10px] font-black uppercase tracking-widest">HUB</span>
-                            <div className="w-5 h-5 bg-lemon text-black rounded-full flex items-center justify-center text-[9px] font-black">
-                               {loggedInUser.name.substring(0, 1).toUpperCase()}
-                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.15em]">HUB</span>
                          </button>
                     </div>
                 </header>
