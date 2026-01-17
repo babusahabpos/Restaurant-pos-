@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SupportTicket } from '../types';
 
 interface HelpAndSupportProps {
@@ -12,6 +12,10 @@ const UserManual: React.FC = () => {
     const [playingIndex, setPlayingIndex] = useState<number | null>(null);
     const [lang, setLang] = useState<'bn' | 'hi'>('bn');
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+    const [isExternalPlaying, setIsExternalPlaying] = useState(false);
+    
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const EXTERNAL_VOICE_URL = "https://www.dropbox.com/scl/fi/ufiv1x6igz94l9s3e7ok6/ElevenLabs_2026-01-17T12_14_36_Sumi-Soft-Romantic-and-Emotional_pvc_sp100_s50_sb75_v3.mp3?rlkey=kbfd76yix6b0saira77b954p0&st=s23hm9pc&dl=1";
 
     useEffect(() => {
         const loadVoices = () => {
@@ -26,10 +30,47 @@ const UserManual: React.FC = () => {
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
 
+        // Initialize external audio
+        audioRef.current = new Audio(EXTERNAL_VOICE_URL);
+        audioRef.current.onended = () => {
+            setIsExternalPlaying(false);
+            setPlayingIndex(null);
+        };
+        audioRef.current.onerror = () => {
+            console.error("Failed to load external voice guide.");
+            setIsExternalPlaying(false);
+            setPlayingIndex(null);
+        };
+
         return () => {
             if (window.speechSynthesis) window.speechSynthesis.cancel();
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
         };
     }, []);
+
+    const toggleExternalVoice = (fromIndex: number | null = null) => {
+        if (!audioRef.current) return;
+
+        if (isExternalPlaying) {
+            audioRef.current.pause();
+            setIsExternalPlaying(false);
+            setPlayingIndex(null);
+        } else {
+            // Stop any ongoing TTS
+            window.speechSynthesis.cancel();
+            
+            // Set the playing index if coming from an item click
+            if (fromIndex !== null) setPlayingIndex(fromIndex);
+            
+            // Play external audio
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(e => console.error("Playback failed", e));
+            setIsExternalPlaying(true);
+        }
+    };
 
     const manualItems = [
         { 
@@ -105,6 +146,12 @@ const UserManual: React.FC = () => {
     ];
 
     const playVoice = (text: string, index: number) => {
+        // SPECIAL CASE: Index 0 is Dashboard, play the high-quality external audio
+        if (index === 0) {
+            toggleExternalVoice(0);
+            return;
+        }
+
         if (!('speechSynthesis' in window)) {
             alert("Speech recognition is not supported in this browser.");
             return;
@@ -113,6 +160,12 @@ const UserManual: React.FC = () => {
         // WebView Fix: Always cancel current and force a resume signal before speaking
         window.speechSynthesis.cancel();
         
+        // Stop external audio if playing
+        if (audioRef.current) {
+            audioRef.current.pause();
+            setIsExternalPlaying(false);
+        }
+
         if (playingIndex === index) {
             setPlayingIndex(null);
             return;
@@ -125,7 +178,6 @@ const UserManual: React.FC = () => {
         const targetLangCode = lang === 'bn' ? 'bn-IN' : 'hi-IN';
         utterance.lang = targetLangCode;
         
-        // Match specific voice from browser list
         const bestVoice = voices.find(v => v.lang === targetLangCode) || 
                           voices.find(v => v.lang.startsWith(lang));
         
@@ -145,7 +197,6 @@ const UserManual: React.FC = () => {
             window.speechSynthesis.resume();
         };
 
-        // WebView / Mobile Fix: Wrap in a tiny delay and ensure engine is resumed
         setTimeout(() => {
             window.speechSynthesis.resume();
             window.speechSynthesis.speak(utterance);
@@ -154,22 +205,50 @@ const UserManual: React.FC = () => {
 
     return (
         <div className="space-y-6 animate-fade-in pb-24">
-            <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 flex flex-col items-center gap-4 shadow-xl">
+            <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 flex flex-col items-center gap-6 shadow-xl">
                 <div className="text-center">
                     <h3 className="text-xl font-black text-lemon uppercase tracking-tighter italic">APP MANUAL</h3>
                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">SELECT LANGUAGE AND TAP TO LISTEN</p>
                 </div>
+
+                <button 
+                    onClick={() => toggleExternalVoice(null)}
+                    className={`w-full flex items-center justify-between p-5 rounded-[2rem] border-2 transition-all group ${isExternalPlaying && playingIndex === null ? 'bg-lemon border-lemon shadow-2xl shadow-lemon/20' : 'bg-black border-gray-800 hover:border-lemon/50'}`}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isExternalPlaying && playingIndex === null ? 'bg-black text-lemon' : 'bg-gray-900 text-lemon'}`}>
+                            {isExternalPlaying && playingIndex === null ? (
+                                <svg className="animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            )}
+                        </div>
+                        <div className="text-left">
+                            <p className={`font-black uppercase text-sm ${isExternalPlaying && playingIndex === null ? 'text-black' : 'text-white'}`}>Listen to Welcome Guide</p>
+                            <p className={`text-[9px] font-bold uppercase ${isExternalPlaying && playingIndex === null ? 'text-black/60' : 'text-gray-500'}`}>
+                                {isExternalPlaying && playingIndex === null ? 'Playing Recording...' : 'Recorded Instructions'}
+                            </p>
+                        </div>
+                    </div>
+                    {isExternalPlaying && playingIndex === null && (
+                        <div className="flex gap-0.5">
+                            <div className="w-1 h-4 bg-black rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                            <div className="w-1 h-6 bg-black rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-1 h-3 bg-black rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                    )}
+                </button>
                 
-                <div className="flex gap-2 p-1 bg-black rounded-xl border border-gray-800">
+                <div className="flex gap-2 p-1 bg-black rounded-xl border border-gray-800 w-full">
                     <button 
                         onClick={() => { setLang('bn'); window.speechSynthesis.cancel(); setPlayingIndex(null); }}
-                        className={`px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'bn' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'bn' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         BENGALI
                     </button>
                     <button 
                         onClick={() => { setLang('hi'); window.speechSynthesis.cancel(); setPlayingIndex(null); }}
-                        className={`px-8 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'hi' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500 hover:text-gray-300'}`}
+                        className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${lang === 'hi' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         HINDI
                     </button>
