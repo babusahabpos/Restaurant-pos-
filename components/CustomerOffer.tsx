@@ -24,15 +24,28 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
         const customerMap: Record<string, CustomerRecord> = {};
 
         orders.forEach(order => {
-            // Check both offline and online sources for customer info
-            const phone = order.deliveryDetails?.phone || (order.sourceInfo.includes('Table') ? '' : order.sourceInfo.match(/\d{10}/)?.[0]);
-            const name = order.deliveryDetails?.customerName || order.sourceInfo.split('(')[1]?.split(')')[0] || 'Unknown';
+            // Priority 1: Structured deliveryDetails
+            let phone = order.deliveryDetails?.phone || '';
+            let name = order.deliveryDetails?.customerName || '';
 
-            if (phone && phone.length >= 10) {
+            // Priority 2: Try to extract from sourceInfo if phone is missing
+            if (!phone || phone.length < 10) {
+                const phoneMatch = order.sourceInfo.match(/\d{10}/);
+                if (phoneMatch) phone = phoneMatch[0];
+            }
+            
+            // Priority 3: Try to extract Name from parentheses if missing
+            if (!name || name === 'Guest') {
+                const nameMatch = order.sourceInfo.match(/\(([^)]+)\)/);
+                if (nameMatch) name = nameMatch[1];
+                else name = 'Customer';
+            }
+
+            if (phone && phone.length >= 10 && !phone.includes('0000000000')) {
                 if (!customerMap[phone]) {
                     customerMap[phone] = {
                         phone,
-                        name,
+                        name: name || 'Customer',
                         orderCount: 0,
                         totalSpend: 0,
                         lastOrderDate: new Date(order.timestamp)
@@ -86,13 +99,12 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
         
         if (confirm) {
             const phones = Array.from(selectedPhones);
-            // We open them one by one. Browsers may block popups, so we alert the user.
             phones.forEach((phone, idx) => {
                 const customer = customers.find(c => c.phone === phone);
                 if (customer) {
                     setTimeout(() => {
                         sendWhatsApp(customer.phone, customer.name);
-                    }, idx * 500); // 500ms delay to prevent browser locking
+                    }, idx * 500); 
                 }
             });
         }
@@ -199,10 +211,10 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
                         </div>
                     </div>
                 )) : (
-                    <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                    <div className="py-24 text-center opacity-30 flex flex-col items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <p className="font-black uppercase text-xs tracking-widest">No customer data found</p>
-                        <p className="text-[10px] mt-1">Customers appear here after placing orders</p>
+                        <p className="text-[10px] mt-1">Customers appear here after placing orders with mobile numbers</p>
                     </div>
                 )}
             </div>

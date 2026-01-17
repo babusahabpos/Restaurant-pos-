@@ -186,8 +186,7 @@ const QrOrdersSection: React.FC<{
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-lemon"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
                     </div>
                     <div className="text-center sm:text-left">
-                        <h3 className="text-lg font-black text-lemon uppercase tracking-tight">QR Live Channel</h3>
-                        <p className="text-lemon/50 text-[10px] font-bold uppercase tracking-widest">Active & listening for customer orders</p>
+                        <h3 className="text-lg font-black text-lemon uppercase tracking-tight">QR ORDER</h3>
                     </div>
                 </div>
                 <button onClick={onNavigateToQrMenu} className="w-full sm:w-auto bg-lemon text-black font-black uppercase text-[10px] px-8 py-4 rounded-2xl shadow-xl transition-all active:scale-95">
@@ -204,7 +203,7 @@ const QrOrdersSection: React.FC<{
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
                 </span>
-                New QR Orders ({orders.length})
+                QR ORDER
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders.map(order => (

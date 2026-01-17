@@ -87,6 +87,51 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentMembers', JSON.stringify(paymentMembers)); }, [paymentMembers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentRecords', JSON.stringify(paymentRecords)); }, [paymentRecords]);
 
+    // --- Background QR Order Sync Engine ---
+    useEffect(() => {
+        if (authState !== 'loggedIn' || !loggedInUser) return;
+
+        const syncInterval = setInterval(() => {
+            const keys = Object.keys(localStorage);
+            const incomingOrderKeys = keys.filter(k => k.startsWith('babuSahabPos_incomingOrder_'));
+
+            if (incomingOrderKeys.length > 0) {
+                let syncedAny = false;
+                const newSyncedOrders: OrderStatusItem[] = [];
+
+                incomingOrderKeys.forEach(key => {
+                    try {
+                        const raw = localStorage.getItem(key);
+                        if (raw) {
+                            const order = JSON.parse(raw) as OrderStatusItem;
+                            // Only pull orders meant for this specific restaurant
+                            if (order.restaurantId === loggedInUser.id) {
+                                newSyncedOrders.push({
+                                    ...order,
+                                    timestamp: new Date(order.timestamp) // Re-instantiate date
+                                });
+                                syncedAny = true;
+                                localStorage.removeItem(key); // Clear temp storage
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse incoming order", e);
+                        localStorage.removeItem(key);
+                    }
+                });
+
+                if (syncedAny) {
+                    setOrders(prev => [...prev, ...newSyncedOrders]);
+                    // Play notification sound
+                    const audio = document.getElementById('notification-sound') as HTMLAudioElement;
+                    if (audio) audio.play().catch(() => {});
+                }
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(syncInterval);
+    }, [authState, loggedInUser]);
+
     const handleLogin = (email: string, pass: string) => {
         const trimmedEmail = email.trim().toLowerCase();
         if (trimmedEmail === 'diptifoodice@gmail.com' && pass === 'suvo1992') { 

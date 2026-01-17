@@ -68,7 +68,14 @@ const Billing: React.FC<BillingProps> = ({ onPrintKOT, menuItems = [], taxRate, 
             items: currentOrder,
             total,
             discount,
-            sourceInfo: orderSource === 'Dine-in' ? `Table: ${tableNumber}` : `Takeaway (${customerName || 'N/A'})`
+            sourceInfo: orderSource === 'Dine-in' ? `Table: ${tableNumber}` : `Takeaway (${customerName || 'N/A'})`,
+            deliveryDetails: {
+                type: orderSource === 'Dine-in' ? 'Pickup' : 'Pickup',
+                customerName: customerName || (orderSource === 'Dine-in' ? `Table ${tableNumber}` : 'Guest'),
+                phone: customerPhone || '',
+                paymentMethod: 'Unsettled',
+                deliveryCharge: 0
+            }
         };
         onPrintKOT(newOrderData);
         setCurrentOrder([]);
