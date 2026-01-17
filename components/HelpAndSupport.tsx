@@ -50,28 +50,28 @@ const UserManual: React.FC = () => {
             title: { bn: "৩. অনলাইন অর্ডার (Online Orders)", hi: "৩. অনলাইন অর্ডার (Online Orders)" }, 
             desc: { 
                 bn: "অনলাইন অর্ডার যোগ করতে প্রথমে অনলাইন অপশনে ক্লিক করুন। লিস্ট থেকে সুইগি বা জোম্যাটো বেছে নিন এবং অর্ডার আইডি লিখুন। এরপর কাস্টমার যা অর্ডার করেছে তা মেনু থেকে যোগ করুন। সবশেষে নিচে থাকা জেনারেট অনলাইন কেওটি বাটনে ক্লিক করলেই কিচেনে অর্ডার চলে যাবে।",
-                hi: "অনলাইন অর্ডার যোগ করতে প্রথমে অনলাইন অপশনে ক্লিক করুন। লিস্ট থেকে সুইগি বা জোম্যাটো বেছে নিন এবং অর্ডার আইডি লিখুন। এরপর কাস্টমার যা অর্ডার করেছে তা মেনু থেকে যোগ করুন। সবশেষে নিচে থাকা জেনারেট অনলাইন কেওটি बटन पर क्लिक करते ही किचन में ऑर्डर चला जाएगा।"
+                hi: "অনলাইন অর্ডার যোগ করতে প্রথমে অনলাইন অপশনে ক্লিক করুন। লিস্ট থেকে সুইগি বা জোম্যাটো বেছে নিন এবং অর্ডার আইডি লিখুন। এরপর কাস্টমার যা অর্ডার করেছে তা মেনু থেকে যোগ করুন। সবশেষে নিচে থাকা জেনারেট অনলাইন কেওটি বাটনে ক্লিক করলেই কিচেনে অর্ডার চলে যাবে।"
             } 
         },
         { 
             title: { bn: "৪. মেনু (Menu Management)", hi: "৪. মেনু (Menu Management)" }, 
             desc: { 
                 bn: "মেনু সেট করতে প্রথমে মেনু অপশনে ক্লিক করুন। নতুন ক্যাটাগরি যোগ করতে অ্যাড নিউ ক্যাটাগরি বাটনে চাপ দিন। কোনও খাবার যোগ করতে ক্যাটাগরির ভেতরে গিয়ে অ্যাড নিউ আইটেম বাটনে ক্লিক করুন এবং নাম ও দাম লিখে সেভ করুন। কোনো খাবার শেষ হয়ে গেলে টগল বাটনটি অফ করে দিলেই সেটি মেনু থেকে বন্ধ হয়ে যাবে।",
-                hi: "मेनू सेट करने के लिए सबसे पहले मेनू विकल्प पर क्लिक करें। नई कैटेगरी जोड़ने के लिए ऐड न्यू कैटेगरी बटन दबाएं। कोई आइटम जोड़ने के लिए कैटेगरी के अंदर जाकर ऐड न्यू आइटम बटन पर क्लिक करें और नाम व कीमत लिखकर सेव करें। यदि कोई आइटम खत्म हो गया है तो टॉगल बटन को ऑफ कर दें जिससे वह मेनू से हट जाएगा।"
+                hi: "মেনু সেট করতে প্রথমে মেনু অপশনে ক্লিক করুন। নতুন ক্যাটাগরি যোগ করতে অ্যাড নিউ ক্যাটাগরি বাটনে চাপ দিন। কোনো খাবার যোগ করতে ক্যাটাগরির ভেতরে গিয়ে অ্যাড নিউ আইটেম বাটনে ক্লিক করুন এবং নাম ও দাম লিখে সেভ করুন। কোনো খাবার শেষ হয়ে গেলে টগল বাটনটি অফ করে দিলেই সেটি মেনু থেকে বন্ধ হয়ে যাবে।"
             } 
         },
         { 
             title: { bn: "৫. কিউআর মেনু (QR Menu)", hi: "৫. কিউআর মেনু (QR Menu)" }, 
             desc: { 
                 bn: "ডিজিটাল কিউআর মেনু তৈরি করতে প্রথমে কিউআর মেনু অপশনে যান এবং ওপরের জেনারেট কিউআর কোড বাটনে ক্লিক করুন। আপনার মেনুর কিউআর কোডটি স্ক্রিনে দেখা যাবে। আপনি চাইলে ডাউনলোড পিডিএফ বাটনে ক্লিক করে এটি প্রিন্ট করতে পারেন এবং টেবিলের ওপর রাখতে পারেন।",
-                hi: "डिजिटल क्यूआर मेनू बनाने के लिए सबसे पहले क्यूआर मेनू विकल्प पर जाएं और ऊपर दिए गए जेनरेट क्यूआर कोड बटन पर क्लिक करें। आपके मेनू का क्यूआर कोड स्क्रीन पर दिखाई देगा। आप चाहें तो डाउनलोड पीडीएफ बटन पर क्लिक करके इसे प्रिंट कर सकते हैं और टेबल पर रख सकते हैं।"
+                hi: "ডিজিটাল কিউআর মেনু তৈরি করতে প্রথমে কিউআর মেনু অপশনে যান এবং ওপরের জেনারেট কিউআর কোড বাটনে ক্লিক করুন। আপনার মেনুর কিউআর কোডটি স্ক্রিনে দেখা যাবে। আপনি চাইলে ডাউনলোড পিডিএফ বাটনে ক্লিক করে এটি প্রিন্ট করতে পারেন এবং টেবিলের ওপর রাখতে পারেন।"
             } 
         },
         { 
             title: { bn: "৬. কাস্টমার অফার (Customer Offer)", hi: "৬. কাস্টমার অফার (Customer Offer)" }, 
             desc: { 
                 bn: "কাস্টমারদের অফার পাঠাতে প্রথমে কাস্টমার অফার অপশনে ক্লিক করুন। এখানে আপনার পুরনো সব কাস্টমারের লিস্ট দেখতে পাবেন। যাদের অফার পাঠাতে চান তাদের নামের পাশে টিক দিন। এরপর ওপরে আপনার মেসেজটি লিখে সেন্ড ব্রডকাস্ট বাটনে ক্লিক করুন। এতে সবার হোয়াটসঅ্যাপে অফারটি চলে যাবে।",
-                hi: "ग्राहकों को ऑफर भेजने के लिए सबसे पहले कस्टमर ऑफर विकल्प पर क्लिक करें। यहाँ आप अपने पुराने सभी ग्राहकों की लिस्ट देख सकते हैं। जिन्हें ऑफर भेजना चाहते हैं उनके नाम के बगल में टिक करें। इसके बाद ऊपर अपना मैसेज लिखें और सेंड ब्रॉडकास्ट बटन पर क्लिक करें। इससे सबके व्हाट्सएप पर ऑफर चला जाएगा।"
+                hi: "কাস্টমারদের অফার পাঠাতে প্রথমে কাস্টমার অফার অপশনে ক্লিক করুন। এখানে আপনার পুরনো সব কাস্টমারের লিস্ট দেখতে পাবেন। যাদের অফার পাঠাতে চান তাদের নামের পাশে টিক দিন। এরপর ওপরে আপনার মেসেজটি লিখে সেন্ড ব্রডকাস্ট বাটনে ক্লিক করুন। এতে সবার হোয়াটসঅ্যাপে অফারটি চলে যাবে।"
             } 
         },
         { 
@@ -110,15 +110,15 @@ const UserManual: React.FC = () => {
             return;
         }
 
-        // Standard fix for mobile: cancel, resume, then speak
+        // WebView Fix: Always cancel current and force a resume signal before speaking
         window.speechSynthesis.cancel();
-        window.speechSynthesis.resume();
-
+        
         if (playingIndex === index) {
             setPlayingIndex(null);
             return;
         }
 
+        // Create utterance
         const cleanedText = text.replace(/[()\-.]/g, ' ');
         const utterance = new SpeechSynthesisUtterance(cleanedText);
         
@@ -145,8 +145,9 @@ const UserManual: React.FC = () => {
             window.speechSynthesis.resume();
         };
 
-        // Execution delay helps mobile stabilization
+        // WebView / Mobile Fix: Wrap in a tiny delay and ensure engine is resumed
         setTimeout(() => {
+            window.speechSynthesis.resume();
             window.speechSynthesis.speak(utterance);
         }, 50);
     };
@@ -316,9 +317,7 @@ const HelpAndSupport: React.FC<HelpAndSupportProps> = ({ userTickets, onCreateTi
 
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 py-4 px-2">
                     {activeTicket.messages.map((msg, idx) => (
-                        // Fix: Changed admin to 'admin' string literal
                         <div key={idx} className={`flex flex-col ${msg.sender === 'admin' ? 'items-start' : 'items-end'}`}>
-                            {/* Fix: Changed admin to 'admin' string literal */}
                             <div className={`p-4 rounded-2xl max-w-[85%] ${msg.sender === 'admin' ? 'bg-lemon text-black rounded-tl-none shadow-lg' : 'bg-gray-800 text-white rounded-tr-none'}`}>
                                 <p className="text-[11px] font-bold leading-relaxed">{msg.text}</p>
                                 {msg.attachment && (
@@ -326,7 +325,6 @@ const HelpAndSupport: React.FC<HelpAndSupportProps> = ({ userTickets, onCreateTi
                                         {msg.attachmentType === 'image' ? (
                                             <img src={msg.attachment} alt="Attachment" className="max-h-48 rounded-xl border border-black/10 shadow-md" />
                                         ) : (
-                                            /* Fix: Changed admin to 'admin' string literal */
                                             <a href={msg.attachment} download="file.pdf" className={`text-[9px] font-black uppercase underline ${msg.sender === 'admin' ? 'text-black' : 'text-lemon'}`}>View Document</a>
                                         )}
                                     </div>
@@ -416,7 +414,6 @@ const HelpAndSupport: React.FC<HelpAndSupportProps> = ({ userTickets, onCreateTi
                                     </div>
                                     <h3 className="text-white font-black text-sm uppercase tracking-tighter leading-tight line-clamp-1">{ticket.subject}</h3>
                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 truncate">
-                                        {/* Fix: Changed admin to 'admin' string literal */}
                                         {ticket.messages[ticket.messages.length - 1].sender === 'admin' ? 'Admin: ' : 'You: '}
                                         {ticket.messages[ticket.messages.length - 1].text}
                                     </p>
