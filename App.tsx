@@ -34,26 +34,24 @@ import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserSt
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
+    // Check hash immediately for customer access
+    const isCustomerLink = () => window.location.hash.includes('customer-order');
+
     const [authState, setAuthState] = useState<AuthState>(() => {
-        try {
-            const hash = window.location.hash || '';
-            if (hash.includes('customer-order')) return 'customer';
-        } catch (e) {}
+        if (isCustomerLink()) return 'customer';
         return 'login';
     });
 
-    // --- Dynamic Hash Routing Effect ---
-    // This ensures that if the URL contains 'customer-order', the customer page is shown instantly
+    // Dynamic routing listener for instant redirection
     useEffect(() => {
         const handleRouteChange = () => {
-            const hash = window.location.hash || '';
-            if (hash.includes('customer-order')) {
+            if (isCustomerLink()) {
                 setAuthState('customer');
             }
         };
 
         window.addEventListener('hashchange', handleRouteChange);
-        // Run once on mount to catch the initial load if state initialization wasn't enough
+        // Force check on mount
         handleRouteChange();
 
         return () => window.removeEventListener('hashchange', handleRouteChange);
@@ -71,7 +69,6 @@ function App() {
             const parsed = JSON.parse(saved);
             return parsed;
         } catch (e) {
-            console.warn(`Error parsing localStorage key: ${key}`, e);
             return defaultValue;
         }
     };
@@ -86,12 +83,10 @@ function App() {
     const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>(() => getSafeData('babuSahabPos_staffJobPosts', []));
     const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>(() => getSafeData('babuSahabPos_restaurantJobs', []));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => getSafeData('babuSahabPos_staffRequests', []));
-    
-    // Payment Hub States
     const [paymentMembers, setPaymentMembers] = useState<PaymentMember[]>(() => getSafeData('babuSahabPos_paymentMembers', []));
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(() => getSafeData('babuSahabPos_paymentRecords', []));
 
-    // --- Save to LocalStorage ---
+    // Save states to LocalStorage
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
@@ -104,48 +99,33 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentMembers', JSON.stringify(paymentMembers)); }, [paymentMembers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentRecords', JSON.stringify(paymentRecords)); }, [paymentRecords]);
 
-    // --- Background QR Order Sync Engine ---
+    // Background QR Order Sync
     useEffect(() => {
         if (authState !== 'loggedIn' || !loggedInUser) return;
-
         const syncInterval = setInterval(() => {
             const keys = Object.keys(localStorage);
             const incomingOrderKeys = keys.filter(k => k.startsWith('babuSahabPos_incomingOrder_'));
-
             if (incomingOrderKeys.length > 0) {
                 let syncedAny = false;
                 const newSyncedOrders: OrderStatusItem[] = [];
-
                 incomingOrderKeys.forEach(key => {
-                    try {
-                        const raw = localStorage.getItem(key);
-                        if (raw) {
-                            const order = JSON.parse(raw) as OrderStatusItem;
-                            // Only pull orders meant for this specific restaurant
-                            if (order.restaurantId === loggedInUser.id) {
-                                newSyncedOrders.push({
-                                    ...order,
-                                    timestamp: new Date(order.timestamp) // Re-instantiate date
-                                });
-                                syncedAny = true;
-                                localStorage.removeItem(key); // Clear temp storage
-                            }
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const order = JSON.parse(raw) as OrderStatusItem;
+                        if (order.restaurantId === loggedInUser.id) {
+                            newSyncedOrders.push({ ...order, timestamp: new Date(order.timestamp) });
+                            syncedAny = true;
+                            localStorage.removeItem(key);
                         }
-                    } catch (e) {
-                        console.error("Failed to parse incoming order", e);
-                        localStorage.removeItem(key);
                     }
                 });
-
                 if (syncedAny) {
                     setOrders(prev => [...prev, ...newSyncedOrders]);
-                    // Play notification sound
                     const audio = document.getElementById('notification-sound') as HTMLAudioElement;
                     if (audio) audio.play().catch(() => {});
                 }
             }
-        }, 3000); // Poll every 3 seconds
-
+        }, 3000);
         return () => clearInterval(syncInterval);
     }, [authState, loggedInUser]);
 
@@ -168,16 +148,9 @@ function App() {
 
     const handleRegister = (newUser: any) => {
         const user: RegisteredUser = { 
-            ...newUser, 
-            id: Date.now(), 
-            status: UserStatus.Approved, 
-            lastLogin: 'Just Now', 
+            ...newUser, id: Date.now(), status: UserStatus.Approved, lastLogin: 'Just Now', 
             subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
-            menu: MOCK_MENU_ITEMS, 
-            taxRate: 5, 
-            deliveryCharge: 30, 
-            isDeliveryEnabled: true, 
-            isPrinterEnabled: true, 
+            menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, 
             referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase() 
         };
         setRegisteredUsers(prev => [...prev, user]);
@@ -188,69 +161,9 @@ function App() {
         if (loggedInUser?.id === userId) setLoggedInUser(prev => prev ? { ...prev, menu } : null);
     };
 
-    const handlePrintKOT = (newOrderData: any) => {
-        const newOrder: OrderStatusItem = { ...newOrderData, id: Date.now(), restaurantId: loggedInUser?.id || 0, status: 'Preparation', timestamp: new Date() };
-        setOrders(prev => [...prev, newOrder]);
-    };
-
-    const handlePlaceMarketOrder = (productId: number, productName: string, price: number, quantity: number) => {
-        if (!loggedInUser) return;
-        const newOrder: MarketplaceOrder = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId, productName, price, quantity, status: 'Pending', timestamp: new Date() };
-        setMarketOrders(prev => [...prev, newOrder]);
-    };
-
-    const handleStaffRequirementSubmit = (req: string, salary: string) => {
-        if (!loggedInUser) return;
-        const newReq: StaffRequirementRequest = { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false };
-        setStaffRequests(prev => [...prev, newReq]);
-    };
-
-    // --- Subscription Renewal via Help Messaging ---
-    const handleRequestRenewal = () => {
-        if (!loggedInUser) return;
-        const renewalTicket: SupportTicket = {
-            id: Date.now(),
-            userId: loggedInUser.id,
-            userName: loggedInUser.name,
-            restaurantName: loggedInUser.restaurantName,
-            subject: 'Renewal Request',
-            messages: [{ 
-                sender: 'user', 
-                text: `Hi Admin, I would like to request a subscription renewal for my restaurant "${loggedInUser.restaurantName}". Please provide the payment details or extend my plan.`, 
-                timestamp: new Date() 
-            }],
-            status: 'Open',
-            lastUpdate: new Date()
-        };
-        setSupportTickets(prev => [...prev, renewalTicket]);
-        alert("Renewal request sent successfully! Admin will reply in the Help/Message section.");
-        setCurrentPage('help');
-    };
-
-    const handleUserReplyToTicket = (ticketId: number, message: string) => {
-        setSupportTickets(prev => prev.map(t => t.id === ticketId ? { 
-            ...t, 
-            status: 'Open', 
-            lastUpdate: new Date(),
-            messages: [...t.messages, { sender: 'user', text: message, timestamp: new Date() }] 
-        } : t));
-    };
-
-    const dashboardData: DashboardData = {
-        onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
-        offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0),
-        onlineOrders: orders.filter(o => o.type === 'Online' && o.status === 'Completed').length,
-        offlineOrders: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').length,
-    };
-
-    // Safety Guard: Reset auth if user data is missing and we aren't in customer mode
-    if (authState === 'loggedIn' && !loggedInUser) {
-        setAuthState('login');
-    }
-
-    // --- High Priority Customer Routing ---
-    if (authState === 'customer') return <CustomerOrderPage />;
-
+    // Routing Guards
+    if (authState === 'customer' || isCustomerLink()) return <CustomerOrderPage />;
+    
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
 
@@ -258,13 +171,8 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout 
-                    badgeCounts={{ 
-                        tickets: supportTickets.filter(t => t.status === 'Open').length, 
-                        marketOrders: marketOrders.filter(o => o.status === 'Pending').length 
-                    }} 
-                    currentPage={currentAdminPage} 
-                    setCurrentPage={setCurrentAdminPage} 
-                    handleLogout={() => setAuthState('login')}
+                    badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} 
+                    currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={() => setAuthState('login')}
                 >
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u))} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u))} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, password: p } : u))} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} onUpdateMenu={handleUpdateMenu} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />}
@@ -276,47 +184,26 @@ function App() {
             ) : (
                 loggedInUser && (
                 <MainLayout 
-                    currentPage={currentPage} 
-                    setCurrentPage={setCurrentPage} 
-                    handleLogout={() => setAuthState('login')} 
-                    alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} 
-                    onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} 
-                    loggedInUser={loggedInUser}
+                    currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={() => setAuthState('login')} 
+                    alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}
                 >
-                    {currentPage === 'dashboard' && <Dashboard data={dashboardData} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(p => p.id === o.id ? o : p))} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
-                    {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={handlePrintKOT} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onToggleStock={(id) => handleUpdateMenu(loggedInUser.id, loggedInUser.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m))} />}
-                    {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={handlePrintKOT} />}
+                    {currentPage === 'dashboard' && <Dashboard data={{ onlineSales: orders.filter(o => o.type === 'Online' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0), offlineSales: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').reduce((sum, o) => sum + o.total, 0), onlineOrders: orders.filter(o => o.type === 'Online' && o.status === 'Completed').length, offlineOrders: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').length }} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(p => p.id === o.id ? o : p))} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
+                    {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => setOrders(prev => [...prev, { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() }])} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onToggleStock={(id) => handleUpdateMenu(loggedInUser.id, loggedInUser.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m))} />}
+                    {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => setOrders(prev => [...prev, { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() }])} />}
                     {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => handleUpdateMenu(loggedInUser.id, m)} />}
                     {currentPage === 'inventory' && <Inventory />}
                     {currentPage === 'staff' && <Staff />}
-                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={handleStaffRequirementSubmit} onMessageStaff={(ph, txt) => alert("Message sent!")} />}
-                    {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={handlePlaceMarketOrder} user={loggedInUser} />}
+                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={(req, salary) => setStaffRequests(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false }])} onMessageStaff={() => {}} />}
+                    {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={(pId, pN, pr, q) => setMarketOrders(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pId, productName: pN, price: pr, quantity: q, status: 'Pending', timestamp: new Date() }])} user={loggedInUser} />}
                     {currentPage === 'reports' && <Reports orders={orders.filter(o => o.restaurantId === loggedInUser.id)} />}
                     {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
                     {currentPage === 'refer' && <Referral user={loggedInUser} />}
-                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={handleRequestRenewal} />}
+                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => { setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: 'Renewal Request', messages: [{ sender: 'user', text: 'Renewal Request for ' + loggedInUser.restaurantName, timestamp: new Date() }], status: 'Open', lastUpdate: new Date() }]); setCurrentPage('help'); }} />}
                     {currentPage === 'customerOffer' && <CustomerOffer orders={orders.filter(o => o.restaurantId === loggedInUser.id)} restaurantName={loggedInUser.restaurantName} />}
-                    {currentPage === 'payment' && (
-                        <Payment 
-                            members={paymentMembers.filter(m => m.userId === loggedInUser.id)} 
-                            records={paymentRecords.filter(r => paymentMembers.find(m => m.id === r.memberId && m.userId === loggedInUser.id))}
-                            onAddMember={(n, c, t) => setPaymentMembers(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, name: n, category: c, type: t }])}
-                            onRecordPayment={(mid, p, d, dt) => setPaymentRecords(prev => [...prev, { id: Date.now(), memberId: mid, paid: p, due: d, date: dt }])}
-                            onUpdateRecord={(id, p, d, dt) => setPaymentRecords(prev => prev.map(r => r.id === id ? { ...r, paid: p, due: d, date: dt } : r))}
-                            onDeleteRecord={(id) => setPaymentRecords(prev => prev.filter(r => r.id !== id))}
-                            onDeleteMember={(id) => {
-                                setPaymentMembers(prev => prev.filter(m => m.id !== id));
-                                setPaymentRecords(prev => prev.filter(r => r.memberId !== id));
-                            }}
-                        />
-                    )}
+                    {currentPage === 'payment' && <Payment members={paymentMembers.filter(m => m.userId === loggedInUser.id)} records={paymentRecords.filter(r => paymentMembers.find(m => m.id === r.memberId && m.userId === loggedInUser.id))} onAddMember={(n, c, t) => setPaymentMembers(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, name: n, category: c, type: t }])} onRecordPayment={(mid, p, d, dt) => setPaymentRecords(prev => [...prev, { id: Date.now(), memberId: mid, paid: p, due: d, date: dt }])} onUpdateRecord={(id, p, d, dt) => setPaymentRecords(prev => prev.map(r => r.id === id ? { ...r, paid: p, due: d, date: dt } : r))} onDeleteRecord={(id) => setPaymentRecords(prev => prev.filter(r => r.id !== id))} onDeleteMember={(id) => { setPaymentMembers(prev => prev.filter(m => m.id !== id)); setPaymentRecords(prev => prev.filter(r => r.memberId !== id)); }} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u))} onLogout={() => setAuthState('login')} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => handleUpdateMenu(loggedInUser.id, m)} loggedInUser={loggedInUser} />}
-                    {currentPage === 'help' && <HelpAndSupport 
-                        userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} 
-                        onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} 
-                        onReplyToTicket={handleUserReplyToTicket}
-                    />}
+                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} onReplyToTicket={(tid, msg) => setSupportTickets(prev => prev.map(t => t.id === tid ? { ...t, status: 'Open', lastUpdate: new Date(), messages: [...t.messages, { sender: 'user', text: msg, timestamp: new Date() }] } : t))} />}
                 </MainLayout>
                 )
             )}
