@@ -42,6 +42,23 @@ function App() {
         return 'login';
     });
 
+    // --- Dynamic Hash Routing Effect ---
+    // This ensures that if the URL contains 'customer-order', the customer page is shown instantly
+    useEffect(() => {
+        const handleRouteChange = () => {
+            const hash = window.location.hash || '';
+            if (hash.includes('customer-order')) {
+                setAuthState('customer');
+            }
+        };
+
+        window.addEventListener('hashchange', handleRouteChange);
+        // Run once on mount to catch the initial load if state initialization wasn't enough
+        handleRouteChange();
+
+        return () => window.removeEventListener('hashchange', handleRouteChange);
+    }, []);
+
     const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
@@ -226,12 +243,14 @@ function App() {
         offlineOrders: orders.filter(o => o.type === 'Offline' && o.status === 'Completed').length,
     };
 
-    // Safety Guard: Reset auth if user data is missing
+    // Safety Guard: Reset auth if user data is missing and we aren't in customer mode
     if (authState === 'loggedIn' && !loggedInUser) {
         setAuthState('login');
     }
 
+    // --- High Priority Customer Routing ---
     if (authState === 'customer') return <CustomerOrderPage />;
+
     if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
     if (authState === 'register') return <Register onRegister={handleRegister} onNavigateToLogin={() => setAuthState('login')} />;
 
