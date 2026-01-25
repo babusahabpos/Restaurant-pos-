@@ -365,9 +365,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
     const incomingQrOrders = orders.filter(o => o.status === 'Placed');
     const pendingOrders = orders.filter(o => o.status === 'Preparation');
     
+    // --- HELPER FOR 4 AM RESET LOGIC ---
+    const getBusinessDateString = (date: Date) => {
+        const d = new Date(date.getTime());
+        d.setHours(d.getHours() - 4);
+        return d.toDateString();
+    };
+
     const todaysOrdersProcessed = orders.filter(o => {
-      const d = new Date(o.timestamp); const t = new Date();
-      return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+      const currentBusinessDay = getBusinessDateString(new Date());
+      return getBusinessDateString(new Date(o.timestamp)) === currentBusinessDay;
     });
 
     const handleSettleAndPrint = (orderId: number, paymentMethod: string) => {
@@ -460,21 +467,21 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard 
                     onClick={() => setShowTodaysOrders(true)}
-                    title="Online Sales" 
+                    title="Online Sell" 
                     value={`₹${data.onlineSales.toFixed(0)}`} 
                     subtext={`${data.onlineOrders} Orders`} 
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>} 
                 />
                 <StatCard 
                     onClick={() => setShowTodaysOrders(true)}
-                    title="Offline Sales" 
+                    title="Offline Sell" 
                     value={`₹${data.offlineSales.toFixed(0)}`} 
                     subtext={`${data.offlineOrders} Orders`} 
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>} 
                 />
                 <StatCard 
                     onClick={() => setShowTodaysOrders(true)}
-                    title="Today's Cash" 
+                    title="Today Sell" 
                     value={`₹${(data.onlineSales + data.offlineSales).toFixed(0)}`} 
                     subtext="Daily Total" 
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} 
