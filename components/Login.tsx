@@ -64,7 +64,7 @@ const ContactAdminModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4">
-            <div className="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
+            <div className="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-md:max-w-full max-w-md border border-gray-700">
                 <h3 className="text-xl font-semibold text-white mb-2">Contact Admin</h3>
                 <p className="text-gray-400 text-sm mb-4">Send a message to the administrator regarding your account.</p>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -119,11 +119,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPa
                 setError('Your account has been deleted.');
                 break;
             case 'not_found':
-                setError('Invalid email or password.');
+                setError('Invalid email/mobile or password.');
                 break;
             case 'ok':
             case 'admin':
-                // Success
                 break;
         }
     };
@@ -160,17 +159,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPa
                     )}
                     <div className="space-y-4 rounded-md shadow-sm">
                         <div>
-                            <label htmlFor="email-address" className="sr-only">Email address</label>
+                            <label htmlFor="identifier" className="sr-only">Email or Phone</label>
                             <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
+                                id="identifier"
+                                name="identifier"
+                                type="text"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 className="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-900 border border-gray-700 rounded-md appearance-none focus:outline-none focus:ring-lemon focus:border-lemon focus:z-10 sm:text-sm"
-                                placeholder="Email address"
+                                placeholder="Email or Mobile Number"
                             />
                         </div>
                         <div className="relative">
