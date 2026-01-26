@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { MOCK_INVENTORY_ITEMS } from '../constants';
+
+import React, { useState } from 'react';
 import { InventoryItem } from '../types';
+
+interface InventoryProps {
+    items: InventoryItem[];
+    setItems: (items: InventoryItem[]) => void;
+}
 
 const InventoryFormModal: React.FC<{
     item: Partial<InventoryItem> | null;
@@ -41,25 +46,7 @@ const InventoryFormModal: React.FC<{
     );
 };
 
-const Inventory: React.FC = () => {
-    const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(() => {
-        try {
-            const savedItems = localStorage.getItem('babuSahabPos_inventoryItems');
-            return savedItems ? JSON.parse(savedItems) : MOCK_INVENTORY_ITEMS;
-        } catch (error) {
-            console.error("Error loading inventory items from localStorage", error);
-            return MOCK_INVENTORY_ITEMS;
-        }
-    });
-    
-    useEffect(() => {
-        try {
-            localStorage.setItem('babuSahabPos_inventoryItems', JSON.stringify(inventoryItems));
-        } catch (error) {
-            console.error("Error saving inventory items to localStorage", error);
-        }
-    }, [inventoryItems]);
-
+const Inventory: React.FC<InventoryProps> = ({ items, setItems }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
@@ -77,10 +64,10 @@ const Inventory: React.FC = () => {
 
     const handleSaveItem = (itemData: InventoryItem) => {
         if (editingItem) {
-            setInventoryItems(inventoryItems.map(item => item.id === editingItem.id ? { ...item, quantity: itemData.quantity } : item));
+            setItems(items.map(item => item.id === editingItem.id ? { ...item, quantity: itemData.quantity } : item));
         } else {
             const newItem = { ...itemData, id: Date.now() };
-            setInventoryItems([...inventoryItems, newItem]);
+            setItems([...items, newItem]);
         }
         handleCloseModal();
     };
@@ -88,14 +75,14 @@ const Inventory: React.FC = () => {
     return (
         <>
             {isModalOpen && <InventoryFormModal item={editingItem} onClose={handleCloseModal} onSave={handleSaveItem} />}
-            <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
+            <div className="bg-gray-900 p-6 rounded-lg shadow-lg h-full overflow-y-auto no-scrollbar">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                     <h3 className="text-lg font-semibold text-white">Inventory Items</h3>
                     <button onClick={() => handleOpenModal()} className="w-full md:w-auto bg-lemon text-black font-bold py-2 px-4 rounded-lg hover:bg-lemon-dark transition">
                         Add New Stock
                     </button>
                 </div>
-                 <div className="overflow-x-auto">
+                 <div className="overflow-x-auto pb-20">
                     <table className="w-full text-sm text-left text-gray-400">
                         <thead className="text-xs text-gray-300 uppercase bg-gray-800">
                             <tr>
@@ -108,7 +95,7 @@ const Inventory: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {inventoryItems.map(item => (
+                            {items.map(item => (
                                 <tr key={item.id} className="bg-gray-900 border-b border-gray-800 hover:bg-gray-800/50">
                                     <th scope="row" className="px-6 py-4 font-medium text-white whitespace-nowrap">{item.name}</th>
                                     <td className="px-6 py-4">{item.category}</td>
