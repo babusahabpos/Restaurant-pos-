@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -32,7 +33,7 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
 const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
-const USER_SYNC_KEY = "global_registered_users_v3"; // Incremented version for clean sync
+const USER_SYNC_KEY = "global_registered_users_v4"; // Advanced sync key
 const ORDER_SYNC_PREFIX = "orders_";
 
 function App() {
@@ -109,9 +110,10 @@ function App() {
                 body: JSON.stringify(list),
                 headers: { 'Content-Type': 'application/json' }
             });
-        } catch (e) { console.error("Cloud Push Error", e); }
+        } catch (e) { console.error("Cloud Error", e); }
     };
 
+    // --- MASTER SYNC ENGINE ---
     useEffect(() => {
         const syncData = async () => {
             if (isSyncing.current) return;
@@ -121,19 +123,22 @@ function App() {
                 let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
                 if (!Array.isArray(cloudUsers)) cloudUsers = [];
 
+                // Smart Merge Logic
                 const localUsers = getSafeData('babuSahabPos_users', MOCK_USERS);
                 const userMap = new Map();
                 
-                // Merge priority: Defaults -> Local Recovery -> Cloud Reality
+                // Add default mock users first
                 MOCK_USERS.forEach(u => userMap.set(u.id, u));
+                // Add local users (potentially from other devices or old sessions)
                 localUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
+                // Overlay cloud users (the true state from admin)
                 cloudUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
 
                 const mergedList = Array.from(userMap.values()) as RegisteredUser[];
 
                 if (JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
                     setRegisteredUsers(mergedList);
-                    // If we found new locals not in cloud, or cloud had new ones, sync up
+                    // If local had something the cloud didn't, or vice-versa, push the merge
                     if (mergedList.length > cloudUsers.length || mergedList.some((m, i) => JSON.stringify(m) !== JSON.stringify(cloudUsers[i]))) {
                          await pushUsersToCloud(mergedList);
                     }
@@ -153,7 +158,7 @@ function App() {
         };
 
         syncData();
-        const interval = setInterval(syncData, 12000);
+        const interval = setInterval(syncData, 10000);
         return () => clearInterval(interval);
     }, [loggedInUser, registeredUsers.length]);
 
@@ -188,6 +193,7 @@ function App() {
         const input = identifier.trim().toLowerCase();
         if (input === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         
+        // Support for Dual Login (Email or Phone)
         const user = registeredUsers.find(u => 
             (u.email.trim().toLowerCase() === input || u.phone.trim() === input) && 
             u.password === pass
@@ -250,6 +256,7 @@ function App() {
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
                     {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} />}
+                    {/* Fix: Changed setMarketplaceOrders to setMarketOrders on line 258 */}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => setMarketOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))} onDeleteOrder={(id) => setMarketOrders(prev => prev.filter(o => o.id !== id))} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} staffRequests={staffRequests} onMarkRequestRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? { ...r, isRead: true } : r))} />}
                 </AdminLayout>

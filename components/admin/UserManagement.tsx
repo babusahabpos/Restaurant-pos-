@@ -109,53 +109,6 @@ const SendMessageModal: React.FC<{
     );
 };
 
-const PasswordManagerModal: React.FC<{
-    user: RegisteredUser;
-    onClose: () => void;
-    onSave: (userId: number, newPass: string) => void;
-}> = ({ user, onClose, onSave }) => {
-    const [newPassword, setNewPassword] = useState('');
-    return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[200] p-4">
-            <div className="bg-gray-900 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm border border-gray-800 text-center">
-                <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tighter">Manage Password</h3>
-                <div className='space-y-4'>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase">Current for {user.restaurantName}:</p>
-                    <p className="font-mono text-lemon bg-black py-2 px-4 rounded-lg inline-block border border-gray-800">{user.password}</p>
-                    <input type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter New Password" className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none text-center font-bold" />
-                </div>
-                <div className="flex gap-2 mt-8">
-                    <button onClick={onClose} className="flex-1 bg-gray-800 text-white font-black py-4 rounded-xl text-[10px] uppercase">Back</button>
-                    <button onClick={() => { if(newPassword) { onSave(user.id, newPassword); onClose(); } }} className="flex-1 bg-lemon text-black font-black py-4 rounded-xl text-[10px] uppercase shadow-lg shadow-lemon/10">Update</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const SubscriptionModal: React.FC<{
-    user: RegisteredUser;
-    onClose: () => void;
-    onSave: (userId: number, newDate: string) => void;
-}> = ({ user, onClose, onSave }) => {
-    const [date, setDate] = useState(user.subscriptionEndDate);
-    return (
-        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[200] p-4">
-            <div className="bg-gray-900 p-8 rounded-[2rem] shadow-2xl w-full max-w-sm border border-gray-800">
-                <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tighter text-center">Set Expiry Date</h3>
-                <div className='space-y-4'>
-                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block text-center">New Subscription End Date</label>
-                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold text-center" />
-                </div>
-                <div className="flex gap-2 mt-8">
-                    <button onClick={onClose} className="flex-1 bg-gray-800 text-white font-black py-4 rounded-xl text-[10px] uppercase">Cancel</button>
-                    <button onClick={() => { if(date) { onSave(user.id, date); onClose(); } }} className="flex-1 bg-teal-600 text-white font-black py-4 rounded-xl text-[10px] uppercase">Update Validity</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const MenuUploadModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
@@ -238,6 +191,29 @@ const MenuUploadModal: React.FC<{
     );
 };
 
+const SubscriptionModal: React.FC<{
+    user: RegisteredUser;
+    onClose: () => void;
+    onSave: (userId: number, newDate: string) => void;
+}> = ({ user, onClose, onSave }) => {
+    const [date, setDate] = useState(user.subscriptionEndDate);
+    return (
+        <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[200] p-4">
+            <div className="bg-gray-900 p-8 rounded-[2rem] shadow-2xl w-full max-w-sm border border-gray-800">
+                <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tighter text-center">Set Expiry Date</h3>
+                <div className='space-y-4'>
+                    <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest block text-center">New Subscription End Date</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold text-center" />
+                </div>
+                <div className="flex gap-2 mt-8">
+                    <button onClick={onClose} className="flex-1 bg-gray-800 text-white font-black py-4 rounded-xl text-[10px] uppercase">Cancel</button>
+                    <button onClick={() => { if(date) { onSave(user.id, date); onClose(); } }} className="flex-1 bg-teal-600 text-white font-black py-4 rounded-xl text-[10px] uppercase">Update Validity</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const UserManagement: React.FC<{
     users: RegisteredUser[];
     onBlockUser: (userId: number, shouldBlock: boolean) => void;
@@ -254,7 +230,6 @@ const UserManagement: React.FC<{
     const [subUser, setSubUser] = useState<RegisteredUser | null>(null);
     const [menuUser, setMenuUser] = useState<RegisteredUser | null>(null);
     const [editUser, setEditUser] = useState<RegisteredUser | null>(null);
-    const [passUser, setPassUser] = useState<RegisteredUser | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
 
     const getStatusChip = (status: UserStatus) => {
@@ -273,7 +248,6 @@ const UserManagement: React.FC<{
             {subUser && <SubscriptionModal user={subUser} onClose={() => setSubUser(null)} onSave={onUpdateSubscription} />}
             {editUser && <EditProfileModal user={editUser} onClose={() => setEditUser(null)} onSave={onUpdateUserInfo} />}
             {menuUser && <MenuUploadModal user={menuUser} onClose={() => setMenuUser(null)} onSave={onUpdateMenu} />}
-            {passUser && <PasswordManagerModal user={passUser} onClose={() => setPassUser(null)} onSave={onPasswordChange} />}
             {showAddModal && <AddUserModal onClose={() => setShowAddModal(false)} onSave={onAddUser} />}
 
             <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 shadow-xl overflow-hidden">
@@ -325,7 +299,6 @@ const UserManagement: React.FC<{
                                                 {user.status === UserStatus.Blocked ? 'Unlock' : 'Block'}
                                             </button>
                                             <button onClick={() => setMsgUser(user)} className="text-[9px] font-black uppercase bg-blue-600/10 text-blue-400 px-3 py-1.5 rounded-lg">Msg</button>
-                                            <button onClick={() => setPassUser(user)} className="text-[9px] font-black uppercase bg-gray-800 text-lemon px-3 py-1.5 rounded-lg">Pass</button>
                                             <button onClick={() => setSubUser(user)} className="text-[9px] font-black uppercase bg-teal-900/30 text-teal-400 px-3 py-1.5 rounded-lg">Date</button>
                                             <button onClick={() => setMenuUser(user)} className="text-[9px] font-black uppercase bg-purple-900/30 text-purple-400 px-3 py-1.5 rounded-lg">Menu</button>
                                             <button onClick={() => { if(window.confirm('Delete Terminal?')) onDeleteUser(user.id); }} className="text-[9px] font-black text-red-500 bg-red-900/10 px-3 py-1.5 rounded-lg">
