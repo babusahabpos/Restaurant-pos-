@@ -32,10 +32,11 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
 const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
-// V6 Fresh Start to avoid corrupted data from previous attempts
-const USER_SYNC_KEY = "global_registered_users_v6"; 
-const REGISTRATION_RELAY_PREFIX = "new_reg_relay_";
-const ORDER_SYNC_PREFIX = "orders_";
+// V8 Sync Cluster - Ensuring absolute data integrity
+const USER_SYNC_KEY = "global_registered_users_v8"; 
+const REG_RELAY_KEY = "registration_relay_v8";
+const TICKET_SYNC_KEY = "global_support_tickets_v8";
+const MARKET_ORDER_SYNC_KEY = "global_market_orders_v8";
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
@@ -96,116 +97,105 @@ function App() {
 
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
+    useEffect(() => { localStorage.setItem('babuSahabPos_marketOrders', JSON.stringify(marketOrders)); }, [marketOrders]);
 
-    const pushUsersToCloud = async (list: RegisteredUser[]) => {
-        if (!list || list.length === 0) return;
+    // Generic Cloud Pusher
+    const pushToCloud = async (key: string, data: any) => {
         try {
-            await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
+            await fetch(`${CLOUD_BASE_URL}${key}`, {
                 method: 'PUT',
-                body: JSON.stringify(list),
+                body: JSON.stringify(data),
                 headers: { 'Content-Type': 'application/json' }
             });
-            setSyncError(false);
-            setLastSyncTime(new Date().toLocaleTimeString());
-        } catch (e) { setSyncError(true); }
+            return true;
+        } catch (e) { return false; }
     };
 
-    // --- RECOVERY ENGINE: v1 to v6 DEEP SCAN ---
-    const handleDeepRecovery = async () => {
-        const keys = ["global_registered_users_v1", "global_registered_users_v2", "global_registered_users_v3", "global_registered_users_v4", "global_registered_users_v5", "global_registered_users_v6"];
-        let allFoundUsers: RegisteredUser[] = [...MOCK_USERS];
-        
-        alert("ইনিশিয়েটিং মাস্টার রিকভারি... সিস্টেম সব পুরনো ডাটাবেস ভার্সন (v1-v6) চেক করছে। অনুগ্রহ করে ৩০ সেকেন্ড অপেক্ষা করুন।");
-        
-        for (const key of keys) {
-            try {
-                const res = await fetch(`${CLOUD_BASE_URL}${key}`);
-                if (res.ok) {
-                    const cloudData = await res.json();
-                    if (Array.isArray(cloudData)) {
-                        cloudData.forEach(u => {
-                            if (!allFoundUsers.find(exist => exist.id === u.id || exist.phone === u.phone)) {
-                                allFoundUsers.push(u);
-                            }
-                        });
-                    }
-                }
-            } catch (e) {}
-        }
-        
-        setRegisteredUsers(allFoundUsers);
-        await pushUsersToCloud(allFoundUsers);
-        alert(`রিকভারি সফল! মোট ${allFoundUsers.length} জন ইউজার পাওয়া গেছে। এখন এগুলো অ্যাডমিন প্যানেলে দেখা যাবে।`);
-    };
-
-    // --- ENHANCED SYNC ENGINE (Polling & Conflict Resolver) ---
+    // --- REFACTORED MASTER SYNC ENGINE (BIDIRECTIONAL) ---
     useEffect(() => {
-        const syncData = async () => {
+        const syncEverything = async () => {
             if (isSyncing.current) return;
             isSyncing.current = true;
             try {
-                // 1. Fetch the master list
-                const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
-                let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
+                // 1. SYNC USERS & REGISTRATION RELAY
+                const userRes = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
+                let cloudUsers: RegisteredUser[] = userRes.ok ? await userRes.json() : [];
                 if (!Array.isArray(cloudUsers)) cloudUsers = [];
 
-                // 2. Fetch Relay (Check if any new user registered on another device)
-                // In a production app, you'd use a real DB. Here we simulate relay by checking a specific key.
-                const relayRes = await fetch(`${CLOUD_BASE_URL}registration_relay_global`);
+                const relayRes = await fetch(`${CLOUD_BASE_URL}${REG_RELAY_KEY}`);
                 let relayUsers: RegisteredUser[] = relayRes.ok ? await relayRes.json() : [];
                 if (!Array.isArray(relayUsers)) relayUsers = [];
 
-                // 3. Merge: Cloud Master + Relay + Local State
                 const userMap = new Map();
-                // Add Cloud Master
-                cloudUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
-                // Add Relay (New registrations)
-                relayUsers.forEach((u: RegisteredUser) => {
-                    if (!userMap.has(u.id)) userMap.set(u.id, u);
-                });
-                // Add local registrations not yet in cloud
-                registeredUsers.forEach((u: RegisteredUser) => {
-                    if (!userMap.has(u.id)) userMap.set(u.id, u);
-                });
+                cloudUsers.forEach(u => userMap.set(u.id, u));
+                relayUsers.forEach(u => { if (!userMap.has(u.id)) userMap.set(u.id, u); });
+                registeredUsers.forEach(u => { if (!userMap.has(u.id)) userMap.set(u.id, u); });
+                
+                const mergedUsers = Array.from(userMap.values()) as RegisteredUser[];
+                if (JSON.stringify(registeredUsers) !== JSON.stringify(mergedUsers)) {
+                    setRegisteredUsers(mergedUsers);
+                    if (authState === 'adminLoggedIn') {
+                        await pushToCloud(USER_SYNC_KEY, mergedUsers);
+                        if (relayUsers.length > 0) await pushToCloud(REG_RELAY_KEY, []);
+                    }
+                }
 
-                const mergedList = Array.from(userMap.values()) as RegisteredUser[];
+                // 2. SYNC SUPPORT TICKETS (User messages to Admin)
+                const ticketRes = await fetch(`${CLOUD_BASE_URL}${TICKET_SYNC_KEY}`);
+                let cloudTickets: SupportTicket[] = ticketRes.ok ? await ticketRes.json() : [];
+                if (!Array.isArray(cloudTickets)) cloudTickets = [];
 
-                // If mergedList is bigger, it means new data found
-                if (mergedList.length > cloudUsers.length || JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
-                    setRegisteredUsers(mergedList);
-                    // Push back to master so everyone else sees the updates
-                    await pushUsersToCloud(mergedList);
-                    // Clear relay if this is admin
-                    if (authState === 'adminLoggedIn' && relayUsers.length > 0) {
-                        await fetch(`${CLOUD_BASE_URL}registration_relay_global`, {
-                            method: 'PUT',
-                            body: JSON.stringify([]),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
+                const ticketMap = new Map();
+                cloudTickets.forEach(t => ticketMap.set(t.id, t));
+                supportTickets.forEach(t => ticketMap.set(t.id, t));
+                const mergedTickets = Array.from(ticketMap.values()) as SupportTicket[];
+                
+                if (JSON.stringify(supportTickets) !== JSON.stringify(mergedTickets)) {
+                    setSupportTickets(mergedTickets);
+                    // Both User and Admin can push tickets to cloud to ensure sync
+                    await pushToCloud(TICKET_SYNC_KEY, mergedTickets);
+                }
+
+                // 3. SYNC MARKET ORDERS
+                const marketRes = await fetch(`${CLOUD_BASE_URL}${MARKET_ORDER_SYNC_KEY}`);
+                let cloudMarketOrders: MarketplaceOrder[] = marketRes.ok ? await marketRes.json() : [];
+                if (!Array.isArray(cloudMarketOrders)) cloudMarketOrders = [];
+
+                const marketMap = new Map();
+                cloudMarketOrders.forEach(o => marketMap.set(o.id, o));
+                marketOrders.forEach(o => marketMap.set(o.id, o));
+                const mergedMarketOrders = Array.from(marketMap.values()) as MarketplaceOrder[];
+
+                if (JSON.stringify(marketOrders) !== JSON.stringify(mergedMarketOrders)) {
+                    setMarketOrders(mergedMarketOrders);
+                    await pushToCloud(MARKET_ORDER_SYNC_KEY, mergedMarketOrders);
+                }
+
+                // 4. Update the Logged-In User session if Admin changed something
+                if (loggedInUser) {
+                    const updatedMe = mergedUsers.find(u => u.id === loggedInUser.id);
+                    if (updatedMe) {
+                        const localP = JSON.stringify({ ...loggedInUser, lastLogin: '' });
+                        const cloudP = JSON.stringify({ ...updatedMe, lastLogin: '' });
+                        if (localP !== cloudP) setLoggedInUser(updatedMe);
                     }
                 }
 
                 setSyncError(false);
                 setLastSyncTime(new Date().toLocaleTimeString());
-
-                if (loggedInUser) {
-                    const updatedMe = mergedList.find(u => u.id === loggedInUser.id);
-                    if (updatedMe && JSON.stringify(updatedMe) !== JSON.stringify(loggedInUser)) {
-                        setLoggedInUser(updatedMe);
-                    }
-                }
             } catch (e) {
-                console.error("Master Sync Failure", e);
+                console.error("Master Heartbeat Failed", e);
                 setSyncError(true);
             } finally {
                 isSyncing.current = false;
             }
         };
 
-        syncData();
-        const interval = setInterval(syncData, authState === 'adminLoggedIn' ? 5000 : 15000); 
+        syncEverything();
+        const interval = setInterval(syncEverything, authState === 'adminLoggedIn' ? 6000 : 12000); 
         return () => clearInterval(interval);
-    }, [authState, registeredUsers.length]);
+    }, [authState, registeredUsers.length, supportTickets.length, marketOrders.length, loggedInUser?.id]);
 
     const handleLogin = (identifier: string, pass: string) => {
         const input = identifier.trim().toLowerCase();
@@ -232,18 +222,13 @@ function App() {
             referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase(), address: 'Setup Required'
         };
 
-        // ATOMIC PUSH: Send directly to relay so Admin sees it instantly even if master sync lags
+        // Instant Relay Push
         try {
-            const relayRes = await fetch(`${CLOUD_BASE_URL}registration_relay_global`);
-            let relayData = relayRes.ok ? await relayRes.json() : [];
-            if (!Array.isArray(relayData)) relayData = [];
-            relayData.push(user);
-            
-            await fetch(`${CLOUD_BASE_URL}registration_relay_global`, {
-                method: 'PUT',
-                body: JSON.stringify(relayData),
-                headers: { 'Content-Type': 'application/json' }
-            });
+            const res = await fetch(`${CLOUD_BASE_URL}${REG_RELAY_KEY}`);
+            let currentRelay = res.ok ? await res.json() : [];
+            if (!Array.isArray(currentRelay)) currentRelay = [];
+            currentRelay.push(user);
+            await pushToCloud(REG_RELAY_KEY, currentRelay);
         } catch (e) {}
 
         setRegisteredUsers(prev => [...prev, user]);
@@ -282,33 +267,33 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={handleDeepRecovery} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
-                    {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
-                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} />}
-                    {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => setMarketOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))} onDeleteOrder={(id) => setMarketOrders(prev => prev.filter(o => o.id !== id))} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={() => {}} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
+                    {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => { const updated = supportTickets.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t); setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} onResolve={(id) => { const updated = supportTickets.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t); setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} onDelete={(id) => { const updated = supportTickets.filter(t => t.id !== id); setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} />}
+                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} />}
+                    {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => { const updated = marketOrders.map(o => o.id === orderId ? { ...o, status } : o); setMarketOrders(updated); pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} onDeleteOrder={(id) => { const updated = marketOrders.filter(o => o.id !== id); setMarketOrders(updated); pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} staffRequests={staffRequests} onMarkRequestRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? { ...r, isRead: true } : r))} />}
                 </AdminLayout>
             ) : (
                 loggedInUser && (
                 <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts.filter(a => a.userId === 'all' || a.userId === loggedInUser.id)} onDismissAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} loggedInUser={loggedInUser}>
                     {currentPage === 'dashboard' && <Dashboard data={getTodaysDashboardData()} orders={orders.filter(o => o.restaurantId === loggedInUser.id)} onCompleteOrder={(id) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'Completed' } : o))} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => setOrders(prev => prev.map(p => p.id === o.id ? o : p))} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
-                    {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => setOrders(prev => [...prev, { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() }])} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onToggleStock={(id) => { const updatedMenu = loggedInUser.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m); const updatedList = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: updatedMenu } : u); setRegisteredUsers(updatedList); pushUsersToCloud(updatedList); setLoggedInUser({ ...loggedInUser, menu: updatedMenu }); }} />}
+                    {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => setOrders(prev => [...prev, { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() }])} taxRate={loggedInUser.taxRate || 5} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onToggleStock={(id) => { const updatedMenu = loggedInUser.menu.map(m => m.id === id ? { ...m, inStock: !m.inStock } : m); const updatedList = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: updatedMenu } : u); setRegisteredUsers(updatedList); pushToCloud(USER_SYNC_KEY, updatedList); setLoggedInUser({ ...loggedInUser, menu: updatedMenu }); }} />}
                     {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => setOrders(prev => [...prev, { ...newOrderData, id: Date.now(), restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date() }])} />}
-                    {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); setLoggedInUser({ ...loggedInUser, menu: m }); }} />}
+                    {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); setLoggedInUser({ ...loggedInUser, menu: m }); }} />}
                     {currentPage === 'inventory' && <Inventory />}
                     {currentPage === 'staff' && <Staff />}
                     {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts.filter(p => p.status === 'Approved')} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={(req, salary) => setStaffRequests(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary, timestamp: new Date(), isRead: false }])} onMessageStaff={() => {}} />}
-                    {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={(pId, pN, pr, q) => setMarketOrders(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pId, productName: pN, price: pr, quantity: q, status: 'Pending', timestamp: new Date() }])} user={loggedInUser} />}
+                    {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={(pId, pN, pr, q) => { const newOrder: MarketplaceOrder = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pId, productName: pN, price: pr, quantity: q, status: 'Pending', timestamp: new Date() }; const updated = [...marketOrders, newOrder]; setMarketOrders(updated); pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} user={loggedInUser} />}
                     {currentPage === 'reports' && <Reports orders={orders.filter(o => o.restaurantId === loggedInUser.id)} />}
                     {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
                     {currentPage === 'refer' && <Referral user={loggedInUser} />}
-                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => { setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: 'Renewal Request', messages: [{ sender: 'user', text: 'Renewal Request for ' + loggedInUser.restaurantName, timestamp: new Date() }], status: 'Open', lastUpdate: new Date() }]); setCurrentPage('help'); }} />}
+                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => { const newTicket: SupportTicket = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: 'Renewal Request', messages: [{ sender: 'user', text: 'Renewal Request for ' + loggedInUser.restaurantName, timestamp: new Date() }], status: 'Open', lastUpdate: new Date() }; const updated = [...supportTickets, newTicket]; setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); setCurrentPage('help'); }} />}
                     {currentPage === 'customerOffer' && <CustomerOffer orders={orders.filter(o => o.restaurantId === loggedInUser.id)} restaurantName={loggedInUser.restaurantName} />}
                     {currentPage === 'payment' && <Payment members={paymentMembers.filter(m => m.userId === loggedInUser.id)} records={paymentRecords.filter(r => paymentMembers.find(m => m.id === r.memberId && m.userId === loggedInUser.id))} onAddMember={(n, c, t) => setPaymentMembers(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, name: n, category: c, type: t }])} onRecordPayment={(mid, p, d, dt) => setPaymentRecords(prev => [...prev, { id: Date.now(), memberId: mid, paid: p, due: d, date: dt }])} onUpdateRecord={(id, p, d, dt) => setPaymentRecords(prev => prev.map(r => r.id === id ? { ...r, paid: p, due: d, date: dt } : r))} onDeleteRecord={(id) => setPaymentRecords(prev => prev.filter(r => r.id !== id))} onDeleteMember={(id) => { setPaymentMembers(prev => prev.filter(m => m.id !== id)); setPaymentRecords(prev => prev.filter(r => r.memberId !== id)); }} />}
-                    {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); setLoggedInUser({ ...loggedInUser, ...updates }); }} onLogout={handleLogout} />}
-                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); setLoggedInUser({ ...loggedInUser, menu: m }); }} loggedInUser={loggedInUser} />}
-                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} onReplyToTicket={(tid, msg) => setSupportTickets(prev => prev.map(t => t.id === tid ? { ...t, status: 'Open', lastUpdate: new Date(), messages: [...t.messages, { sender: 'user', text: msg, timestamp: new Date() }] } : t))} />}
+                    {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); setLoggedInUser({ ...loggedInUser, ...updates }); }} onLogout={handleLogout} />}
+                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => { const updated = registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); setLoggedInUser({ ...loggedInUser, menu: m }); }} loggedInUser={loggedInUser} />}
+                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => { const newT: SupportTicket = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }; const updated = [...supportTickets, newT]; setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} onReplyToTicket={(tid, msg) => { const updated = supportTickets.map(t => t.id === tid ? { ...t, status: 'Open', lastUpdate: new Date(), messages: [...t.messages, { sender: 'user', text: msg, timestamp: new Date() }] } : t); setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} />}
                 </MainLayout>
                 )
             )}
