@@ -24,17 +24,14 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
         const customerMap: Record<string, CustomerRecord> = {};
 
         orders.forEach(order => {
-            // Priority 1: Structured deliveryDetails
             let phone = order.deliveryDetails?.phone || '';
             let name = order.deliveryDetails?.customerName || '';
 
-            // Priority 2: Try to extract from sourceInfo if phone is missing
             if (!phone || phone.length < 10) {
                 const phoneMatch = order.sourceInfo.match(/\d{10}/);
                 if (phoneMatch) phone = phoneMatch[0];
             }
             
-            // Priority 3: Try to extract Name from parentheses if missing
             if (!name || name === 'Guest') {
                 const nameMatch = order.sourceInfo.match(/\(([^)]+)\)/);
                 if (nameMatch) name = nameMatch[1];
@@ -111,7 +108,7 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
     };
 
     return (
-        <div className="h-full flex flex-col p-4 space-y-6 overflow-hidden animate-fade-in">
+        <div className="h-full flex flex-col overflow-y-auto no-scrollbar p-4 space-y-6 animate-fade-in pb-28">
             {/* Header Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
                 <div className="bg-gray-900 p-5 rounded-[2rem] border border-gray-800 flex justify-between items-center shadow-xl">
@@ -138,7 +135,7 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
             </div>
 
             {/* Global Actions Box */}
-            <div className="bg-black border-2 border-lemon p-6 rounded-[2.5rem] shadow-2xl space-y-4">
+            <div className="bg-black border-2 border-lemon p-6 rounded-[2.5rem] shadow-2xl space-y-4 shrink-0">
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Broadcast Offer</h3>
                 <textarea 
                     value={customMessage} 
@@ -174,7 +171,7 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
             </div>
 
             {/* Customer List */}
-            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24">
+            <div className="space-y-3">
                 {filteredCustomers.length > 0 ? filteredCustomers.map(customer => (
                     <div 
                         key={customer.phone} 
@@ -214,7 +211,6 @@ const CustomerOffer: React.FC<CustomerOfferProps> = ({ orders, restaurantName })
                     <div className="py-24 text-center opacity-30 flex flex-col items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         <p className="font-black uppercase text-xs tracking-widest">No customer data found</p>
-                        <p className="text-[10px] mt-1">Customers appear here after placing orders with mobile numbers</p>
                     </div>
                 )}
             </div>

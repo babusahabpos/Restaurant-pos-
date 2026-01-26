@@ -25,7 +25,6 @@ const Reports: React.FC<ReportsProps> = ({ orders = [] }) => {
         const now = new Date();
 
         if (filter === 'Today') {
-            // Hours for today
             for (let i = 0; i < 24; i += 2) {
                 const hourLabel = `${i < 10 ? '0' : ''}${i}:00`;
                 dataMap[hourLabel] = 0;
@@ -40,7 +39,6 @@ const Reports: React.FC<ReportsProps> = ({ orders = [] }) => {
                 }
             });
         } else if (filter === 'Last 7 Days') {
-            // Days for last 7 days
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
@@ -57,7 +55,6 @@ const Reports: React.FC<ReportsProps> = ({ orders = [] }) => {
                 }
             });
         } else {
-            // Default: All time grouped by week/month logic could be added here
             completedOrders.forEach(o => {
                 const monthLabel = new Date(o.timestamp).toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
                 dataMap[monthLabel] = (dataMap[monthLabel] || 0) + o.total;
@@ -96,8 +93,8 @@ const Reports: React.FC<ReportsProps> = ({ orders = [] }) => {
     }, [completedOrders]);
 
     return (
-        <div className="space-y-4 max-w-full">
-             <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-xl">
+        <div className="h-full overflow-y-auto no-scrollbar pb-24 px-4 space-y-6">
+             <div className="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-xl mt-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-white font-black uppercase text-[10px] tracking-widest">Revenue Hub</h2>
                     <select 
@@ -119,9 +116,9 @@ const Reports: React.FC<ReportsProps> = ({ orders = [] }) => {
                 <ReportCard title="Online Sales" value={totals.online} />
             </div>
 
-            <div className="bg-black p-4 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden h-72 flex flex-col">
+            <div className="bg-black p-4 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden min-h-[300px] flex flex-col">
                 <h3 className="text-[8px] font-black text-gray-600 uppercase mb-4 tracking-[0.2em] text-center">Sales Performance</h3>
-                 <div className="flex-1 w-full -ml-4 pr-4">
+                 <div className="flex-1 w-full h-64 -ml-4 pr-4">
                     {chartData.some(d => d.value > 0) ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData}>
