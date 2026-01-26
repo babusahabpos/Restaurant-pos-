@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
 import MainLayout from './components/MainLayout';
@@ -31,15 +31,18 @@ import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
-// Public Relay for Cross-Device Syncing (Anonymous KV Store)
-const CLOUD_SYNC_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/orders_"; 
+// Public Relay for Cross-Device Syncing
+const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
+const USER_SYNC_KEY = "global_registered_users_v2";
+const ORDER_SYNC_PREFIX = "orders_";
 
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
     
     const isCustomerRoute = () => window.location.hash.includes('customer-order');
+    const migrationDone = useRef(false);
 
-    // --- SESSION PERSISTENCE LOGIC ---
+    // --- SESSION PERSISTENCE ---
     const [authState, setAuthState] = useState<AuthState>(() => {
         if (isCustomerRoute()) return 'customer';
         const savedSession = localStorage.getItem('babuSahabPos_session');
@@ -67,15 +70,6 @@ function App() {
         }
     }, [authState, loggedInUser]);
 
-    useEffect(() => {
-        const handleHashChange = () => {
-            if (isCustomerRoute()) setAuthState('customer');
-        };
-        window.addEventListener('hashchange', handleHashChange);
-        handleHashChange();
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
@@ -88,9 +82,7 @@ function App() {
                 return data.map((o: any) => ({ ...o, timestamp: new Date(o.timestamp) }));
             }
             return data;
-        } catch (e) {
-            return defaultValue;
-        }
+        } catch (e) { return defaultValue; }
     };
 
     const [orders, setOrders] = useState<OrderStatusItem[]>(() => getSafeData('babuSahabPos_orders', []));
@@ -117,20 +109,74 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentMembers', JSON.stringify(paymentMembers)); }, [paymentMembers]);
     useEffect(() => { localStorage.setItem('babuSahabPos_paymentRecords', JSON.stringify(paymentRecords)); }, [paymentRecords]);
 
-    // --- HELPER FOR 4 AM RESET LOGIC ---
+    // --- GLOBAL USER SYNC & LEGACY MIGRATION ---
+    const pushUsersToCloud = async (updatedList: RegisteredUser[]) => {
+        try {
+            await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
+                method: 'PUT',
+                body: JSON.stringify(updatedList),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) { console.error("User Sync Error", e); }
+    };
+
+    useEffect(() => {
+        const pollAndMigrate = async () => {
+            try {
+                const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
+                let cloudUsers: RegisteredUser[] = [];
+                if (res.ok) {
+                    cloudUsers = await res.json();
+                }
+
+                if (!Array.isArray(cloudUsers)) cloudUsers = [];
+
+                // MIGRATION LOGIC: Find local users not in cloud
+                if (!migrationDone.current) {
+                    const localUsers = getSafeData('babuSahabPos_users', MOCK_USERS);
+                    const cloudIds = new Set(cloudUsers.map(u => u.id));
+                    const legacyUsers = localUsers.filter((u: RegisteredUser) => !cloudIds.has(u.id));
+
+                    if (legacyUsers.length > 0) {
+                        console.log(`Migrating ${legacyUsers.length} legacy users to cloud...`);
+                        const mergedList = [...cloudUsers, ...legacyUsers];
+                        await pushUsersToCloud(mergedList);
+                        cloudUsers = mergedList;
+                    }
+                    migrationDone.current = true;
+                }
+
+                setRegisteredUsers(prev => {
+                    if (JSON.stringify(prev) === JSON.stringify(cloudUsers)) return prev;
+                    return cloudUsers;
+                });
+                
+                if (loggedInUser) {
+                    const updatedMe = cloudUsers.find(u => u.id === loggedInUser.id);
+                    if (updatedMe && JSON.stringify(updatedMe) !== JSON.stringify(loggedInUser)) {
+                        setLoggedInUser(updatedMe);
+                    }
+                }
+            } catch (e) {}
+        };
+
+        const interval = setInterval(pollAndMigrate, 10000);
+        pollAndMigrate();
+        return () => clearInterval(interval);
+    }, [loggedInUser]);
+
+    // --- BUSINESS DAY RESET LOGIC (4 AM) ---
     const getBusinessDateString = (date: Date) => {
         const d = new Date(date.getTime());
-        // Subtract 4 hours to align with 4 AM reset
         d.setHours(d.getHours() - 4);
         return d.toDateString();
     };
 
-    // --- DAILY STATS CALCULATION FOR DASHBOARD ---
     const getTodaysDashboardData = (): DashboardData => {
         const currentBusinessDay = getBusinessDateString(new Date());
-        const restaurantOrders = orders.filter(o => o.restaurantId === loggedInUser?.id && o.status === 'Completed');
-        
-        const todaysOrders = restaurantOrders.filter(o => 
+        const todaysOrders = orders.filter(o => 
+            o.restaurantId === loggedInUser?.id && 
+            o.status === 'Completed' &&
             getBusinessDateString(new Date(o.timestamp)) === currentBusinessDay
         );
 
@@ -142,14 +188,13 @@ function App() {
         };
     };
 
-    // --- GLOBAL CLOUD SYNC ENGINE ---
+    // --- GLOBAL ORDER CLOUD SYNC ---
     useEffect(() => {
         if (authState !== 'loggedIn' || !loggedInUser) return;
-
         const pollCloudOrders = async () => {
             try {
-                const syncKey = `${loggedInUser.id}_${loggedInUser.phone}`;
-                const response = await fetch(`${CLOUD_SYNC_URL}${syncKey}`);
+                const syncKey = `${ORDER_SYNC_PREFIX}${loggedInUser.id}_${loggedInUser.phone}`;
+                const response = await fetch(`${CLOUD_BASE_URL}${syncKey}`);
                 if (response.ok) {
                     const cloudData = await response.json();
                     if (Array.isArray(cloudData) && cloudData.length > 0) {
@@ -162,14 +207,10 @@ function App() {
                             if (audio) audio.play().catch(() => {});
                             return [...prev, ...uniqueNew];
                         });
-                        await fetch(`${CLOUD_SYNC_URL}${syncKey}`, {
-                            method: 'PUT',
-                            body: JSON.stringify([]),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
+                        await fetch(`${CLOUD_BASE_URL}${syncKey}`, { method: 'PUT', body: JSON.stringify([]), headers: { 'Content-Type': 'application/json' } });
                     }
                 }
-            } catch (error) { console.warn("Cloud Sync Polling Error:", error); }
+            } catch (error) { console.warn("Order Sync Error:", error); }
         };
         const syncInterval = setInterval(pollCloudOrders, 5000);
         return () => clearInterval(syncInterval);
@@ -202,11 +243,20 @@ function App() {
             menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, 
             referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase() 
         };
-        setRegisteredUsers(prev => [...prev, user]);
+        const updatedUsers = [...registeredUsers, user];
+        setRegisteredUsers(updatedUsers);
+        pushUsersToCloud(updatedUsers);
+    };
+
+    const handleAdminUserUpdate = (updatedList: RegisteredUser[]) => {
+        setRegisteredUsers(updatedList);
+        pushUsersToCloud(updatedList);
     };
 
     const handleUpdateMenu = (userId: number, menu: MenuItem[]) => {
-        setRegisteredUsers(prev => prev.map(u => u.id === userId ? { ...u, menu } : u));
+        const updatedList = registeredUsers.map(u => u.id === userId ? { ...u, menu } : u);
+        setRegisteredUsers(updatedList);
+        pushUsersToCloud(updatedList);
         if (loggedInUser?.id === userId) setLoggedInUser(prev => prev ? { ...prev, menu } : null);
     };
 
@@ -218,10 +268,10 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u))} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u))} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, password: p } : u))} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} onUpdateMenu={handleUpdateMenu} onDeleteUser={(id) => setRegisteredUsers(prev => prev.filter(u => u.id !== id))} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => handleAdminUserUpdate(registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u))} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => handleAdminUserUpdate(registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u))} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => handleAdminUserUpdate(registeredUsers.map(u => u.id === id ? { ...u, password: p } : u))} onUpdateSubscription={(id, d) => handleAdminUserUpdate(registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} onUpdateMenu={handleUpdateMenu} onDeleteUser={(id) => handleAdminUserUpdate(registeredUsers.filter(u => u.id !== id))} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
-                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => setRegisteredUsers(prev => prev.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} />}
+                    {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => handleAdminUserUpdate(registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u))} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => setMarketOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))} onDeleteOrder={(id) => setMarketOrders(prev => prev.filter(o => o.id !== id))} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} staffRequests={staffRequests} onMarkRequestRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? { ...r, isRead: true } : r))} />}
                 </AdminLayout>
@@ -242,7 +292,7 @@ function App() {
                     {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => { setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: 'Renewal Request', messages: [{ sender: 'user', text: 'Renewal Request for ' + loggedInUser.restaurantName, timestamp: new Date() }], status: 'Open', lastUpdate: new Date() }]); setCurrentPage('help'); }} />}
                     {currentPage === 'customerOffer' && <CustomerOffer orders={orders.filter(o => o.restaurantId === loggedInUser.id)} restaurantName={loggedInUser.restaurantName} />}
                     {currentPage === 'payment' && <Payment members={paymentMembers.filter(m => m.userId === loggedInUser.id)} records={paymentRecords.filter(r => paymentMembers.find(m => m.id === r.memberId && m.userId === loggedInUser.id))} onAddMember={(n, c, t) => setPaymentMembers(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, name: n, category: c, type: t }])} onRecordPayment={(mid, p, d, dt) => setPaymentRecords(prev => [...prev, { id: Date.now(), memberId: mid, paid: p, due: d, date: dt }])} onUpdateRecord={(id, p, d, dt) => setPaymentRecords(prev => prev.map(r => r.id === id ? { ...r, paid: p, due: d, date: dt } : r))} onDeleteRecord={(id) => setPaymentRecords(prev => prev.filter(r => r.id !== id))} onDeleteMember={(id) => { setPaymentMembers(prev => prev.filter(m => m.id !== id)); setPaymentRecords(prev => prev.filter(r => r.memberId !== id)); }} />}
-                    {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => setRegisteredUsers(prev => prev.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u))} onLogout={handleLogout} />}
+                    {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => handleAdminUserUpdate(registeredUsers.map(u => u.id === loggedInUser.id ? { ...u, ...updates } : u))} onLogout={handleLogout} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => handleUpdateMenu(loggedInUser.id, m)} loggedInUser={loggedInUser} />}
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => setSupportTickets(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }])} onReplyToTicket={(tid, msg) => setSupportTickets(prev => prev.map(t => t.id === tid ? { ...t, status: 'Open', lastUpdate: new Date(), messages: [...t.messages, { sender: 'user', text: msg, timestamp: new Date() }] } : t))} />}
                 </MainLayout>
