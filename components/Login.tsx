@@ -132,7 +132,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPa
         {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} onSubmit={onForgotPassword} />}
         {showContactModal && <ContactAdminModal onClose={() => setShowContactModal(false)} onSubmit={onContactAdmin} />}
         
-        <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="flex items-center justify-center min-h-screen bg-lemon">
             <div className="w-full max-w-md p-8 space-y-8 bg-black rounded-lg shadow-2xl relative">
                 <div>
                     <h2 className="text-3xl font-extrabold text-center text-lemon">

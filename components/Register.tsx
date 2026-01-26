@@ -90,7 +90,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     if (showSuccessModal) return <RegistrationSuccessModal status={UserStatus.Approved} onClose={onNavigateToLogin} />;
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-white p-4 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen bg-lemon p-4 overflow-y-auto">
             <div className="w-full max-w-md p-8 my-8 space-y-6 bg-black rounded-[2.5rem] shadow-2xl border border-gray-800 relative overflow-hidden">
                 {isVerifying && (
                     <div className="absolute inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-10 text-center animate-fade-in">
