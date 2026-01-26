@@ -32,7 +32,7 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
 const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
-const USER_SYNC_KEY = "global_registered_users_v2";
+const USER_SYNC_KEY = "global_registered_users_v3"; // Incremented version for clean sync
 const ORDER_SYNC_PREFIX = "orders_";
 
 function App() {
@@ -109,7 +109,7 @@ function App() {
                 body: JSON.stringify(list),
                 headers: { 'Content-Type': 'application/json' }
             });
-        } catch (e) {}
+        } catch (e) { console.error("Cloud Push Error", e); }
     };
 
     useEffect(() => {
@@ -123,16 +123,19 @@ function App() {
 
                 const localUsers = getSafeData('babuSahabPos_users', MOCK_USERS);
                 const userMap = new Map();
+                
+                // Merge priority: Defaults -> Local Recovery -> Cloud Reality
                 MOCK_USERS.forEach(u => userMap.set(u.id, u));
                 localUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
                 cloudUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
 
-                const mergedList = Array.from(userMap.values());
+                const mergedList = Array.from(userMap.values()) as RegisteredUser[];
 
                 if (JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
                     setRegisteredUsers(mergedList);
-                    if (mergedList.length > cloudUsers.length) {
-                        await pushUsersToCloud(mergedList);
+                    // If we found new locals not in cloud, or cloud had new ones, sync up
+                    if (mergedList.length > cloudUsers.length || mergedList.some((m, i) => JSON.stringify(m) !== JSON.stringify(cloudUsers[i]))) {
+                         await pushUsersToCloud(mergedList);
                     }
                 }
 
@@ -143,14 +146,14 @@ function App() {
                     }
                 }
             } catch (e) {
-                console.error("Sync Error", e);
+                console.error("Master Sync Failure", e);
             } finally {
                 isSyncing.current = false;
             }
         };
 
         syncData();
-        const interval = setInterval(syncData, 10000);
+        const interval = setInterval(syncData, 12000);
         return () => clearInterval(interval);
     }, [loggedInUser, registeredUsers.length]);
 
@@ -185,7 +188,6 @@ function App() {
         const input = identifier.trim().toLowerCase();
         if (input === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         
-        // Match with Email OR Phone
         const user = registeredUsers.find(u => 
             (u.email.trim().toLowerCase() === input || u.phone.trim() === input) && 
             u.password === pass
@@ -199,12 +201,12 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: any) => {
+    const handleRegister = (newUser: any, status: UserStatus = UserStatus.Approved) => {
         const user: RegisteredUser = { 
-            ...newUser, id: Date.now(), status: UserStatus.Approved, lastLogin: 'Just Now', 
+            ...newUser, id: Date.now(), status, lastLogin: 'Just Now', 
             subscriptionEndDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
             menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, 
-            referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase() 
+            referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase(), address: 'Setup Required'
         };
         const updated = [...registeredUsers, user];
         setRegisteredUsers(updated);
@@ -245,7 +247,7 @@ function App() {
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateUserInfo={(id, name, email, phone) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushUsersToCloud(updated); }} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
                     {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => setMarketOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))} onDeleteOrder={(id) => setMarketOrders(prev => prev.filter(o => o.id !== id))} />}
