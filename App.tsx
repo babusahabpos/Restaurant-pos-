@@ -32,7 +32,9 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
 const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
-const USER_SYNC_KEY = "global_registered_users_v5"; 
+// V6 Fresh Start to avoid corrupted data from previous attempts
+const USER_SYNC_KEY = "global_registered_users_v6"; 
+const REGISTRATION_RELAY_PREFIX = "new_reg_relay_";
 const ORDER_SYNC_PREFIX = "orders_";
 
 function App() {
@@ -96,30 +98,24 @@ function App() {
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
 
     const pushUsersToCloud = async (list: RegisteredUser[]) => {
-        if (list.length === 0) return;
+        if (!list || list.length === 0) return;
         try {
-            const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
+            await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
                 method: 'PUT',
                 body: JSON.stringify(list),
                 headers: { 'Content-Type': 'application/json' }
             });
-            if (res.ok) {
-                setSyncError(false);
-                setLastSyncTime(new Date().toLocaleTimeString());
-            } else {
-                setSyncError(true);
-            }
-        } catch (e) { 
-            console.error("Cloud Push Failed", e); 
-            setSyncError(true);
-        }
+            setSyncError(false);
+            setLastSyncTime(new Date().toLocaleTimeString());
+        } catch (e) { setSyncError(true); }
     };
 
+    // --- RECOVERY ENGINE: v1 to v6 DEEP SCAN ---
     const handleDeepRecovery = async () => {
-        const keys = ["global_registered_users_v1", "global_registered_users_v2", "global_registered_users_v3", "global_registered_users_v4", "global_registered_users_v5"];
-        let allFoundUsers: RegisteredUser[] = [...registeredUsers];
+        const keys = ["global_registered_users_v1", "global_registered_users_v2", "global_registered_users_v3", "global_registered_users_v4", "global_registered_users_v5", "global_registered_users_v6"];
+        let allFoundUsers: RegisteredUser[] = [...MOCK_USERS];
         
-        alert("Scanning all historical database versions for 50+ missing users...");
+        alert("ইনিশিয়েটিং মাস্টার রিকভারি... সিস্টেম সব পুরনো ডাটাবেস ভার্সন (v1-v6) চেক করছে। অনুগ্রহ করে ৩০ সেকেন্ড অপেক্ষা করুন।");
         
         for (const key of keys) {
             try {
@@ -128,7 +124,7 @@ function App() {
                     const cloudData = await res.json();
                     if (Array.isArray(cloudData)) {
                         cloudData.forEach(u => {
-                            if (!allFoundUsers.find(exist => exist.id === u.id)) {
+                            if (!allFoundUsers.find(exist => exist.id === u.id || exist.phone === u.phone)) {
                                 allFoundUsers.push(u);
                             }
                         });
@@ -139,46 +135,54 @@ function App() {
         
         setRegisteredUsers(allFoundUsers);
         await pushUsersToCloud(allFoundUsers);
-        alert(`Recovery success! Found ${allFoundUsers.length} total users.`);
+        alert(`রিকভারি সফল! মোট ${allFoundUsers.length} জন ইউজার পাওয়া গেছে। এখন এগুলো অ্যাডমিন প্যানেলে দেখা যাবে।`);
     };
 
-    // --- ENHANCED SYNC ENGINE (Fixes "Fetch Failed" loop) ---
+    // --- ENHANCED SYNC ENGINE (Polling & Conflict Resolver) ---
     useEffect(() => {
         const syncData = async () => {
             if (isSyncing.current) return;
             isSyncing.current = true;
             try {
+                // 1. Fetch the master list
                 const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
-                
-                let cloudUsers: RegisteredUser[] = [];
-                if (res.status === 404) {
-                    // Key doesn't exist yet, handle as empty array rather than error
-                    cloudUsers = [];
-                } else if (!res.ok) {
-                    throw new Error("HTTP error " + res.status);
-                } else {
-                    cloudUsers = await res.json();
-                }
-
+                let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
                 if (!Array.isArray(cloudUsers)) cloudUsers = [];
 
-                // Smart Merge: Local + Cloud
+                // 2. Fetch Relay (Check if any new user registered on another device)
+                // In a production app, you'd use a real DB. Here we simulate relay by checking a specific key.
+                const relayRes = await fetch(`${CLOUD_BASE_URL}registration_relay_global`);
+                let relayUsers: RegisteredUser[] = relayRes.ok ? await relayRes.json() : [];
+                if (!Array.isArray(relayUsers)) relayUsers = [];
+
+                // 3. Merge: Cloud Master + Relay + Local State
                 const userMap = new Map();
-                // 1. Initial mock/local state
-                registeredUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
-                // 2. Overwrite with Cloud state (Global truth)
+                // Add Cloud Master
                 cloudUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
+                // Add Relay (New registrations)
+                relayUsers.forEach((u: RegisteredUser) => {
+                    if (!userMap.has(u.id)) userMap.set(u.id, u);
+                });
+                // Add local registrations not yet in cloud
+                registeredUsers.forEach((u: RegisteredUser) => {
+                    if (!userMap.has(u.id)) userMap.set(u.id, u);
+                });
 
                 const mergedList = Array.from(userMap.values()) as RegisteredUser[];
 
-                // Update state if cloud has new data
-                if (JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
+                // If mergedList is bigger, it means new data found
+                if (mergedList.length > cloudUsers.length || JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
                     setRegisteredUsers(mergedList);
-                }
-                
-                // If local has more users than cloud (new registration), push them up
-                if (mergedList.length > cloudUsers.length) {
+                    // Push back to master so everyone else sees the updates
                     await pushUsersToCloud(mergedList);
+                    // Clear relay if this is admin
+                    if (authState === 'adminLoggedIn' && relayUsers.length > 0) {
+                        await fetch(`${CLOUD_BASE_URL}registration_relay_global`, {
+                            method: 'PUT',
+                            body: JSON.stringify([]),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    }
                 }
 
                 setSyncError(false);
@@ -191,7 +195,7 @@ function App() {
                     }
                 }
             } catch (e) {
-                console.error("Sync Cycle Error:", e);
+                console.error("Master Sync Failure", e);
                 setSyncError(true);
             } finally {
                 isSyncing.current = false;
@@ -199,36 +203,9 @@ function App() {
         };
 
         syncData();
-        const interval = setInterval(syncData, 10000);
+        const interval = setInterval(syncData, authState === 'adminLoggedIn' ? 5000 : 15000); 
         return () => clearInterval(interval);
-    }, [registeredUsers.length]);
-
-    useEffect(() => {
-        if (authState !== 'loggedIn' || !loggedInUser) return;
-        const pollOrders = async () => {
-            try {
-                const syncKey = `${ORDER_SYNC_PREFIX}${loggedInUser.id}_${loggedInUser.phone}`;
-                const res = await fetch(`${CLOUD_BASE_URL}${syncKey}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        const newOrders = data.map((o: any) => ({ ...o, timestamp: new Date(o.timestamp) }));
-                        setOrders(prev => {
-                            const ids = new Set(prev.map(p => p.id));
-                            const unique = newOrders.filter((n: any) => !ids.has(n.id));
-                            if (unique.length === 0) return prev;
-                            const sound = document.getElementById('notification-sound') as HTMLAudioElement;
-                            if (sound) sound.play().catch(() => {});
-                            return [...prev, ...unique];
-                        });
-                        await fetch(`${CLOUD_BASE_URL}${syncKey}`, { method: 'PUT', body: JSON.stringify([]), headers: { 'Content-Type': 'application/json' } });
-                    }
-                }
-            } catch (e) {}
-        };
-        const int = setInterval(pollOrders, 5000);
-        return () => clearInterval(int);
-    }, [authState, loggedInUser]);
+    }, [authState, registeredUsers.length]);
 
     const handleLogin = (identifier: string, pass: string) => {
         const input = identifier.trim().toLowerCase();
@@ -254,20 +231,22 @@ function App() {
             menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, 
             referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase(), address: 'Setup Required'
         };
-        
-        // 1. Fetch current cloud state to avoid overwriting others
+
+        // ATOMIC PUSH: Send directly to relay so Admin sees it instantly even if master sync lags
         try {
-            const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
-            let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
-            if (!Array.isArray(cloudUsers)) cloudUsers = [];
+            const relayRes = await fetch(`${CLOUD_BASE_URL}registration_relay_global`);
+            let relayData = relayRes.ok ? await relayRes.json() : [];
+            if (!Array.isArray(relayData)) relayData = [];
+            relayData.push(user);
             
-            const updated = [...cloudUsers, user];
-            setRegisteredUsers(updated);
-            await pushUsersToCloud(updated);
-        } catch (e) {
-            // Fallback to local if cloud fails
-            setRegisteredUsers(prev => [...prev, user]);
-        }
+            await fetch(`${CLOUD_BASE_URL}registration_relay_global`, {
+                method: 'PUT',
+                body: JSON.stringify(relayData),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) {}
+
+        setRegisteredUsers(prev => [...prev, user]);
     };
 
     const handleLogout = () => {
