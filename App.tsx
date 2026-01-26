@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -33,7 +32,7 @@ import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, PaymentMember, PaymentRecord } from './types';
 
 const CLOUD_BASE_URL = "https://kvdb.io/59m7f7eK6Z6F6X9u6G6G6/";
-const USER_SYNC_KEY = "global_registered_users_v4"; // Advanced sync key
+const USER_SYNC_KEY = "global_registered_users_v5"; 
 const ORDER_SYNC_PREFIX = "orders_";
 
 function App() {
@@ -41,6 +40,8 @@ function App() {
     
     const isCustomerRoute = () => window.location.hash.includes('customer-order');
     const isSyncing = useRef(false);
+    const [lastSyncTime, setLastSyncTime] = useState<string>("Never");
+    const [syncError, setSyncError] = useState<boolean>(false);
 
     const getSafeData = (key: string, defaultValue: any) => {
         try {
@@ -93,56 +94,95 @@ function App() {
 
     useEffect(() => { localStorage.setItem('babuSahabPos_orders', JSON.stringify(orders)); }, [orders]);
     useEffect(() => { localStorage.setItem('babuSahabPos_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_tickets', JSON.stringify(supportTickets)); }, [supportTickets]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_alerts', JSON.stringify(alerts)); }, [alerts]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_marketProducts', JSON.stringify(marketplaceProducts)); }, [marketplaceProducts]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_marketOrders', JSON.stringify(marketOrders)); }, [marketOrders]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_staffJobPosts', JSON.stringify(staffJobPosts)); }, [staffJobPosts]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_restaurantJobs', JSON.stringify(restaurantJobs)); }, [restaurantJobs]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_staffRequests', JSON.stringify(staffRequests)); }, [staffRequests]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_paymentMembers', JSON.stringify(paymentMembers)); }, [paymentMembers]);
-    useEffect(() => { localStorage.setItem('babuSahabPos_paymentRecords', JSON.stringify(paymentRecords)); }, [paymentRecords]);
 
     const pushUsersToCloud = async (list: RegisteredUser[]) => {
+        if (list.length === 0) return;
         try {
-            await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
+            const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`, {
                 method: 'PUT',
                 body: JSON.stringify(list),
                 headers: { 'Content-Type': 'application/json' }
             });
-        } catch (e) { console.error("Cloud Error", e); }
+            if (res.ok) {
+                setSyncError(false);
+                setLastSyncTime(new Date().toLocaleTimeString());
+            } else {
+                setSyncError(true);
+            }
+        } catch (e) { 
+            console.error("Cloud Push Failed", e); 
+            setSyncError(true);
+        }
     };
 
-    // --- MASTER SYNC ENGINE ---
+    const handleDeepRecovery = async () => {
+        const keys = ["global_registered_users_v1", "global_registered_users_v2", "global_registered_users_v3", "global_registered_users_v4", "global_registered_users_v5"];
+        let allFoundUsers: RegisteredUser[] = [...registeredUsers];
+        
+        alert("Scanning all historical database versions for 50+ missing users...");
+        
+        for (const key of keys) {
+            try {
+                const res = await fetch(`${CLOUD_BASE_URL}${key}`);
+                if (res.ok) {
+                    const cloudData = await res.json();
+                    if (Array.isArray(cloudData)) {
+                        cloudData.forEach(u => {
+                            if (!allFoundUsers.find(exist => exist.id === u.id)) {
+                                allFoundUsers.push(u);
+                            }
+                        });
+                    }
+                }
+            } catch (e) {}
+        }
+        
+        setRegisteredUsers(allFoundUsers);
+        await pushUsersToCloud(allFoundUsers);
+        alert(`Recovery success! Found ${allFoundUsers.length} total users.`);
+    };
+
+    // --- ENHANCED SYNC ENGINE (Fixes "Fetch Failed" loop) ---
     useEffect(() => {
         const syncData = async () => {
             if (isSyncing.current) return;
             isSyncing.current = true;
             try {
                 const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
-                let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
+                
+                let cloudUsers: RegisteredUser[] = [];
+                if (res.status === 404) {
+                    // Key doesn't exist yet, handle as empty array rather than error
+                    cloudUsers = [];
+                } else if (!res.ok) {
+                    throw new Error("HTTP error " + res.status);
+                } else {
+                    cloudUsers = await res.json();
+                }
+
                 if (!Array.isArray(cloudUsers)) cloudUsers = [];
 
-                // Smart Merge Logic
-                const localUsers = getSafeData('babuSahabPos_users', MOCK_USERS);
+                // Smart Merge: Local + Cloud
                 const userMap = new Map();
-                
-                // Add default mock users first
-                MOCK_USERS.forEach(u => userMap.set(u.id, u));
-                // Add local users (potentially from other devices or old sessions)
-                localUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
-                // Overlay cloud users (the true state from admin)
+                // 1. Initial mock/local state
+                registeredUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
+                // 2. Overwrite with Cloud state (Global truth)
                 cloudUsers.forEach((u: RegisteredUser) => userMap.set(u.id, u));
 
                 const mergedList = Array.from(userMap.values()) as RegisteredUser[];
 
+                // Update state if cloud has new data
                 if (JSON.stringify(registeredUsers) !== JSON.stringify(mergedList)) {
                     setRegisteredUsers(mergedList);
-                    // If local had something the cloud didn't, or vice-versa, push the merge
-                    if (mergedList.length > cloudUsers.length || mergedList.some((m, i) => JSON.stringify(m) !== JSON.stringify(cloudUsers[i]))) {
-                         await pushUsersToCloud(mergedList);
-                    }
                 }
+                
+                // If local has more users than cloud (new registration), push them up
+                if (mergedList.length > cloudUsers.length) {
+                    await pushUsersToCloud(mergedList);
+                }
+
+                setSyncError(false);
+                setLastSyncTime(new Date().toLocaleTimeString());
 
                 if (loggedInUser) {
                     const updatedMe = mergedList.find(u => u.id === loggedInUser.id);
@@ -151,7 +191,8 @@ function App() {
                     }
                 }
             } catch (e) {
-                console.error("Master Sync Failure", e);
+                console.error("Sync Cycle Error:", e);
+                setSyncError(true);
             } finally {
                 isSyncing.current = false;
             }
@@ -160,7 +201,7 @@ function App() {
         syncData();
         const interval = setInterval(syncData, 10000);
         return () => clearInterval(interval);
-    }, [loggedInUser, registeredUsers.length]);
+    }, [registeredUsers.length]);
 
     useEffect(() => {
         if (authState !== 'loggedIn' || !loggedInUser) return;
@@ -193,7 +234,6 @@ function App() {
         const input = identifier.trim().toLowerCase();
         if (input === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
         
-        // Support for Dual Login (Email or Phone)
         const user = registeredUsers.find(u => 
             (u.email.trim().toLowerCase() === input || u.phone.trim() === input) && 
             u.password === pass
@@ -207,16 +247,27 @@ function App() {
         return 'not_found';
     };
 
-    const handleRegister = (newUser: any, status: UserStatus = UserStatus.Approved) => {
+    const handleRegister = async (newUser: any, status: UserStatus = UserStatus.Approved) => {
         const user: RegisteredUser = { 
             ...newUser, id: Date.now(), status, lastLogin: 'Just Now', 
             subscriptionEndDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
             menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, 
             referralCode: 'REF' + Math.random().toString(36).substring(7).toUpperCase(), address: 'Setup Required'
         };
-        const updated = [...registeredUsers, user];
-        setRegisteredUsers(updated);
-        pushUsersToCloud(updated);
+        
+        // 1. Fetch current cloud state to avoid overwriting others
+        try {
+            const res = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
+            let cloudUsers: RegisteredUser[] = res.ok ? await res.json() : [];
+            if (!Array.isArray(cloudUsers)) cloudUsers = [];
+            
+            const updated = [...cloudUsers, user];
+            setRegisteredUsers(updated);
+            await pushUsersToCloud(updated);
+        } catch (e) {
+            // Fallback to local if cloud fails
+            setRegisteredUsers(prev => [...prev, user]);
+        }
     };
 
     const handleLogout = () => {
@@ -252,11 +303,10 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={handleDeepRecovery} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushUsersToCloud(updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(id, m) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, messages: [...t.messages, { sender: 'admin', text: m, timestamp: new Date() }], status: 'Pending', lastUpdate: new Date() } : t))} onResolve={(id) => setSupportTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'Resolved', lastUpdate: new Date() } : t))} onDelete={(id) => setSupportTickets(prev => prev.filter(t => t.id !== id))} />}
                     {currentAdminPage === AdminPage.SubscriptionRenewal && <SubscriptionRenewal users={registeredUsers} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushUsersToCloud(updated); }} />}
-                    {/* Fix: Changed setMarketplaceOrders to setMarketOrders on line 258 */}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => setMarketplaceProducts(prev => [...prev, { id: Date.now(), name: n, price: p, description: d, image: i }])} onDeleteProduct={(id) => setMarketplaceProducts(prev => prev.filter(p => p.id !== id))} onMessageUser={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onUpdateStatus={(orderId, status) => setMarketOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))} onDeleteOrder={(id) => setMarketOrders(prev => prev.filter(o => o.id !== id))} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={(id) => setStaffJobPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'Approved' } : p))} onDelete={(id) => setStaffJobPosts(prev => prev.filter(p => p.id !== id))} onMessage={(ph, txt) => setAlerts(prev => [...prev, { id: Date.now(), userId: 'all', message: `To ${ph}: ${txt}` }])} onCreateRestaurantJob={(j) => setRestaurantJobs(prev => [...prev, { ...j, id: Date.now(), timestamp: new Date() }])} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={(id) => setRestaurantJobs(prev => prev.filter(j => j.id !== id))} staffRequests={staffRequests} onMarkRequestRead={(id) => setStaffRequests(prev => prev.map(r => r.id === id ? { ...r, isRead: true } : r))} />}
                 </AdminLayout>

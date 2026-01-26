@@ -8,15 +8,34 @@ interface AdminDashboardProps {
     marketOrders: MarketplaceOrder[];
     onApproveReject: (userId: number, decision: 'approve' | 'reject') => void;
     onApproveMarketOrder: (order: MarketplaceOrder) => void;
+    syncStatus?: { time: string; error: boolean };
+    onDeepRecovery?: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ users = [], tickets = [], marketOrders = [], onApproveReject, onApproveMarketOrder }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ users = [], tickets = [], marketOrders = [], onApproveReject, onApproveMarketOrder, syncStatus, onDeepRecovery }) => {
 
     const pendingUsers = users.filter(u => u.status === UserStatus.Pending);
     const pendingMarketOrders = marketOrders.filter(o => o.status === 'Pending');
 
     return (
         <div className="space-y-6 animate-fade-in">
+            {/* Sync Header */}
+            <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className={`w-3 h-3 rounded-full ${syncStatus?.error ? 'bg-red-500 animate-pulse' : 'bg-green-500 pulse-green'}`}></div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase text-gray-500">Cloud Sync Status</p>
+                        <p className="text-xs font-bold text-white">{syncStatus?.error ? 'Connection Interrupted' : `Real-time Sync Active • Last: ${syncStatus?.time}`}</p>
+                    </div>
+                </div>
+                <button 
+                    onClick={onDeepRecovery}
+                    className="bg-gray-800 hover:bg-lemon hover:text-black text-gray-400 text-[9px] font-black uppercase px-4 py-2 rounded-xl transition-all"
+                >
+                    Restore Missing Users (50+)
+                </button>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-900 border border-gray-800 p-5 rounded-3xl">
                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Active Clients</p>
