@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -46,7 +45,6 @@ function App() {
     const [lastSyncTime, setLastSyncTime] = useState<string>("Never");
     const [syncError, setSyncError] = useState<boolean>(false);
 
-    // FIX: Added missing state variables for current page and admin page navigation
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
@@ -83,14 +81,13 @@ function App() {
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => getSafeData('babuSahabPos_tickets', MOCK_TICKETS));
     const [alerts, setAlerts] = useState<AdminAlert[]>(() => getSafeData('babuSahabPos_alerts', []));
     const [marketplaceProducts, setMarketplaceProducts] = useState<MarketplaceProduct[]>(() => getSafeData('babuSahabPos_marketProducts', []));
-    const [marketOrders, setMarketplaceOrders] = useState<MarketplaceOrder[]>(() => getSafeData('babuSahabPos_marketOrders', []));
+    const [marketOrders, setMarketOrders] = useState<MarketplaceOrder[]>(() => getSafeData('babuSahabPos_marketOrders', []));
     const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>(() => getSafeData('babuSahabPos_staffJobPosts', []));
     const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>(() => getSafeData('babuSahabPos_restaurantJobs', []));
     const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>(() => getSafeData('babuSahabPos_staffRequests', []));
     const [paymentMembers, setPaymentMembers] = useState<PaymentMember[]>(() => getSafeData('babuSahabPos_paymentMembers', []));
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(() => getSafeData('babuSahabPos_paymentRecords', []));
     
-    // Per-restaurant data
     const [inventory, setInventory] = useState<InventoryItem[]>(() => getSafeData('babuSahabPos_inventoryItems', []));
     const [staff, setStaff] = useState<StaffMember[]>(() => getSafeData('babuSahabPos_staff', []));
     const [staffLog, setStaffLog] = useState<StaffLogEntry[]>(() => getSafeData('babuSahabPos_staffLog', []));
@@ -124,13 +121,21 @@ function App() {
             if (isSyncing.current) return;
             isSyncing.current = true;
             try {
-                // 1. SYNC GLOBAL USERS (Syncs Menu & Profile)
+                // 1. SYNC GLOBAL USERS (Syncs Menu, Stock & Profile)
                 const userRes = await fetch(`${CLOUD_BASE_URL}${USER_SYNC_KEY}`);
                 let cloudUsers: RegisteredUser[] = userRes.ok ? await userRes.json() : [];
                 if (!Array.isArray(cloudUsers)) cloudUsers = [];
 
                 if (JSON.stringify(registeredUsers) !== JSON.stringify(cloudUsers) && cloudUsers.length > 0) {
                     setRegisteredUsers(cloudUsers);
+                    
+                    // CRITICAL: Update the loggedInUser state if their data changed on another device
+                    if (loggedInUser) {
+                        const updatedMe = cloudUsers.find(u => u.id === loggedInUser.id);
+                        if (updatedMe && JSON.stringify(updatedMe) !== JSON.stringify(loggedInUser)) {
+                            setLoggedInUser(updatedMe);
+                        }
+                    }
                 }
 
                 // 2. PER-RESTAURANT SYNC (Orders, Inventory, Staff)
@@ -144,7 +149,6 @@ function App() {
                         const cloudOrdersRaw = await oRes.json();
                         const cloudOrders = cloudOrdersRaw.map((o: any) => ({ ...o, timestamp: new Date(o.timestamp) }));
                         if (JSON.stringify(orders) !== JSON.stringify(cloudOrders)) {
-                            // Merge strategy: Unique IDs and latest timestamp
                             setOrders(cloudOrders);
                         }
                     }
@@ -188,9 +192,10 @@ function App() {
         };
 
         syncEverything();
-        const interval = setInterval(syncEverything, 10000); 
+        // Reduced interval to 3 seconds for near real-time multi-device sync
+        const interval = setInterval(syncEverything, 3000); 
         return () => clearInterval(interval);
-    }, [authState, loggedInUser?.id, orders.length, inventory.length, staff.length]);
+    }, [authState, loggedInUser?.id, orders, inventory, staff, registeredUsers]);
 
     const handleUpdateOrders = async (newOrders: OrderStatusItem[]) => {
         setOrders(newOrders);
@@ -263,7 +268,7 @@ function App() {
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onApproveMarketOrder={(o) => setMarketplaceOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={() => {}} />}
+                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onApproveMarketOrder={(o) => setMarketOrders(prev => prev.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo))} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={() => {}} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
                 </AdminLayout>
             ) : (
