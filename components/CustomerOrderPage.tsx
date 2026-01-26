@@ -133,17 +133,13 @@ const CustomerOrderPage: React.FC = () => {
             deliveryDetails: { type: orderType, customerName, phone: customerPhone, address: orderType === 'Delivery' ? address : undefined, paymentMethod, deliveryCharge: deliveryFee }
         };
 
-        // --- CLOUD SYNC PUSH ---
-        // Pushes the order to the public cloud relay for the owner to fetch
         try {
             const syncKey = `${restaurant.id}_${restaurant.phone}`;
-            // 1. Fetch current cloud queue
             const getRes = await fetch(`${CLOUD_SYNC_URL}${syncKey}`);
             let currentQueue = [];
             if (getRes.ok) currentQueue = await getRes.json();
             if (!Array.isArray(currentQueue)) currentQueue = [];
             
-            // 2. Add new order and update cloud
             currentQueue.push(newOrder);
             await fetch(`${CLOUD_SYNC_URL}${syncKey}`, {
                 method: 'PUT',
@@ -154,7 +150,6 @@ const CustomerOrderPage: React.FC = () => {
             console.warn("Cloud push failed, falling back to local only.");
         }
 
-        // Also save locally for good measure
         localStorage.setItem(`babuSahabPos_incomingOrder_${newOrder.id}`, JSON.stringify(newOrder));
         setView('confirmation');
     };
@@ -162,29 +157,39 @@ const CustomerOrderPage: React.FC = () => {
     if (loading) return <div className="min-h-screen bg-black text-white flex justify-center items-center"><p className="text-xl font-bold text-lemon animate-pulse">Opening Menu...</p></div>;
 
     return (
-        <div className="min-h-screen bg-black text-white p-4">
-            <header className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
-                <h1 className="text-xl font-black text-lemon uppercase">{restaurant?.restaurantName}</h1>
-                <button onClick={() => setView(view === 'menu' ? 'cart' : 'menu')} className="bg-lemon text-black font-black px-4 py-2 rounded-lg text-xs uppercase relative">
-                    {view === 'menu' ? 'My Cart' : 'Menu'}
-                    {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">{cart.length}</span>}
+        <div className="h-screen w-screen flex flex-col bg-black text-white overflow-hidden">
+            <header className="flex justify-between items-center p-4 border-b border-gray-800 bg-black shrink-0 z-10 shadow-lg">
+                <h1 className="text-xl font-black text-lemon uppercase truncate max-w-[60%]">{restaurant?.restaurantName}</h1>
+                <button onClick={() => setView(view === 'menu' ? 'cart' : 'menu')} className="bg-lemon text-black font-black px-4 py-2 rounded-xl text-[10px] uppercase relative active:scale-95 transition-transform">
+                    {view === 'menu' ? 'Cart' : 'Back'}
+                    {cart.length > 0 && view === 'menu' && <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-black">{cart.length}</span>}
                 </button>
             </header>
 
-            <main className="max-w-2xl mx-auto">
-                {error && <div className="bg-red-900/20 text-red-400 p-4 rounded-xl border border-red-800 text-center uppercase text-xs font-black">{error}</div>}
+            <main className="flex-1 overflow-y-auto no-scrollbar p-4 w-full max-w-2xl mx-auto pb-24">
+                {error && <div className="bg-red-900/20 text-red-400 p-6 rounded-3xl border border-red-800 text-center uppercase text-xs font-black animate-fade-in">{error}</div>}
                 
                 {view === 'menu' && !error && (
-                    <div className="space-y-6">
-                        {/* Fix: Added explicit casting to MenuItem[] to fix Property 'filter' does not exist on type 'unknown' error */}
+                    <div className="space-y-8 animate-fade-in">
                         {Object.entries(menu.reduce<Record<string, MenuItem[]>>((acc, i) => { if(!acc[i.category]) acc[i.category]=[]; acc[i.category].push(i); return acc; }, {})).map(([cat, items]) => (
-                            <div key={cat}>
-                                <h2 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-3">{cat}</h2>
-                                <div className="space-y-2">
+                            <div key={cat} className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">{cat}</h2>
+                                    <div className="h-px bg-gray-800 flex-1"></div>
+                                </div>
+                                <div className="space-y-3">
                                     {(items as MenuItem[]).filter(i => i.inStock).map(i => (
-                                        <div key={i.id} className="bg-gray-900 p-4 rounded-2xl border border-gray-800 flex justify-between items-center">
-                                            <div><p className="font-bold text-white uppercase text-sm">{i.name}</p><p className="text-lemon font-black text-xs mt-1">₹{i.onlinePrice}</p></div>
-                                            <button onClick={() => addToCart(i)} className="bg-gray-800 text-lemon font-black px-4 py-2 rounded-xl text-[10px] border border-lemon/20 active:bg-lemon active:text-black">ADD</button>
+                                        <div key={i.id} className="bg-gray-900 border border-gray-800 p-5 rounded-[1.8rem] flex justify-between items-center hover:border-lemon/20 transition-all active:scale-[0.98]">
+                                            <div className="flex-1 pr-4">
+                                                <p className="font-black text-white uppercase text-sm tracking-tight">{i.name}</p>
+                                                <p className="text-lemon font-black text-base mt-1 tracking-tighter">₹{i.onlinePrice}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => addToCart(i)} 
+                                                className="bg-gray-800 text-lemon font-black px-6 py-2.5 rounded-2xl text-[10px] uppercase border border-lemon/10 shadow-lg active:bg-lemon active:text-black transition-all"
+                                            >
+                                                ADD
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -194,63 +199,106 @@ const CustomerOrderPage: React.FC = () => {
                 )}
 
                 {view === 'cart' && (
-                    <div className="bg-gray-900 p-6 rounded-[2rem] border border-gray-800 animate-fade-in">
-                        <h2 className="text-xl font-black text-white uppercase mb-6">Review Cart</h2>
-                        {cart.length === 0 ? <p className="text-gray-500 text-center py-10">Cart is empty</p> : (
-                            <div className="space-y-4">
-                                {cart.map(i => (
-                                    <div key={i.id} className="flex justify-between items-center border-b border-white/5 pb-4">
-                                        <div className="flex-1"><p className="text-sm font-bold uppercase">{i.name}</p><p className="text-lemon text-xs">₹{i.onlinePrice * i.quantity}</p></div>
-                                        <div className="flex items-center gap-3 bg-black p-1 rounded-lg">
-                                            <button onClick={() => updateQuantity(i.id, i.quantity - 1)} className="w-8 h-8 text-white">-</button>
-                                            <span className="text-xs font-black">{i.quantity}</span>
-                                            <button onClick={() => updateQuantity(i.id, i.quantity + 1)} className="w-8 h-8 text-white">+</button>
+                    <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 animate-fade-in shadow-2xl">
+                        <h2 className="text-2xl font-black text-white uppercase mb-8 tracking-tighter italic">Review Order</h2>
+                        {cart.length === 0 ? (
+                            <div className="text-center py-20 opacity-20">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                                <p className="font-black uppercase text-xs tracking-widest">Cart is empty</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="space-y-4">
+                                    {cart.map(i => (
+                                        <div key={i.id} className="flex justify-between items-center border-b border-white/5 pb-4">
+                                            <div className="flex-1 min-w-0 pr-4">
+                                                <p className="text-sm font-black uppercase text-white truncate">{i.name}</p>
+                                                <p className="text-lemon font-bold text-xs">₹{i.onlinePrice * i.quantity}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3 bg-black p-1.5 rounded-2xl border border-gray-800">
+                                                <button onClick={() => updateQuantity(i.id, i.quantity - 1)} className="w-8 h-8 rounded-xl hover:bg-gray-800 transition-colors text-white font-black">-</button>
+                                                <span className="text-sm font-black text-lemon min-w-[20px] text-center">{i.quantity}</span>
+                                                <button onClick={() => updateQuantity(i.id, i.quantity + 1)} className="w-8 h-8 rounded-xl hover:bg-gray-800 transition-colors text-white font-black">+</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                <div className="pt-4 space-y-2">
-                                    <div className="flex justify-between text-xs text-gray-500 font-bold uppercase"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
-                                    <div className="flex justify-between text-sm text-white font-black uppercase"><span>Grand Total</span><span className="text-lemon text-lg">₹{cartTotal.toFixed(0)}</span></div>
+                                    ))}
                                 </div>
-                                <button onClick={() => setView('checkout')} className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase text-xs mt-6">Checkout</button>
+                                <div className="pt-6 space-y-3 bg-black/30 p-6 rounded-3xl border border-white/5">
+                                    <div className="flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest"><span>Subtotal</span><span>₹{cartSubtotal}</span></div>
+                                    {deliveryFee > 0 && <div className="flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest"><span>Delivery Charge</span><span>₹{deliveryFee}</span></div>}
+                                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                        <span className="text-sm text-white font-black uppercase">Grand Total</span>
+                                        <span className="text-2xl text-lemon font-black tracking-tighter">₹{cartTotal.toFixed(0)}</span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setView('checkout')} className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] uppercase text-xs tracking-widest mt-6 shadow-xl shadow-lemon/10 active:scale-95 transition-all">Proceed to Details</button>
                             </div>
                         )}
                     </div>
                 )}
 
                 {view === 'checkout' && (
-                    <form onSubmit={handlePlaceOrder} className="bg-gray-900 p-6 rounded-[2rem] border border-gray-800 space-y-4">
-                        <div className="flex gap-2 p-1 bg-black rounded-xl border border-gray-800">
-                             <button type="button" onClick={() => setOrderType('Pickup')} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase ${orderType === 'Pickup' ? 'bg-lemon text-black' : 'text-gray-500'}`}>Pickup</button>
-                             <button type="button" onClick={() => setOrderType('Delivery')} disabled={!restaurant?.isDeliveryEnabled} className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase ${orderType === 'Delivery' ? 'bg-lemon text-black' : 'text-gray-500'}`}>Delivery</button>
+                    <form onSubmit={handlePlaceOrder} className="bg-gray-900 p-8 rounded-[2.5rem] border border-gray-800 space-y-6 animate-fade-in shadow-2xl">
+                        <div className="flex gap-2 p-1.5 bg-black rounded-2xl border border-gray-800">
+                             <button type="button" onClick={() => setOrderType('Pickup')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${orderType === 'Pickup' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500'}`}>Self Pickup</button>
+                             <button type="button" onClick={() => setOrderType('Delivery')} disabled={!restaurant?.isDeliveryEnabled} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${orderType === 'Delivery' ? 'bg-lemon text-black shadow-lg shadow-lemon/20' : 'text-gray-500 disabled:opacity-20'}`}>Home Delivery</button>
                         </div>
-                        <input placeholder="Your Name" className="w-full bg-black text-white p-4 rounded-xl border border-gray-800 outline-none font-bold" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
-                        <div className="flex gap-2">
-                            <input placeholder="Mobile Number" type="tel" maxLength={10} className="flex-1 bg-black text-white p-4 rounded-xl border border-gray-800 outline-none font-bold" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} disabled={otpVerified} required />
-                            {!otpVerified && <button type="button" onClick={handleSendOtp} className="bg-gray-800 text-lemon px-4 rounded-xl font-black text-[9px] uppercase border border-lemon/20">{otpSent ? 'Retry' : 'Verify'}</button>}
-                        </div>
-                        {otpSent && !otpVerified && (
-                            <div className="flex gap-2">
-                                <input placeholder="4-digit OTP" className="flex-1 bg-black text-white p-4 rounded-xl border border-lemon/30 outline-none font-bold" value={otp} onChange={e => setOtp(e.target.value)} />
-                                <button type="button" onClick={handleVerifyOtp} className="bg-lemon text-black px-6 rounded-xl font-black text-[9px] uppercase">Verify</button>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Full Name</label>
+                                <input placeholder="Your Name" className="w-full bg-black text-white p-4 rounded-2xl border border-gray-800 outline-none font-bold focus:border-lemon transition-colors" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
                             </div>
-                        )}
-                        {orderType === 'Delivery' && <textarea placeholder="Address" className="w-full bg-black text-white p-4 rounded-xl border border-gray-800 outline-none font-bold" rows={2} value={address} onChange={e => setAddress(e.target.value)} required />}
-                        <button type="submit" disabled={!otpVerified} className="w-full bg-lemon text-black font-black py-4 rounded-xl uppercase text-xs shadow-xl shadow-lemon/20 disabled:opacity-30">Place Order - ₹{cartTotal.toFixed(0)}</button>
+                            
+                            <div>
+                                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Verification Required</label>
+                                <div className="flex gap-2">
+                                    <input placeholder="Mobile Number" type="tel" maxLength={10} className="flex-1 bg-black text-white p-4 rounded-2xl border border-gray-800 outline-none font-bold focus:border-lemon" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} disabled={otpVerified} required />
+                                    {!otpVerified && <button type="button" onClick={handleSendOtp} className="bg-gray-800 text-lemon px-6 rounded-2xl font-black text-[10px] uppercase border border-lemon/20 active:scale-95 transition-all">{otpSent ? 'Resend' : 'Send OTP'}</button>}
+                                </div>
+                            </div>
+                            
+                            {otpSent && !otpVerified && (
+                                <div className="flex gap-2 animate-bounce-short">
+                                    <input placeholder="4-digit Code" className="flex-1 bg-black text-lemon p-4 rounded-2xl border border-lemon/30 outline-none font-black text-center tracking-[0.5em]" value={otp} onChange={e => setOtp(e.target.value)} />
+                                    <button type="button" onClick={handleVerifyOtp} className="bg-lemon text-black px-8 rounded-2xl font-black text-[10px] uppercase active:scale-95">Verify</button>
+                                </div>
+                            )}
+
+                            {orderType === 'Delivery' && (
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Drop Location</label>
+                                    <textarea placeholder="Your Complete Address" className="w-full bg-black text-white p-4 rounded-2xl border border-gray-800 outline-none font-bold focus:border-lemon resize-none" rows={3} value={address} onChange={e => setAddress(e.target.value)} required />
+                                </div>
+                            )}
+                        </div>
+
+                        <button type="submit" disabled={!otpVerified} className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] uppercase text-xs tracking-[0.2em] shadow-2xl shadow-lemon/10 disabled:opacity-20 active:scale-95 transition-all mt-4">Place Order • ₹{cartTotal.toFixed(0)}</button>
                     </form>
                 )}
 
                 {view === 'confirmation' && (
-                    <div className="bg-gray-900 p-8 rounded-[3rem] border border-lemon text-center space-y-6">
-                        <div className="w-20 h-20 bg-lemon/10 rounded-full mx-auto flex items-center justify-center text-lemon">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <div className="bg-gray-900 p-10 rounded-[3rem] border border-lemon text-center space-y-8 animate-fade-in shadow-2xl">
+                        <div className="w-24 h-24 bg-lemon/10 rounded-full mx-auto flex items-center justify-center text-lemon border border-lemon/20">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Order Placed!</h2>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest leading-loose">We have notified the kitchen. Your Order ID is <span className="text-lemon">{orderId}</span></p>
-                        <button onClick={() => window.location.reload()} className="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest">Back to Menu</button>
+                        <div>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">ORDER PLACED!</h2>
+                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-2">Notification sent to kitchen</p>
+                        </div>
+                        <div className="bg-black/50 p-6 rounded-3xl border border-white/5">
+                             <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Your Order ID</p>
+                             <p className="text-3xl font-black text-lemon tracking-tighter">{orderId}</p>
+                        </div>
+                        <button onClick={() => window.location.reload()} className="w-full bg-white text-black font-black py-5 rounded-[1.5rem] uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">Order More Items</button>
                     </div>
                 )}
             </main>
+            
+            {/* Simple Footer Logo */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-md border-t border-gray-900 flex justify-center items-center pointer-events-none">
+                 <p className="text-[8px] font-black text-gray-700 uppercase tracking-[0.5em]">Powered by BaBu SAHAB POS</p>
+            </div>
         </div>
     );
 };

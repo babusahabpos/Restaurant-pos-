@@ -164,8 +164,8 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
     });
 
     const renderCategoryGrid = () => (
-        <>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
                 <input 
                     type="text" 
                     placeholder="Search categories..."
@@ -177,25 +177,27 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
                     Add New Category
                 </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredCategories.map(category => (
-                    <div key={category} onClick={() => setSelectedCategory(category)} className="bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:ring-2 hover:ring-lemon transition border border-gray-800 h-32">
-                        <h4 className="text-lg font-bold text-white capitalize">{category}</h4>
-                        <p className="text-sm text-gray-400 mt-1">
-                            {menu.filter(item => item.category === category).length} items
-                        </p>
-                    </div>
-                ))}
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredCategories.map(category => (
+                        <div key={category} onClick={() => setSelectedCategory(category)} className="bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:ring-2 hover:ring-lemon transition border border-gray-800 h-32">
+                            <h4 className="text-lg font-bold text-white capitalize">{category}</h4>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {menu.filter(item => item.category === category).length} items
+                            </p>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </>
+        </div>
     );
 
     const renderItemView = () => {
         if (!selectedCategory) return null;
         const itemsToShow = menu.filter(item => item.category === selectedCategory && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
         return (
-            <>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
                      <button onClick={() => { setSelectedCategory(null); setSearchTerm(''); }} className="flex items-center gap-2 bg-gray-800 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                         Back
@@ -212,16 +214,16 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
                     </button>
                 </div>
 
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-800">
-                    <h4 className="text-xl font-bold text-lemon mb-4 capitalize">{selectedCategory}</h4>
-                    <div className="hidden md:grid grid-cols-12 gap-4 px-3 py-2 text-xs text-gray-400 font-bold uppercase">
+                <div className="flex-1 flex flex-col min-h-0 bg-gray-900/50 p-4 rounded-lg border border-gray-800 overflow-hidden">
+                    <h4 className="text-xl font-bold text-lemon mb-4 capitalize shrink-0">{selectedCategory}</h4>
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-3 py-2 text-xs text-gray-400 font-bold uppercase shrink-0">
                         <div className="col-span-5">Item Name</div>
                         <div className="col-span-2 text-right">Offline Price</div>
                         <div className="col-span-2 text-right">Online Price</div>
                         <div className="col-span-1 text-center">Stock</div>
                         <div className="col-span-2 text-center">Actions</div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-6">
                         {itemsToShow.map(item => (
                             <div key={item.id} className="bg-gray-800 p-3 rounded-lg grid grid-cols-2 md:grid-cols-12 md:gap-4 items-center">
                                 <div className="col-span-2 md:col-span-5 font-medium text-white flex items-center gap-3">
@@ -237,7 +239,7 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
                                      <label className="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" checked={item.inStock} onChange={() => toggleStock(item.id)} className="sr-only peer" />
                                         <div className="w-11 h-6 bg-gray-900 rounded-full peer peer-focus:ring-2 peer-focus:ring-lemon/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lemon"></div>
-                                    </label>
+                                     </label>
                                 </div>
                                 <div className="col-span-2 md:col-span-2 flex justify-center items-center gap-4 mt-2 md:mt-0">
                                     <button onClick={() => handleOpenItemModal(item)} className="font-medium text-blue-500 hover:underline text-sm">Edit</button>
@@ -247,19 +249,19 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
                         ))}
                     </div>
                 </div>
-            </>
+            </div>
         );
     };
 
     return (
-        <>
+        <div className="h-full flex flex-col overflow-hidden">
             {isItemModalOpen && <MenuItemFormModal item={editingItem} onClose={handleCloseModals} onSave={handleSaveItem} categories={categories} />}
             {isCategoryModalOpen && <AddCategoryModal onClose={handleCloseModals} onSave={handleSaveCategory} />}
 
-            <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
+            <div className="flex-1 bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800 flex flex-col min-h-0">
                 {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
             </div>
-        </>
+        </div>
     );
 };
 

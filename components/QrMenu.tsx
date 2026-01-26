@@ -172,7 +172,6 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
 
     const handleGenerateUrl = () => {
         // Minify data to reduce URL length
-        // Structure: [id, name, cat, offPrice, onPrice, inStock(1/0)]
         const simplifiedMenu = menu.map(m => [
             m.id, 
             m.name, 
@@ -182,8 +181,6 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
             m.inStock ? 1 : 0
         ]);
 
-        // Key Map:
-        // i: id, n: restaurantName, a: address, p: phone, f: fssai, t: taxRate, d: deliveryCharge, e: isDeliveryEnabled, m: menu
         const dataToEncode = {
             i: loggedInUser.id,
             n: loggedInUser.restaurantName,
@@ -197,35 +194,28 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
         };
 
         const stringifiedData = JSON.stringify(dataToEncode);
-        
-        // Use a unique session key
         const sessionKey = `bs_m_${loggedInUser.id}`;
         try {
             sessionStorage.setItem(sessionKey, stringifiedData);
-        } catch (e) {
-            console.error("Could not write to sessionStorage.", e);
-        }
+        } catch (e) {}
 
-        // Handle Unicode (e.g. ₹) properly for base64 encoding
         const binaryString = unescape(encodeURIComponent(stringifiedData));
         const encodedData = encodeURIComponent(btoa(binaryString));
 
         let path = window.location.pathname.replace('index.html', '');
-        // Ensure trailing slash for consistent base URL
         if (path && !path.endsWith('/')) {
             path += '/';
         }
 
         const url = `${window.location.origin}${path}#customer-order?key=${sessionKey}&data=${encodedData}`;
-
         setMenuUrl(url);
         setIsUrlModalOpen(true);
     };
 
 
     const renderCategoryGrid = () => (
-        <>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
                 <input 
                     type="text" 
                     placeholder="Search categories..."
@@ -237,25 +227,27 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
                     Add New Category
                 </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredCategories.map(category => (
-                    <div key={category} onClick={() => setSelectedCategory(category)} className="bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:ring-2 hover:ring-lemon transition border border-gray-800 h-32">
-                        <h4 className="text-lg font-bold text-white capitalize">{category}</h4>
-                        <p className="text-sm text-gray-400 mt-1">
-                            {validMenuItems.filter(item => item.category === category).length} items
-                        </p>
-                    </div>
-                ))}
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredCategories.map(category => (
+                        <div key={category} onClick={() => setSelectedCategory(category)} className="bg-gray-900 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:ring-2 hover:ring-lemon transition border border-gray-800 h-32">
+                            <h4 className="text-lg font-bold text-white capitalize">{category}</h4>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {validMenuItems.filter(item => item.category === category).length} items
+                            </p>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </>
+        </div>
     );
 
     const renderItemView = () => {
         if (!selectedCategory) return null;
         const itemsToShow = validMenuItems.filter(item => item.category === selectedCategory && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
         return (
-            <>
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 shrink-0">
                      <button onClick={() => { setSelectedCategory(null); setSearchTerm(''); }} className="flex items-center gap-2 bg-gray-800 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                         Back
@@ -272,16 +264,16 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
                     </button>
                 </div>
 
-                <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-800">
-                    <h4 className="text-xl font-bold text-lemon mb-4 capitalize">{selectedCategory}</h4>
-                    <div className="hidden md:grid grid-cols-12 gap-4 px-3 py-2 text-xs text-gray-400 font-bold uppercase">
+                <div className="flex-1 flex flex-col min-h-0 bg-gray-900/50 p-4 rounded-lg border border-gray-800 overflow-hidden">
+                    <h4 className="text-xl font-bold text-lemon mb-4 capitalize shrink-0">{selectedCategory}</h4>
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-3 py-2 text-xs text-gray-400 font-bold uppercase shrink-0">
                         <div className="col-span-5">Item Name</div>
                         <div className="col-span-2 text-right">Offline Price</div>
                         <div className="col-span-2 text-right">Online Price</div>
                         <div className="col-span-1 text-center">Stock</div>
                         <div className="col-span-2 text-center">Actions</div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-6">
                         {itemsToShow.map(item => (
                             <div key={item.id} className="bg-gray-800 p-3 rounded-lg grid grid-cols-2 md:grid-cols-12 md:gap-4 items-center">
                                 <div className="col-span-2 md:col-span-5 font-medium text-white">{item.name}</div>
@@ -305,19 +297,19 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
                         ))}
                     </div>
                 </div>
-            </>
+            </div>
         );
     };
 
     return (
-        <>
+        <div className="h-full flex flex-col overflow-hidden">
             {isItemModalOpen && <MenuItemFormModal item={editingItem} onClose={handleCloseModals} onSave={handleSaveItem} categories={categories} />}
             {isCategoryModalOpen && <AddCategoryModal onClose={handleCloseModals} onSave={handleSaveCategory} />}
             {isUrlModalOpen && <QrCodeModal isOpen={isUrlModalOpen} onClose={() => setIsUrlModalOpen(false)} menuUrl={menuUrl} restaurantName={loggedInUser.restaurantName} />}
 
-            <div className="space-y-6">
-                <div className="bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800">
-                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-800 pb-6">
+            <div className="flex-1 flex flex-col min-h-0 space-y-6">
+                <div className="flex-1 bg-black p-4 md:p-6 rounded-lg shadow-sm border border-gray-800 flex flex-col min-h-0">
+                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-800 pb-6 shrink-0">
                         <div>
                             <h3 className="text-xl font-bold text-white">QR Menu Management</h3>
                             <p className="text-gray-400 mt-1">Manage your menu items and generate QR codes for customers.</p>
@@ -331,7 +323,7 @@ const QrMenu: React.FC<QrMenuProps> = ({ menu = [], setMenu, loggedInUser }) => 
                     {selectedCategory === null ? renderCategoryGrid() : renderItemView()}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
