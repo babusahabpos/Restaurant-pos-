@@ -30,16 +30,13 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
     const [formData, setFormData] = useState({ restaurantName: '', name: '', phone: '', email: '', password: '' });
     const [referralCode, setReferralCode] = useState('');
     const [transactionId, setTransactionId] = useState('');
-    const [userUpiId, setUserUpiId] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'selection' | 'upi_request' | 'qr'>('selection');
-    const [isOfferChecked, setIsOfferChecked] = useState(false);
     
-    const ADMIN_UPI_ID = "7003548323@ybl";
     const SUBSCRIPTION_AMOUNT = "99"; 
+    const UPI_PAYMENT_URL = "upi://pay?pa=gpay-11257286267@okbizaxis&pn=BaBu%20SAHAB%20POS&am=99&cu=INR";
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -56,25 +53,14 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         setStep(2);
     };
 
-    const upiUrl = `upi://pay?pa=${ADMIN_UPI_ID}&pn=BaBuSAHAB&am=${SUBSCRIPTION_AMOUNT}&cu=INR&tn=ID_Activation`;
-
-    const handleUpiRequest = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!userUpiId.includes('@')) {
-            alert("Please enter a valid UPI ID (e.g. name@upi)");
-            return;
-        }
-        setIsVerifying(true);
-        setTimeout(() => {
-            setIsVerifying(false);
-            alert(`Payment request of ₹${SUBSCRIPTION_AMOUNT} sent to ${userUpiId}. Please accept in your UPI app.`);
-        }, 2000);
+    const handlePayClick = () => {
+        window.location.href = UPI_PAYMENT_URL;
     };
 
     const handleVerifyAndActivate = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         
-        if (!isOfferChecked && transactionId.length < 4) {
+        if (transactionId.length < 4) {
             alert("Please enter a valid Transaction ID / UTR.");
             return;
         }
@@ -82,6 +68,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         setIsVerifying(true);
         setTimeout(() => {
             setIsVerifying(false);
+            // 2 months total (1 month paid + 1 month bonus)
             onRegister(formData, UserStatus.Approved, referralCode);
             setShowSuccessModal(true);
         }, 3000);
@@ -129,114 +116,53 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                     </form>
                 ) : (
                     <div className="space-y-4 animate-fade-in">
-                        {/* SPECIAL OFFER BOX */}
-                        <div 
-                            onClick={() => setIsOfferChecked(!isOfferChecked)}
-                            className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between gap-4 ${isOfferChecked ? 'bg-lemon/10 border-lemon' : 'bg-gray-900/50 border-gray-800 hover:border-gray-600'}`}
-                        >
-                            <div className="flex-1">
-                                <h3 className="text-lemon font-black text-sm uppercase tracking-tighter italic">★ SPECIAL OFFER ★</h3>
-                                <p className="text-white font-black text-base uppercase leading-tight mt-1">2 Month Free Subscription</p>
-                                <p className="text-gray-500 text-[10px] font-bold uppercase mt-1">Limited time introductory benefit</p>
-                            </div>
-                            <div className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 ${isOfferChecked ? 'bg-lemon border-lemon shadow-lg shadow-lemon/20' : 'bg-black border-gray-700'}`}>
-                                {isOfferChecked && <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                        {/* RESTORED PLAN DETAILS BOX STYLE */}
+                        <div className="p-6 rounded-[2rem] border-2 border-lemon bg-lemon/5 shadow-2xl">
+                            <h3 className="text-lemon font-black text-sm uppercase tracking-tighter italic">Activation Plan</h3>
+                            <div className="mt-4 space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <p className="text-white font-black text-base uppercase">Subscription</p>
+                                    <p className="text-lemon font-black text-base">₹99 / Monthly</p>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                    <div className="flex flex-col">
+                                        <p className="text-green-500 font-black text-[11px] uppercase tracking-widest leading-none">Joining Bonus</p>
+                                        <p className="text-gray-500 font-bold text-[8px] uppercase tracking-widest mt-1 opacity-60">Valid for 60 Days Total</p>
+                                    </div>
+                                    <p className="text-green-500 font-black text-[11px] uppercase tracking-widest">+ 1 Month FREE</p>
+                                </div>
                             </div>
                         </div>
 
-                        {isOfferChecked ? (
-                            <div className="space-y-4 animate-fade-in pt-2">
-                                <div className="bg-gray-900/40 p-6 rounded-[2rem] border border-dashed border-lemon/30 text-center">
-                                    <p className="text-gray-300 font-bold text-sm uppercase tracking-tight italic">"You have chosen the free activation path."</p>
-                                </div>
-                                <button 
-                                    onClick={() => handleVerifyAndActivate()}
-                                    className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] hover:bg-lemon-dark transition shadow-2xl shadow-lemon/30 uppercase text-xs tracking-[0.2em] active:scale-95"
-                                >
-                                    Claim Offer & Activate ID
+                        <div className="space-y-4">
+                            {/* LARGE LEMON YELLOW BUTTON */}
+                            <button 
+                                onClick={handlePayClick}
+                                className="w-full bg-lemon hover:bg-lemon-dark text-black font-black p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,0,0.15)] group"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="mb-1"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                <span className="text-sm font-black uppercase tracking-widest">Pay subscription fee</span>
+                                <span className="text-[8px] font-bold uppercase opacity-60">Opens GPay / PhonePe / Paytm</span>
+                            </button>
+
+                            <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-5 rounded-[2.5rem] border border-gray-800">
+                                <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">After Payment, Enter UTR / Ref No.</p>
+                                <input 
+                                    type="text" 
+                                    placeholder="UTR / Transaction ID" 
+                                    required 
+                                    value={transactionId}
+                                    onChange={e => setTransactionId(e.target.value)}
+                                    className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-mono font-bold text-center text-sm mb-4 focus:border-lemon transition-colors"
+                                />
+                                <button type="submit" className="w-full bg-white text-black font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest">
+                                    Verify & Activate Terminal
                                 </button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4 animate-fade-in">
-                                {paymentMethod === 'selection' && (
-                                    <div className="space-y-4">
-                                        <div className="bg-lemon text-black py-2.5 rounded-xl text-center font-black uppercase tracking-[0.2em] text-[10px]">
-                                            SELECT PAYMENT METHOD
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 gap-3">
-                                            <button onClick={() => setPaymentMethod('upi_request')} className="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
-                                                <div className="bg-lemon/10 p-3 rounded-2xl group-hover:bg-lemon/20 transition-colors">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2.5"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-white font-black text-xs uppercase">UPI ID Request</p>
-                                                    <p className="text-gray-500 text-[9px] font-bold uppercase">Get payment request for ₹{SUBSCRIPTION_AMOUNT}</p>
-                                                </div>
-                                            </button>
-
-                                            <button onClick={() => setPaymentMethod('qr')} className="bg-gray-900 p-5 rounded-3xl border border-gray-800 flex items-center gap-4 hover:border-lemon transition-all group">
-                                                <div className="bg-lemon/10 p-3 rounded-2xl group-hover:bg-lemon/20 transition-colors">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="text-white font-black text-xs uppercase">Scan QR Code</p>
-                                                    <p className="text-gray-500 text-[9px] font-bold uppercase">Pay ₹{SUBSCRIPTION_AMOUNT} for Instant Activation</p>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {paymentMethod === 'upi_request' && (
-                                    <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 space-y-4">
-                                        <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest text-center">Enter your UPI ID</h4>
-                                        <form onSubmit={handleUpiRequest} className="space-y-3">
-                                            <input 
-                                                type="text" 
-                                                placeholder="yourname@upi" 
-                                                value={userUpiId}
-                                                onChange={e => setUserUpiId(e.target.value)}
-                                                className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-bold text-center text-sm"
-                                            />
-                                            <button type="submit" className="w-full bg-white text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest">
-                                                Request ₹{SUBSCRIPTION_AMOUNT}
-                                            </button>
-                                        </form>
-                                        <button onClick={() => setPaymentMethod('selection')} className="w-full text-[9px] text-lemon font-black uppercase tracking-widest text-center">Go Back</button>
-                                    </div>
-                                )}
-
-                                {paymentMethod === 'qr' && (
-                                    <div className="bg-gray-900 p-6 rounded-3xl border border-lemon/20 text-center space-y-4">
-                                        <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Scan to Pay</h4>
-                                        <div className="bg-white p-2 rounded-xl inline-block border-4 border-lemon">
-                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`} alt="Payment QR" className="w-32 h-32" />
-                                        </div>
-                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Total Amount: ₹{SUBSCRIPTION_AMOUNT}</p>
-                                        <button onClick={() => setPaymentMethod('selection')} className="w-full text-[9px] text-lemon font-black uppercase tracking-widest">Go Back</button>
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-4 rounded-2xl border border-gray-800">
-                                    <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">After Payment, Enter UTR / Ref No.</p>
-                                    <input 
-                                        type="text" 
-                                        placeholder="UTR / Transaction ID" 
-                                        required 
-                                        value={transactionId}
-                                        onChange={e => setTransactionId(e.target.value)}
-                                        className="w-full bg-black text-lemon p-4 rounded-xl border border-gray-800 outline-none font-mono font-bold text-center text-sm mb-3 focus:border-lemon transition-colors"
-                                    />
-                                    <button type="submit" className="w-full bg-lemon text-black font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all uppercase text-[11px] tracking-widest shadow-lemon/10">
-                                        Verify & Activate
-                                    </button>
-                                </form>
-                            </div>
-                        )}
+                            </form>
+                        </div>
 
                         <button onClick={() => setStep(1)} className="w-full text-gray-700 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1 pt-4">
-                             ← Back to Details
+                             ← Edit Registration Details
                         </button>
                     </div>
                 )}
