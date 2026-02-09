@@ -88,8 +88,11 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
     const handleOrder = (product: MarketplaceProduct) => {
         const qty = quantities[product.id] || 1;
         onPlaceOrder(product.id, product.name, product.price, qty);
-        alert(`Order for ${product.name} placed! Check the yellow tracking box.`);
+        alert(`Order for ${product.name} placed! Track progress in the yellow box above.`);
     };
+
+    // Sort to show newest first and all orders por-por
+    const sortedOrders = [...orders].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return (
         <div className="space-y-6 h-full flex flex-col p-2 md:p-0 animate-fade-in overflow-hidden">
@@ -106,8 +109,8 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-8 pb-32">
-                {/* ORDER HISTORY - Redesigned for multiple entries */}
-                {orders.length > 0 && (
+                {/* ORDER HISTORY - Yellow Box with multiple orders por-por */}
+                {sortedOrders.length > 0 && (
                     <div className="bg-lemon border-4 border-lemon/40 p-5 rounded-[2.5rem] space-y-4 shadow-2xl animate-fade-in mx-1">
                         <div className="flex justify-between items-center px-2">
                             <h3 className="text-black font-black uppercase text-xs tracking-widest flex items-center gap-2">
@@ -115,15 +118,14 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-2 w-2 bg-black"></span>
                                 </span>
-                                Active Tracking
+                                My Orders Tracking
                             </h3>
-                            <span className="text-[8px] font-black text-black/60 uppercase">{orders.length} items</span>
+                            <span className="text-[8px] font-black text-black/60 uppercase">{sortedOrders.length} active items</span>
                         </div>
                         
-                        {/* Improved horizontal slider with better keying */}
                         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                            {orders.slice().reverse().map(order => (
-                                <div key={`market-order-${order.id}`} className="min-w-[280px] bg-black p-6 rounded-[2.2rem] border border-black/10 shadow-xl relative overflow-hidden group">
+                            {sortedOrders.map((order, idx) => (
+                                <div key={`order-history-${order.id}-${idx}`} className="min-w-[280px] bg-black p-6 rounded-[2.2rem] border border-black/10 shadow-xl relative overflow-hidden group">
                                     <div className="flex flex-col h-full justify-between gap-5">
                                         <div>
                                             <div className="flex justify-between items-start mb-2">
@@ -137,15 +139,14 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
                                                 <span className="text-[8px] text-gray-600 font-bold uppercase">{new Date(order.timestamp).toLocaleDateString()}</span>
                                             </div>
                                             <h4 className="text-white font-black uppercase text-sm leading-tight line-clamp-1">{order.productName}</h4>
-                                            <p className="text-lemon font-bold text-[10px] mt-1 uppercase tracking-widest">Qty: {order.quantity} • Total: ₹{order.price * order.quantity}</p>
+                                            <p className="text-lemon font-bold text-[10px] mt-1 uppercase tracking-widest">Qty: {order.quantity} • Bill: ₹{order.price * order.quantity}</p>
                                         </div>
 
                                         <div className="space-y-3">
-                                            {/* Delivery Date Display - Crucial for sync verification */}
                                             <div className={`p-3 rounded-xl border ${order.status === 'Out of Stock' ? 'bg-orange-900/10 border-orange-900/30' : 'bg-white/5 border-white/10'}`}>
-                                                 <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1">Schedule</p>
+                                                 <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest leading-none mb-1 italic">Schedule</p>
                                                  <p className={`font-black text-xs uppercase tracking-tighter ${order.status === 'Out of Stock' ? 'text-orange-500' : 'text-white'}`}>
-                                                     {order.status === 'Out of Stock' ? 'Currently Unavailable' : (order.deliveryDate || 'Awaiting Confirmation')}
+                                                     {order.status === 'Out of Stock' ? 'Not Available' : (order.deliveryDate || 'Processing...')}
                                                  </p>
                                             </div>
                                             
@@ -155,7 +156,7 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
                                                     className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-95"
                                                 >
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
-                                                    Support
+                                                    Chat
                                                 </button>
                                                 {(order.status === 'Pending' || order.status === 'Accepted') && (
                                                     <button 
@@ -214,13 +215,6 @@ const Market: React.FC<MarketProps> = ({ products, orders, onPlaceOrder, onCance
                     </div>
                 ))}
                 </div>
-
-                {products.length === 0 && (
-                    <div className="py-24 text-center opacity-30 flex flex-col items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-6"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        <p className="font-black uppercase text-xs tracking-[0.3em]">Marketplace currently offline</p>
-                    </div>
-                )}
             </div>
         </div>
     );
