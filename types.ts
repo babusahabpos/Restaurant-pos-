@@ -148,6 +148,7 @@ export interface MarketplaceOrder {
     status: 'Pending' | 'Accepted' | 'Cancelled' | 'Out of Stock' | 'Delivered';
     deliveryDate?: string;
     timestamp: Date;
+    messages?: TicketMessage[];
 }
 
 // Inventory Types

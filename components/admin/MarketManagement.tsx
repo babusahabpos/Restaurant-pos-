@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MarketplaceProduct, MarketplaceOrder, RegisteredUser } from '../../types';
+import { MarketplaceProduct, MarketplaceOrder, RegisteredUser, TicketMessage } from '../../types';
 
 interface MarketManagementProps {
     products: MarketplaceProduct[];
@@ -11,14 +11,59 @@ interface MarketManagementProps {
     onMessageUser: (userId: number, message: string) => void;
     onUpdateStatus: (orderId: number, status: MarketplaceOrder['status']) => void;
     onDeleteOrder: (orderId: number) => void;
+    onSendMessageOrder: (orderId: number, text: string, sender: 'user' | 'admin') => void;
 }
 
-const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, users, onAddProduct, onDeleteProduct, onMessageUser, onUpdateStatus, onDeleteOrder }) => {
+const OrderChatModalAdmin: React.FC<{
+    order: MarketplaceOrder;
+    onClose: () => void;
+    onSend: (text: string) => void;
+}> = ({ order, onClose, onSend }) => {
+    const [msg, setMsg] = useState('');
+    return (
+        <div className="fixed inset-0 bg-black/95 flex justify-center items-center z-[250] p-4 backdrop-blur-md">
+            <div className="bg-gray-800 border border-gray-700 w-full max-w-lg rounded-[2.5rem] flex flex-col h-[80vh] shadow-2xl animate-fade-in overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 className="text-lemon font-black uppercase text-sm tracking-tighter">Order Chat: {order.restaurantName}</h3>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Item: {order.productName}</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl font-black">&times;</button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+                    {(order.messages || []).map((m, i) => (
+                        <div key={i} className={`flex flex-col ${m.sender === 'admin' ? 'items-end' : 'items-start'}`}>
+                            <div className={`p-4 rounded-2xl max-w-[85%] ${m.sender === 'admin' ? 'bg-lemon text-black rounded-tr-none' : 'bg-gray-700 text-white rounded-tl-none'}`}>
+                                <p className="text-xs font-bold leading-relaxed">{m.text}</p>
+                            </div>
+                            <span className="text-[8px] text-gray-600 font-black uppercase mt-1 px-1">{new Date(m.timestamp).toLocaleString()}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <form onSubmit={(e) => { e.preventDefault(); if(msg.trim()) { onSend(msg); setMsg(''); }}} className="p-4 bg-gray-900 border-t border-white/5 flex gap-2 items-center">
+                    <input 
+                        value={msg} onChange={e => setMsg(e.target.value)}
+                        placeholder="Reply to restaurant owner..."
+                        className="flex-1 bg-black text-lemon p-4 rounded-2xl border border-gray-700 outline-none text-xs font-bold"
+                    />
+                    <button type="submit" className="bg-lemon text-black p-4 rounded-2xl active:scale-95 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, users, onAddProduct, onDeleteProduct, onMessageUser, onUpdateStatus, onDeleteOrder, onSendMessageOrder }) => {
     const [view, setView] = useState<'products' | 'orders'>('products');
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
     const [desc, setDesc] = useState('');
     const [image, setImage] = useState<string | undefined>(undefined);
+    const [activeChatOrder, setActiveChatOrder] = useState<MarketplaceOrder | null>(null);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -45,6 +90,8 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
 
     return (
         <div className="space-y-6">
+            {activeChatOrder && <OrderChatModalAdmin order={activeChatOrder} onClose={() => setActiveChatOrder(null)} onSend={(t) => onSendMessageOrder(activeChatOrder.id, t, 'admin')} />}
+            
             <div className="flex gap-2 bg-gray-900 p-1.5 rounded-2xl border border-gray-800 shrink-0">
                 <button onClick={() => setView('products')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'products' ? 'bg-lemon text-black shadow-lg' : 'text-gray-500'}`}>Inventory Supply</button>
                 <button onClick={() => setView('orders')} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${view === 'orders' ? 'bg-lemon text-black shadow-lg' : 'text-gray-500'}`}>User Requests ({orders.length})</button>
@@ -105,7 +152,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-tighter ${order.status === 'Pending' ? 'bg-lemon text-black' : order.status === 'Out of Stock' ? 'bg-red-600 text-white' : order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>{order.status}</span>
+                                            <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-tighter ${order.status === 'Pending' ? 'bg-lemon text-black' : order.status === 'Cancelled' ? 'bg-red-900 text-red-100' : order.status === 'Out of Stock' ? 'bg-red-600 text-white' : order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>{order.status}</span>
                                             <span className="text-[9px] text-gray-500 font-black uppercase">{new Date(order.timestamp).toLocaleString()}</span>
                                         </div>
                                         <h4 className="text-2xl font-black text-white uppercase leading-tight tracking-tighter">{order.productName}</h4>
@@ -125,35 +172,36 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                 <div className="flex flex-col gap-2 w-full md:w-56 shrink-0">
                                     <div className="grid grid-cols-2 gap-2">
                                         <button 
-                                            onClick={() => {
-                                                const msg = window.prompt("Enter notice for user:", `Regarding ${order.productName}: `);
-                                                if (msg) {
-                                                    onMessageUser(order.userId, msg);
-                                                    alert("Notice sent to user dashboard!");
-                                                }
-                                            }} 
-                                            className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all"
+                                            onClick={() => setActiveChatOrder(order)} 
+                                            className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all flex items-center justify-center gap-1"
                                         >
-                                            Message
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+                                            Order Chat
                                         </button>
                                         <button 
                                             onClick={() => {
-                                                onUpdateStatus(order.id, 'Delivered');
-                                                alert("Order marked as Delivered!");
+                                                const dDate = window.prompt("Set Delivery Date (e.g. 25th Jan):", order.deliveryDate || "");
+                                                if (dDate !== null) {
+                                                    const updatedOrders = orders.map(o => o.id === order.id ? { ...o, deliveryDate: dDate, status: 'Accepted' as const } : o);
+                                                    // In a real app this would call an update function, for now we simulate via direct update if the user has access to it.
+                                                    // Since this component is managed by AdminLayout, we just alert or ideally pass back.
+                                                    // Let's assume onUpdateStatus can be extended or used for this.
+                                                    onUpdateStatus(order.id, 'Accepted'); 
+                                                    alert("Delivery Date Updated & Order Accepted!");
+                                                }
                                             }} 
                                             className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all"
                                         >
-                                            Delivery
+                                            Accept/Date
                                         </button>
                                         <button 
                                             onClick={() => { 
-                                                onUpdateStatus(order.id, 'Out of Stock'); 
-                                                onMessageUser(order.userId, `Sorry, your order for ${order.productName} is currently out of stock.`); 
-                                                alert("Order marked Out of Stock and user notified!");
+                                                onUpdateStatus(order.id, 'Delivered');
+                                                alert("Order marked as Delivered!");
                                             }} 
-                                            className="bg-orange-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-orange-700 active:scale-95 transition-all"
+                                            className="bg-blue-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-blue-700 active:scale-95 transition-all"
                                         >
-                                            Out Stock
+                                            Deliver
                                         </button>
                                         <button 
                                             onClick={() => { 

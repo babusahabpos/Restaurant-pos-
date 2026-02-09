@@ -143,7 +143,10 @@ function App() {
                 if (marketProdRes.ok) setMarketplaceProducts(await marketProdRes.json());
 
                 const marketOrderRes = await fetch(`${CLOUD_BASE_URL}${MARKET_ORDER_SYNC_KEY}`);
-                if (marketOrderRes.ok) setMarketOrders(await marketOrderRes.json());
+                if (marketOrderRes.ok) {
+                    const rawOrders = await marketOrderRes.json();
+                    setMarketOrders(rawOrders.map((o: any) => ({ ...o, timestamp: new Date(o.timestamp) })));
+                }
 
                 // 3. PER-RESTAURANT SYNC
                 if (loggedInUser && authState === 'loggedIn') {
@@ -209,11 +212,27 @@ function App() {
             restaurantName: loggedInUser.restaurantName,
             productId, productName, price, quantity,
             status: 'Pending',
-            timestamp: new Date()
+            timestamp: new Date(),
+            messages: []
         };
         const updatedOrders = [...marketOrders, newOrder];
         setMarketOrders(updatedOrders);
         await pushToCloud(MARKET_ORDER_SYNC_KEY, updatedOrders);
+    };
+
+    const handleCancelMarketOrder = async (orderId: number) => {
+        const updated = marketOrders.map(o => o.id === orderId ? { ...o, status: 'Cancelled' as const } : o);
+        setMarketOrders(updated);
+        await pushToCloud(MARKET_ORDER_SYNC_KEY, updated);
+    };
+
+    const handleSendMessageMarketOrder = async (orderId: number, text: string, sender: 'user' | 'admin') => {
+        const updated = marketOrders.map(o => o.id === orderId ? { 
+            ...o, 
+            messages: [...(o.messages || []), { sender, text, timestamp: new Date() }] 
+        } : o);
+        setMarketOrders(updated);
+        await pushToCloud(MARKET_ORDER_SYNC_KEY, updated);
     };
 
     const handleSubmitStaffRequirement = async (requirement: string, salary: string) => {
@@ -289,7 +308,7 @@ function App() {
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onApproveMarketOrder={(o) => { const updated = marketOrders.map(mo => mo.id === o.id ? { ...mo, status: 'Accepted' } : mo); setMarketOrders(updated); pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} syncStatus={{ time: lastSyncTime, error: syncError }} onDeepRecovery={() => {}} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, status: b ? UserStatus.Blocked : UserStatus.Approved } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onSendMessage={(id, m) => setAlerts(prev => [...prev, { id: Date.now(), userId: id, message: m }])} onPasswordChange={(id, p) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, password: p } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateSubscription={(id, d) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, subscriptionEndDate: d } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateMenu={(id, m) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, menu: m } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onUpdateUserInfo={(id, name, email, phone, pass, rName) => { const updated = registeredUsers.map(u => u.id === id ? { ...u, name, email, phone, password: pass || u.password, restaurantName: rName || u.restaurantName } : u); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onDeleteUser={(id) => { const updated = registeredUsers.filter(u => u.id !== id); setRegisteredUsers(updated); pushToCloud(USER_SYNC_KEY, updated); }} onAddUser={(u) => handleRegister(u, UserStatus.Approved)} />}
-                    {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={async (n, p, d, i) => { const updated = [...marketplaceProducts, { id: Date.now(), name: n, price: p, description: d, image: i }]; setMarketplaceProducts(updated); await pushToCloud(MARKET_PRODUCT_SYNC_KEY, updated); }} onDeleteProduct={async (id) => { const updated = marketplaceProducts.filter(p => p.id !== id); setMarketplaceProducts(updated); await pushToCloud(MARKET_PRODUCT_SYNC_KEY, updated); }} onMessageUser={(uid, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: uid, message: msg }])} onUpdateStatus={async (oid, st) => { const updated = marketOrders.map(o => o.id === oid ? { ...o, status: st } : o); setMarketOrders(updated); await pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} onDeleteOrder={async (oid) => { const updated = marketOrders.filter(o => o.id !== oid); setMarketOrders(updated); await pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} />}
+                    {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={async (n, p, d, i) => { const updated = [...marketplaceProducts, { id: Date.now(), name: n, price: p, description: d, image: i }]; setMarketplaceProducts(updated); await pushToCloud(MARKET_PRODUCT_SYNC_KEY, updated); }} onDeleteProduct={async (id) => { const updated = marketplaceProducts.filter(p => p.id !== id); setMarketplaceProducts(updated); await pushToCloud(MARKET_PRODUCT_SYNC_KEY, updated); }} onMessageUser={(uid, msg) => setAlerts(prev => [...prev, { id: Date.now(), userId: uid, message: msg }])} onUpdateStatus={async (oid, st) => { const updated = marketOrders.map(o => o.id === oid ? { ...o, status: st } : o); setMarketOrders(updated); await pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} onDeleteOrder={async (oid) => { const updated = marketOrders.filter(o => o.id !== oid); setMarketOrders(updated); await pushToCloud(MARKET_ORDER_SYNC_KEY, updated); }} onSendMessageOrder={handleSendMessageMarketOrder} />}
                     {currentAdminPage === AdminPage.StaffHub && <AdminStaffHub jobPosts={staffJobPosts} onApprove={async (id) => { const updated = staffJobPosts.map(p => p.id === id ? { ...p, status: 'Approved' } : p); setStaffJobPosts(updated); await pushToCloud(STAFF_JOB_SYNC_KEY, updated); }} onDelete={async (id) => { const updated = staffJobPosts.filter(p => p.id !== id); setStaffJobPosts(updated); await pushToCloud(STAFF_JOB_SYNC_KEY, updated); }} onMessage={() => {}} onCreateRestaurantJob={async (job) => { const updated = [...restaurantJobs, { ...job, id: Date.now(), timestamp: new Date() }]; setRestaurantJobs(updated); await pushToCloud(RESTAURANT_JOB_SYNC_KEY, updated); }} activeRestaurantJobs={restaurantJobs} onDeleteRestaurantJob={async (id) => { const updated = restaurantJobs.filter(j => j.id !== id); setRestaurantJobs(updated); await pushToCloud(RESTAURANT_JOB_SYNC_KEY, updated); }} staffRequests={staffRequests} onMarkRequestRead={async (id) => { const updated = staffRequests.map(r => r.id === id ? { ...r, isRead: true } : r); setStaffRequests(updated); await pushToCloud(STAFF_REQ_SYNC_KEY, updated); }} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={async (tid, msg) => { const updated = supportTickets.map(t => t.id === tid ? { ...t, status: 'Pending', messages: [...t.messages, { sender: 'admin', text: msg, timestamp: new Date() }] } : t); setSupportTickets(updated); await pushToCloud(TICKET_SYNC_KEY, updated); }} onResolve={async (tid) => { const updated = supportTickets.map(t => t.id === tid ? { ...t, status: 'Resolved' } : t); setSupportTickets(updated); await pushToCloud(TICKET_SYNC_KEY, updated); }} onDelete={async (tid) => { const updated = supportTickets.filter(t => t.id !== tid); setSupportTickets(updated); await pushToCloud(TICKET_SYNC_KEY, updated); }} />}
                 </AdminLayout>
@@ -308,7 +327,7 @@ function App() {
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => { const newT: SupportTicket = { id: Date.now(), userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date() }; const updated = [...supportTickets, newT]; setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} onReplyToTicket={(tid, msg) => { const updated = supportTickets.map(t => t.id === tid ? { ...t, status: 'Open', lastUpdate: new Date(), messages: [...t.messages, { sender: 'user', text: msg, timestamp: new Date() }] } : t); setSupportTickets(updated); pushToCloud(TICKET_SYNC_KEY, updated); }} />}
                     {currentPage === 'payment' && <Payment members={paymentMembers.filter(m => m.userId === loggedInUser.id)} records={paymentRecords.filter(r => paymentMembers.find(m => m.id === r.memberId && m.userId === loggedInUser.id))} onAddMember={(n, c, t) => setPaymentMembers(prev => [...prev, { id: Date.now(), userId: loggedInUser.id, name: n, category: c, type: t }])} onRecordPayment={(mid, p, d, dt) => setPaymentRecords(prev => [...prev, { id: Date.now(), memberId: mid, paid: p, due: d, date: dt }])} onUpdateRecord={(id, p, d, dt) => setPaymentRecords(prev => prev.map(r => r.id === id ? { ...r, paid: p, due: d, date: dt } : r))} onDeleteRecord={(id) => setPaymentRecords(prev => prev.filter(r => r.id !== id))} onDeleteMember={(id) => { setPaymentMembers(prev => prev.filter(m => m.id !== id)); setPaymentRecords(prev => prev.filter(r => r.memberId !== id)); }} />}
                     {currentPage === 'customerOffer' && <CustomerOffer orders={orders.filter(o => o.restaurantId == loggedInUser.id)} restaurantName={loggedInUser.restaurantName} />}
-                    {currentPage === 'market' && <Market products={marketplaceProducts} onPlaceOrder={handlePlaceMarketOrder} user={loggedInUser} />}
+                    {currentPage === 'market' && <Market products={marketplaceProducts} orders={marketOrders.filter(o => o.userId === loggedInUser.id)} onPlaceOrder={handlePlaceMarketOrder} onCancelOrder={handleCancelMarketOrder} onSendMessage={handleSendMessageMarketOrder} user={loggedInUser} />}
                     {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={handleSubmitStaffRequirement} onMessageStaff={() => {}} />}
                     {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
                     {currentPage === 'refer' && <Referral user={loggedInUser} />}
