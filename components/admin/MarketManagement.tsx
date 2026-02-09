@@ -9,7 +9,7 @@ interface MarketManagementProps {
     onAddProduct: (name: string, price: number, desc: string, image?: string) => void;
     onDeleteProduct: (id: number) => void;
     onMessageUser: (userId: number, message: string) => void;
-    onUpdateStatus: (orderId: number, status: MarketplaceOrder['status']) => void;
+    onUpdateStatus: (orderId: number, status: MarketplaceOrder['status'], deliveryDate?: string) => void;
     onDeleteOrder: (orderId: number) => void;
     onSendMessageOrder: (orderId: number, text: string, sender: 'user' | 'admin') => void;
 }
@@ -157,9 +157,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                                 order.status === 'Cancelled' ? 'bg-red-900 text-red-100' : 
                                                 order.status === 'Out of Stock' ? 'bg-red-600 text-white' : 
                                                 order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
-                                            }`}>
-                                                {order.status}
-                                            </span>
+                                            }`}>{order.status}</span>
                                             <span className="text-[9px] text-gray-500 font-black uppercase">{new Date(order.timestamp).toLocaleString()}</span>
                                         </div>
                                         <h4 className="text-2xl font-black text-white uppercase leading-tight tracking-tighter">{order.productName}</h4>
@@ -188,10 +186,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                             onClick={() => {
                                                 const dDate = window.prompt("Set Delivery Date (e.g. 25th Jan):", order.deliveryDate || "");
                                                 if (dDate !== null) {
-                                                    // In this mock, we trigger state change. App.tsx syncs this globally.
-                                                    onUpdateStatus(order.id, 'Accepted'); 
-                                                    // Note: You might want to update the deliveryDate property too in a real DB.
-                                                    // For this version, status 'Accepted' indicates date is set.
+                                                    onUpdateStatus(order.id, 'Accepted', dDate); 
                                                 }
                                             }} 
                                             className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all"
