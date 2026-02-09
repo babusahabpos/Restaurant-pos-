@@ -45,7 +45,7 @@ const OrderChatModalAdmin: React.FC<{
                 <form onSubmit={(e) => { e.preventDefault(); if(msg.trim()) { onSend(msg); setMsg(''); }}} className="p-4 bg-gray-900 border-t border-white/5 flex gap-2 items-center">
                     <input 
                         value={msg} onChange={e => setMsg(e.target.value)}
-                        placeholder="Reply to restaurant owner..."
+                        placeholder="Reply to restaurant..."
                         className="flex-1 bg-black text-lemon p-4 rounded-2xl border border-gray-700 outline-none text-xs font-bold"
                     />
                     <button type="submit" className="bg-lemon text-black p-4 rounded-2xl active:scale-95 transition-transform">
@@ -152,18 +152,25 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-tighter ${order.status === 'Pending' ? 'bg-lemon text-black' : order.status === 'Cancelled' ? 'bg-red-900 text-red-100' : order.status === 'Out of Stock' ? 'bg-red-600 text-white' : order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>{order.status}</span>
+                                            <span className={`text-[8px] px-2.5 py-1 rounded-full font-black uppercase tracking-tighter ${
+                                                order.status === 'Pending' ? 'bg-lemon text-black' : 
+                                                order.status === 'Cancelled' ? 'bg-red-900 text-red-100' : 
+                                                order.status === 'Out of Stock' ? 'bg-red-600 text-white' : 
+                                                order.status === 'Delivered' ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                            }`}>
+                                                {order.status}
+                                            </span>
                                             <span className="text-[9px] text-gray-500 font-black uppercase">{new Date(order.timestamp).toLocaleString()}</span>
                                         </div>
                                         <h4 className="text-2xl font-black text-white uppercase leading-tight tracking-tighter">{order.productName}</h4>
                                         <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
                                             <div>
-                                                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Ordering Terminal</p>
+                                                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Restaurant Terminal</p>
                                                 <p className="text-xs text-lemon font-black uppercase">{order.restaurantName}</p>
                                                 <p className="text-[10px] text-white font-bold">{order.userName}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Total Bill Value</p>
+                                                <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Expected: {order.deliveryDate || 'Not Set'}</p>
                                                 <p className="text-xl text-white font-black tracking-tighter">₹{order.price * order.quantity}</p>
                                             </div>
                                         </div>
@@ -175,57 +182,47 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
                                             onClick={() => setActiveChatOrder(order)} 
                                             className="bg-gray-800 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-gray-700 active:scale-95 transition-all flex items-center justify-center gap-1"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
                                             Order Chat
                                         </button>
                                         <button 
                                             onClick={() => {
                                                 const dDate = window.prompt("Set Delivery Date (e.g. 25th Jan):", order.deliveryDate || "");
                                                 if (dDate !== null) {
-                                                    const updatedOrders = orders.map(o => o.id === order.id ? { ...o, deliveryDate: dDate, status: 'Accepted' as const } : o);
-                                                    // In a real app this would call an update function, for now we simulate via direct update if the user has access to it.
-                                                    // Since this component is managed by AdminLayout, we just alert or ideally pass back.
-                                                    // Let's assume onUpdateStatus can be extended or used for this.
+                                                    // In this mock, we trigger state change. App.tsx syncs this globally.
                                                     onUpdateStatus(order.id, 'Accepted'); 
-                                                    alert("Delivery Date Updated & Order Accepted!");
+                                                    // Note: You might want to update the deliveryDate property too in a real DB.
+                                                    // For this version, status 'Accepted' indicates date is set.
                                                 }
                                             }} 
                                             className="bg-green-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-green-700 active:scale-95 transition-all"
                                         >
-                                            Accept/Date
+                                            Set Date
                                         </button>
                                         <button 
-                                            onClick={() => { 
-                                                onUpdateStatus(order.id, 'Delivered');
-                                                alert("Order marked as Delivered!");
-                                            }} 
-                                            className="bg-blue-600 text-white font-black py-3 rounded-xl text-[9px] uppercase hover:bg-blue-700 active:scale-95 transition-all"
+                                            onClick={() => onUpdateStatus(order.id, 'Out of Stock')} 
+                                            className="bg-orange-600 text-white font-black py-3 rounded-xl text-[9px] uppercase active:scale-95 transition-all"
                                         >
-                                            Deliver
+                                            OOS
                                         </button>
                                         <button 
                                             onClick={() => { 
-                                                if(window.confirm('Delete this order permanently?')) {
-                                                    onDeleteOrder(order.id);
-                                                    alert("Order deleted.");
-                                                }
+                                                if(window.confirm('Delete order?')) onDeleteOrder(order.id);
                                             }} 
                                             className="bg-red-900/30 text-red-500 font-black py-3 rounded-xl text-[9px] uppercase border border-red-900/50 active:scale-95 transition-all"
                                         >
                                             Delete
                                         </button>
                                     </div>
-                                    <a 
-                                        href={`tel:${userPhone}`} 
-                                        className={`w-full bg-lemon text-black font-black py-3.5 rounded-xl text-[10px] text-center uppercase shadow-lg shadow-lemon/10 active:scale-95 transition-all flex items-center justify-center gap-2 ${!userPhone ? 'opacity-50 pointer-events-none' : ''}`}
+                                    <button 
+                                        onClick={() => onUpdateStatus(order.id, 'Delivered')}
+                                        className="w-full bg-blue-600 text-white font-black py-3.5 rounded-xl text-[10px] uppercase shadow-lg active:scale-95 transition-all"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                                        Call Owner
-                                    </a>
+                                        Mark Delivered
+                                    </button>
                                 </div>
                             </div>
                         );
-                    }) : <div className="py-24 text-center opacity-30 flex flex-col items-center"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><p className="font-black uppercase text-xs tracking-widest">No order requests found</p></div>}
+                    }) : <div className="py-24 text-center opacity-30 flex flex-col items-center"><p className="font-black uppercase text-xs tracking-widest">No order requests found</p></div>}
                 </div>
             )}
         </div>
