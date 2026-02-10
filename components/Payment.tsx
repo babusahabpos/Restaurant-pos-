@@ -63,7 +63,7 @@ const PaymentFormModal: React.FC<{
     );
 };
 
-const Payment: React.FC<PaymentProps> = ({ members, records, onAddMember, onRecordPayment, onUpdateRecord, onDeleteRecord, onDeleteMember }) => {
+const Payment: React.FC<PaymentProps> = ({ members = [], records = [], onAddMember, onRecordPayment, onUpdateRecord, onDeleteRecord, onDeleteMember }) => {
     const [activeTab, setActiveTab] = useState<'staff' | 'seller'>('staff');
     const [view, setView] = useState<'list' | 'dairy'>('list');
     const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
@@ -74,7 +74,10 @@ const Payment: React.FC<PaymentProps> = ({ members, records, onAddMember, onReco
     const filteredMembers = useMemo(() => members.filter(m => m.type === activeTab), [members, activeTab]);
     const selectedMember = useMemo(() => members.find(m => m.id === selectedMemberId), [members, selectedMemberId]);
     
-    const memberRecords = useMemo(() => records.filter(r => r.memberId === selectedMemberId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [records, selectedMemberId]);
+    const memberRecords = useMemo(() => {
+        if (!selectedMemberId) return [];
+        return records.filter(r => r.memberId === selectedMemberId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [records, selectedMemberId]);
 
     const totalPaid = useMemo(() => memberRecords.reduce((s, r) => s + r.paid, 0), [memberRecords]);
     const currentDue = useMemo(() => memberRecords.length > 0 ? memberRecords[0].due : 0, [memberRecords]);
@@ -141,7 +144,7 @@ const Payment: React.FC<PaymentProps> = ({ members, records, onAddMember, onReco
                                 </div>
                             );
                         }) : (
-                            <div className="col-span-full py-24 text-center opacity-30 flex flex-col items-center">
+                            <div className="col-span-full py-24 text-center opacity-20 flex flex-col items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-4"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
                                 <p className="font-black uppercase text-xs tracking-widest italic">No members in this category</p>
                             </div>
@@ -186,7 +189,7 @@ const Payment: React.FC<PaymentProps> = ({ members, records, onAddMember, onReco
                                         <button onClick={() => handleDeleteRecordClick(record.id)} className="flex-1 sm:flex-none bg-red-600/10 text-red-500 font-black px-5 py-2.5 rounded-xl text-[9px] uppercase border border-red-600/20 active:scale-95 transition-all">Delete</button>
                                     </div>
                                 </div>
-                            )) : <div className="py-20 text-center text-gray-700 font-black uppercase text-[10px] tracking-widest italic opacity-50">Empty Dairy Logs</div>}
+                            )) : <div className="py-20 text-center text-gray-700 font-black uppercase text-[10px] tracking-widest italic opacity-20">Empty Dairy Logs</div>}
                         </div>
                     </div>
                 )}
