@@ -32,7 +32,11 @@ import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS, MOCK_INVENTORY_ITEMS, MOCK_STAFF } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, InventoryItem, StaffMember, StaffLogEntry, PaymentMember, PaymentRecord, StaffMessage } from './types';
 
-// Firebase Configuration
+/**
+ * SYSTEM UPDATE: v1.0.1 - Force Vercel Rebuild
+ * Ensuring all types and variable names are consistent for production build.
+ */
+
 const firebaseConfig = {
   apiKey: "AIzaSyB6rJzFw7FwUP3MFveojRAUB7GuhAmGXHI",
   authDomain: "babu-sahab.firebaseapp.com",
@@ -73,7 +77,6 @@ function App() {
         return null;
     });
 
-    // Real-time states
     const [orders, setOrders] = useState<OrderStatusItem[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
@@ -83,7 +86,6 @@ function App() {
     const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>([]);
     const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>([]);
     
-    // User specific states
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
     const [staff, setStaff] = useState<StaffMember[]>([]);
     const [staffLog, setStaffLog] = useState<StaffLogEntry[]>([]);
@@ -95,7 +97,6 @@ function App() {
         if (loggedInUser) localStorage.setItem('babuSahabPos_activeUser', JSON.stringify(loggedInUser));
     }, [authState, loggedInUser]);
 
-    // --- REAL-TIME SYNC ENGINE ---
     useEffect(() => {
         const usersRef = ref(db, 'global/users');
         const ticketsRef = ref(db, 'global/supportTickets');
@@ -149,37 +150,31 @@ function App() {
         });
 
         if (loggedInUser) {
-            // User Orders
             onValue(ref(db, `orders/${loggedInUser.id}`), (snapshot) => {
                 if (snapshot.val()) setOrders(Object.values(snapshot.val()).map((o:any) => ({...o, timestamp: new Date(o.timestamp)})));
                 else setOrders([]);
             });
 
-            // Inventory
             onValue(ref(db, `userdata/${loggedInUser.id}/inventory`), (snapshot) => {
                 if (snapshot.val()) setInventory(Object.values(snapshot.val()));
                 else setInventory(MOCK_INVENTORY_ITEMS);
             });
 
-            // Staff
             onValue(ref(db, `userdata/${loggedInUser.id}/staff`), (snapshot) => {
                 if (snapshot.val()) setStaff(Object.values(snapshot.val()));
                 else setStaff([]);
             });
 
-            // Staff Logs
             onValue(ref(db, `userdata/${loggedInUser.id}/staffLog`), (snapshot) => {
                 if (snapshot.val()) setStaffLog(Object.values(snapshot.val()).map((l:any) => ({...l, timestamp: new Date(l.timestamp)})));
                 else setStaffLog([]);
             });
 
-            // Payment Members
             onValue(ref(db, `userdata/${loggedInUser.id}/paymentMembers`), (snapshot) => {
                 if (snapshot.val()) setPaymentMembers(Object.values(snapshot.val()));
                 else setPaymentMembers([]);
             });
 
-            // Payment Records
             onValue(ref(db, `userdata/${loggedInUser.id}/paymentRecords`), (snapshot) => {
                 if (snapshot.val()) setPaymentRecords(Object.values(snapshot.val()));
                 else setPaymentRecords([]);
