@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, update, push, remove } from 'firebase/database';
@@ -29,9 +30,9 @@ import SupportTickets from './components/admin/SupportTickets';
 import MarketManagement from './components/admin/MarketManagement';
 import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS, MOCK_INVENTORY_ITEMS, MOCK_STAFF } from './constants';
-import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, InventoryItem, StaffMember, StaffLogEntry } from './types';
+import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, InventoryItem, StaffMember, StaffLogEntry, PaymentMember, PaymentRecord, StaffMessage } from './types';
 
-// আপনার দেওয়া Firebase Configuration
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB6rJzFw7FwUP3MFveojRAUB7GuhAmGXHI",
   authDomain: "babu-sahab.firebaseapp.com",
@@ -43,7 +44,6 @@ const firebaseConfig = {
   measurementId: "G-1NDD8M4BJS"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -61,8 +61,7 @@ function App() {
         try {
             const saved = localStorage.getItem(key);
             if (!saved || saved === "undefined" || saved === "[]") return defaultValue;
-            const data = JSON.parse(saved);
-            return data;
+            return JSON.parse(saved);
         } catch (e) { return defaultValue; }
     };
 
@@ -82,7 +81,7 @@ function App() {
         return null;
     });
 
-    // States with real-time listeners
+    // Real-time states
     const [orders, setOrders] = useState<OrderStatusItem[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
     const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
@@ -91,9 +90,13 @@ function App() {
     const [marketOrders, setMarketOrders] = useState<MarketplaceOrder[]>([]);
     const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>([]);
     const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>([]);
-    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>([]);
-    const [inventory, setInventory] = useState<InventoryItem[]>(() => getSafeData('babuSahabPos_inventoryItems', MOCK_INVENTORY_ITEMS));
-    const [staff, setStaff] = useState<StaffMember[]>(() => getSafeData('babuSahabPos_staff', MOCK_STAFF));
+    
+    // User specific states (Staff & Payment)
+    const [inventory, setInventory] = useState<InventoryItem[]>([]);
+    const [staff, setStaff] = useState<StaffMember[]>([]);
+    const [staffLog, setStaffLog] = useState<StaffLogEntry[]>([]);
+    const [paymentMembers, setPaymentMembers] = useState<PaymentMember[]>([]);
+    const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
 
     useEffect(() => {
         if (authState !== 'customer' && authState !== 'register') localStorage.setItem('babuSahabPos_session', authState);
@@ -106,12 +109,12 @@ function App() {
         const ticketsRef = ref(db, 'global/supportTickets');
         const productsRef = ref(db, 'global/marketProducts');
         const marketOrdersRef = ref(db, 'global/marketOrders');
+        const staffJobsRef = ref(db, 'global/staffJobPosts');
+        const restaurantJobsRef = ref(db, 'global/restaurantJobs');
 
-        // Listen for all users
         onValue(usersRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const list = Object.values(data) as RegisteredUser[];
+            if (snapshot.val()) {
+                const list = Object.values(snapshot.val()) as RegisteredUser[];
                 setRegisteredUsers(list);
                 if (loggedInUser) {
                     const updatedMe = list.find(u => u.id === loggedInUser.id);
@@ -121,11 +124,9 @@ function App() {
             setLastSyncTime(new Date().toLocaleTimeString());
         }, () => setSyncError(true));
 
-        // Listen for Tickets
         onValue(ticketsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const list = Object.values(data).map((t: any) => ({
+            if (snapshot.val()) {
+                const list = Object.values(snapshot.val()).map((t: any) => ({
                     ...t, lastUpdate: new Date(t.lastUpdate),
                     messages: t.messages ? Object.values(t.messages) : []
                 })) as SupportTicket[];
@@ -133,34 +134,68 @@ function App() {
             }
         });
 
-        // Listen for Marketplace
         onValue(productsRef, (snapshot) => {
             if (snapshot.val()) setMarketplaceProducts(Object.values(snapshot.val()));
         });
 
         onValue(marketOrdersRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const list = Object.values(data).map((o: any) => ({
+            if (snapshot.val()) {
+                const list = Object.values(snapshot.val()).map((o: any) => ({
                     ...o, timestamp: new Date(o.timestamp),
                     messages: o.messages ? Object.values(o.messages) : []
                 })) as MarketplaceOrder[];
                 setMarketOrders(list);
-            } else {
-                setMarketOrders([]);
             }
         });
 
-        // Current User's Orders listener
+        onValue(staffJobsRef, (snapshot) => {
+            if (snapshot.val()) setStaffJobPosts(Object.values(snapshot.val()));
+        });
+
+        onValue(restaurantJobsRef, (snapshot) => {
+            if (snapshot.val()) setRestaurantJobs(Object.values(snapshot.val()));
+        });
+
         if (loggedInUser) {
-            const ordersRef = ref(db, `orders/${loggedInUser.id}`);
-            onValue(ordersRef, (snapshot) => {
-                if (snapshot.val()) setOrders(Object.values(snapshot.val()));
+            // User Orders
+            onValue(ref(db, `orders/${loggedInUser.id}`), (snapshot) => {
+                if (snapshot.val()) setOrders(Object.values(snapshot.val()).map((o:any) => ({...o, timestamp: new Date(o.timestamp)})));
+                else setOrders([]);
+            });
+
+            // Inventory
+            onValue(ref(db, `userdata/${loggedInUser.id}/inventory`), (snapshot) => {
+                if (snapshot.val()) setInventory(Object.values(snapshot.val()));
+                else setInventory(MOCK_INVENTORY_ITEMS);
+            });
+
+            // Staff
+            onValue(ref(db, `userdata/${loggedInUser.id}/staff`), (snapshot) => {
+                if (snapshot.val()) setStaff(Object.values(snapshot.val()));
+                else setStaff(MOCK_STAFF);
+            });
+
+            // Staff Logs
+            onValue(ref(db, `userdata/${loggedInUser.id}/staffLog`), (snapshot) => {
+                if (snapshot.val()) setStaffLog(Object.values(snapshot.val()).map((l:any) => ({...l, timestamp: new Date(l.timestamp)})));
+                else setStaffLog([]);
+            });
+
+            // Payment Members
+            onValue(ref(db, `userdata/${loggedInUser.id}/paymentMembers`), (snapshot) => {
+                if (snapshot.val()) setPaymentMembers(Object.values(snapshot.val()));
+                else setPaymentMembers([]);
+            });
+
+            // Payment Records
+            onValue(ref(db, `userdata/${loggedInUser.id}/paymentRecords`), (snapshot) => {
+                if (snapshot.val()) setPaymentRecords(Object.values(snapshot.val()));
+                else setPaymentRecords([]);
             });
         }
     }, [loggedInUser?.id]);
 
-    // Firebase Handlers
+    // Handlers
     const handleRegister = async (newUser: any, status: UserStatus = UserStatus.Approved) => {
         const userId = Date.now();
         const user: RegisteredUser = { 
@@ -224,10 +259,18 @@ function App() {
                     {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(newOrderData) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...newOrderData, id: oid, restaurantId: loggedInUser.id, status: 'Preparation', timestamp: new Date().toISOString() }); }} />}
                     {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} />}
                     {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} loggedInUser={loggedInUser} />}
+                    {currentPage === 'inventory' && <Inventory items={inventory} setItems={(items) => update(ref(db, `userdata/${loggedInUser.id}`), { inventory: items })} />}
+                    {currentPage === 'reports' && <Reports orders={orders} />}
+                    {currentPage === 'staff' && <Staff staff={staff} setStaff={(s) => update(ref(db, `userdata/${loggedInUser.id}`), { staff: s })} staffLog={staffLog} setStaffLog={(log: any) => { if (typeof log === 'function') { const newLog = log(staffLog); update(ref(db, `userdata/${loggedInUser.id}`), { staffLog: newLog }); } else { update(ref(db, `userdata/${loggedInUser.id}`), { staffLog: log }); } }} />}
+                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={(req, sal) => { const rid = Date.now(); set(ref(db, `global/staffRequirements/${rid}`), { id: rid, userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary: sal, timestamp: new Date().toISOString(), isRead: false }); }} onMessageStaff={(p, t) => { const mid = Date.now(); set(ref(db, `global/staffMessages/${mid}`), { id: mid, senderName: loggedInUser.restaurantName, recipientPhone: p, text: t, timestamp: new Date().toISOString(), isRead: false }); }} />}
+                    {currentPage === 'payment' && <Payment members={paymentMembers} records={paymentRecords} onAddMember={(n, c, t) => { const mid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`), { id: mid, userId: loggedInUser.id, name: n, category: c, type: t }); }} onRecordPayment={(mid, p, d, dt) => { const rid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { id: rid, memberId: mid, paid: p, due: d, date: dt }); }} onUpdateRecord={(rid, p, d, dt) => update(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { paid: p, due: d, date: dt })} onDeleteRecord={(rid) => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`))} onDeleteMember={(mid) => { remove(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`)); const related = paymentRecords.filter(r => r.memberId === mid); related.forEach(r => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${r.id}`))); }} />}
+                    {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
+                    {currentPage === 'refer' && <Referral user={loggedInUser} />}
+                    {currentPage === 'customerOffer' && <CustomerOffer orders={orders} restaurantName={loggedInUser.restaurantName} />}
+                    {currentPage === 'market' && <Market products={marketplaceProducts} orders={marketOrders.filter(o => o.userId === loggedInUser.id)} onPlaceOrder={(pid, pn, pr, q) => { const oid = Date.now(); set(ref(db, `global/marketOrders/${oid}`), { id: oid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pid, productName: pn, price: pr, quantity: q, status: 'Pending', timestamp: new Date().toISOString() }); }} onCancelOrder={(id) => update(ref(db, `global/marketOrders/${id}`), {status: 'Cancelled'})} onSendMessage={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} user={loggedInUser} />}
                     {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => update(ref(db, `global/users/${loggedInUser.id}`), updates)} onLogout={handleLogout} />}
                     {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => { const tid = Date.now(); set(ref(db, `global/supportTickets/${tid}`), { id: tid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date().toISOString(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date().toISOString() }); }} onReplyToTicket={(tid, msg) => push(ref(db, `global/supportTickets/${tid}/messages`), { sender: 'user', text: msg, timestamp: new Date().toISOString() })} />}
-                    {currentPage === 'market' && <Market products={marketplaceProducts} orders={marketOrders.filter(o => o.userId === loggedInUser.id)} onPlaceOrder={(pid, pn, pr, q) => { const oid = Date.now(); set(ref(db, `global/marketOrders/${oid}`), { id: oid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pid, productName: pn, price: pr, quantity: q, status: 'Pending', timestamp: new Date().toISOString() }); }} onCancelOrder={(id) => update(ref(db, `global/marketOrders/${id}`), {status: 'Cancelled'})} onSendMessage={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} user={loggedInUser} />}
-                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => {}} />}
+                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => { const tid = Date.now(); set(ref(db, `global/supportTickets/${tid}`), { id: tid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: 'Renewal Request', messages: [{ sender: 'user', text: `Hi Admin, I would like to renew my subscription for ${loggedInUser.restaurantName}.`, timestamp: new Date().toISOString() }], status: 'Open', lastUpdate: new Date().toISOString() }); alert('Renewal request sent to Admin Hub!'); }} />}
                 </MainLayout>
                 )
             )}
