@@ -118,7 +118,7 @@ const Menu: React.FC<MenuProps> = ({ menu, setMenu }) => {
     };
     
     const handleOpenItemModal = (item: MenuItem | null = null) => {
-        const initialData = item ? item : { category: selectedCategory, inStock: true };
+        const initialData = item ? item : { category: selectedCategory || '', inStock: true };
         setEditingItem(initialData);
         setIsItemModalOpen(true);
     };

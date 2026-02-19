@@ -141,9 +141,15 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
                                 className="w-full bg-lemon hover:bg-lemon-dark text-black font-black p-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,0,0.15)] group"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="mb-1"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                                <span className="text-sm font-black uppercase tracking-widest">Pay subscription fee</span>
+                                <span className="text-sm font-black uppercase tracking-widest">PAY NOW</span>
                                 <span className="text-[8px] font-bold uppercase opacity-60">Opens GPay / PhonePe / Paytm</span>
                             </button>
+
+                            <div className="bg-lemon/10 border border-lemon/20 p-4 rounded-2xl text-center">
+                                <p className="text-[10px] text-lemon font-black uppercase tracking-widest leading-relaxed">
+                                    Please share your restaurant name in the "Add Note" section during payment.
+                                </p>
+                            </div>
 
                             <form onSubmit={handleVerifyAndActivate} className="bg-gray-900/40 p-5 rounded-[2.5rem] border border-gray-800">
                                 <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest mb-3 text-center">After Payment, Enter UTR / Ref No.</p>

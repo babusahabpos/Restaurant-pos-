@@ -18,7 +18,7 @@ const AdminStaffRequirements: React.FC<AdminStaffRequirementsProps> = ({ request
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onAddPost(formData);
+        onAddPost({ ...formData, status: 'Approved' });
         setFormData({ staffName: '', category: '', phone: '', location: '', cvDetails: '' });
         setView('requests');
     };
