@@ -53,6 +53,13 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
             setError('Please fill all required fields.');
             return;
         }
+        
+        // If it's the admin email, skip the payment step and go straight to activation
+        if (formData.email.toLowerCase() === 'diptifoodice@gmail.com') {
+            handleVerifyAndActivate();
+            return;
+        }
+        
         setStep(2);
     };
 
@@ -63,7 +70,9 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
     const handleVerifyAndActivate = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         
-        if (transactionId.length < 4) {
+        const isAdmin = formData.email.toLowerCase() === 'diptifoodice@gmail.com';
+
+        if (!isAdmin && transactionId.length < 4) {
             alert("Please enter a valid Transaction ID / UTR.");
             return;
         }
