@@ -37,7 +37,7 @@ const AddUserModal: React.FC<{
 const EditProfileModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
-    onSave: (userId: number, name: string, email: string, phone: string, pass: string, rName: string) => void;
+    onSave: (userId: string, name: string, email: string, phone: string, pass: string, rName: string) => void;
 }> = ({ user, onClose, onSave }) => {
     const [name, setName] = useState(user.name);
     const [email, setEmail] = useState(user.email);
@@ -83,7 +83,7 @@ const EditProfileModal: React.FC<{
 const SendMessageModal: React.FC<{
     user: RegisteredUser | 'all';
     onClose: () => void;
-    onSend: (userId: number | 'all', message: string) => void;
+    onSend: (userId: string | 'all', message: string) => void;
 }> = ({ user, onClose, onSend }) => {
     const [message, setMessage] = useState('');
     return (
@@ -112,7 +112,7 @@ const SendMessageModal: React.FC<{
 const MenuUploadModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
-    onSave: (userId: number, menu: MenuItem[]) => void;
+    onSave: (userId: string, menu: MenuItem[]) => void;
 }> = ({ user, onClose, onSave }) => {
     const [menu, setMenu] = useState<MenuItem[]>(user.menu || []);
     const [menuText, setMenuText] = useState('');
@@ -194,7 +194,7 @@ const MenuUploadModal: React.FC<{
 const SubscriptionModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
-    onSave: (userId: number, newDate: string) => void;
+    onSave: (userId: string, newDate: string) => void;
 }> = ({ user, onClose, onSave }) => {
     const [date, setDate] = useState(user.subscriptionEndDate);
     return (
@@ -216,13 +216,13 @@ const SubscriptionModal: React.FC<{
 
 const UserManagement: React.FC<{
     users: RegisteredUser[];
-    onBlockUser: (userId: number, shouldBlock: boolean) => void;
-    onSendMessage: (userId: number | 'all', message: string) => void;
-    onPasswordChange: (userId: number, newPass: string) => void;
-    onUpdateSubscription: (userId: number, newDate: string) => void;
-    onUpdateMenu: (userId: number, menu: MenuItem[]) => void;
-    onUpdateUserInfo: (userId: number, name: string, email: string, phone: string, pass: string, rName: string) => void;
-    onDeleteUser: (userId: number) => void;
+    onBlockUser: (userId: string, shouldBlock: boolean) => void;
+    onSendMessage: (userId: string | 'all', message: string) => void;
+    onPasswordChange: (userId: string, newPass: string) => void;
+    onUpdateSubscription: (userId: string, newDate: string) => void;
+    onUpdateMenu: (userId: string, menu: MenuItem[]) => void;
+    onUpdateUserInfo: (userId: string, name: string, email: string, phone: string, pass: string, rName: string) => void;
+    onDeleteUser: (userId: string) => void;
     onAddUser: (user: any) => void;
 }> = ({ users, onBlockUser, onSendMessage, onPasswordChange, onUpdateSubscription, onUpdateMenu, onUpdateUserInfo, onDeleteUser, onAddUser }) => {
     

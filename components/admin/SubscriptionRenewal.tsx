@@ -4,7 +4,7 @@ import { RegisteredUser } from '../../types';
 const SubscriptionModal: React.FC<{
     user: RegisteredUser;
     onClose: () => void;
-    onSave: (userId: number, newDate: string) => void;
+    onSave: (userId: string, newDate: string) => void;
 }> = ({ user, onClose, onSave }) => {
     const [date, setDate] = useState(user.subscriptionEndDate);
 
@@ -39,7 +39,7 @@ const SubscriptionModal: React.FC<{
 
 const SubscriptionRenewal: React.FC<{
     users: RegisteredUser[];
-    onUpdateSubscription: (userId: number, newDate: string) => void;
+    onUpdateSubscription: (userId: string, newDate: string) => void;
 }> = ({ users, onUpdateSubscription }) => {
     
     const [managingUser, setManagingUser] = useState<RegisteredUser | null>(null);

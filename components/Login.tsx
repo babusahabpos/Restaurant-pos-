@@ -1,25 +1,31 @@
 
 import React, { useState } from 'react';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 
 interface LoginProps {
-    onLogin: (email: string, pass: string) => 'ok' | 'pending' | 'blocked' | 'admin' | 'not_found' | 'deleted';
     onNavigateToRegister: () => void;
-    onForgotPassword: (identifier: string) => boolean;
-    onContactAdmin: (email: string, message: string) => void;
 }
 
 const ForgotPasswordModal: React.FC<{
     onClose: () => void;
-    onSubmit: (identifier: string) => boolean;
-}> = ({ onClose, onSubmit }) => {
+}> = ({ onClose }) => {
     const [identifier, setIdentifier] = useState('');
+    const [loading, setLoading] = useState(false);
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (identifier) {
-            if(onSubmit(identifier)) {
+            setLoading(true);
+            try {
+                await sendPasswordResetEmail(auth, identifier);
+                alert("Password reset email sent!");
                 onClose();
+            } catch (error: any) {
+                alert(error.message);
+            } finally {
+                setLoading(false);
             }
         }
     };
@@ -28,19 +34,21 @@ const ForgotPasswordModal: React.FC<{
          <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
             <div className="bg-black p-8 rounded-lg shadow-xl w-full max-w-sm border border-gray-800">
                 <h3 className="text-xl font-semibold text-white mb-4">Forgot Password</h3>
-                <p className="text-sm text-gray-400 mb-6">Enter your email or phone number to request a password reset.</p>
+                <p className="text-sm text-gray-400 mb-6">Enter your email to request a password reset.</p>
                 <form onSubmit={handleSubmit}>
                     <input 
-                        type="text" 
+                        type="email" 
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder="Email or Phone Number" 
+                        placeholder="Email Address" 
                         className="w-full bg-gray-900 text-white p-3 rounded mb-6 border border-gray-700 focus:ring-lemon focus:border-lemon"
                         required
                     />
                     <div className="flex justify-end gap-4">
                         <button type="button" onClick={onClose} className="bg-gray-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700">Cancel</button>
-                        <button type="submit" className="bg-lemon text-black font-bold py-2 px-4 rounded-lg hover:bg-lemon-dark">Submit Request</button>
+                        <button type="submit" disabled={loading} className="bg-lemon text-black font-bold py-2 px-4 rounded-lg hover:bg-lemon-dark disabled:opacity-50">
+                            {loading ? 'Sending...' : 'Submit Request'}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -50,14 +58,13 @@ const ForgotPasswordModal: React.FC<{
 
 const ContactAdminModal: React.FC<{
     onClose: () => void;
-    onSubmit: (email: string, message: string) => void;
-}> = ({ onClose, onSubmit }) => {
+}> = ({ onClose }) => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(email, message);
+        // This would normally send to a backend or DB
         onClose();
         alert("Message sent to Admin successfully.");
     };
@@ -94,43 +101,38 @@ const ContactAdminModal: React.FC<{
     );
 };
 
-const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPassword, onContactAdmin }) => {
+const Login: React.FC<LoginProps> = ({ onNavigateToRegister }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
     const [showContactModal, setShowContactModal] = useState(false);
     
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         
-        const result = onLogin(email, password);
-        
-        switch (result) {
-            case 'pending':
-                setError('Your account is pending approval from the admin.');
-                break;
-            case 'blocked':
-                setError('Your account has been blocked.');
-                break;
-            case 'deleted':
-                setError('Your account has been deleted.');
-                break;
-            case 'not_found':
-                setError('Invalid email/mobile or password.');
-                break;
-            case 'ok':
-            case 'admin':
-                break;
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // App.tsx handles the redirect via onAuthStateChanged
+        } catch (err: any) {
+            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                setError('Invalid email or password.');
+            } else {
+                setError(err.message);
+            }
+        } finally {
+            setLoading(false);
         }
     };
     
     return (
         <>
-        {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} onSubmit={onForgotPassword} />}
-        {showContactModal && <ContactAdminModal onClose={() => setShowContactModal(false)} onSubmit={onContactAdmin} />}
+        {showForgotModal && <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />}
+        {showContactModal && <ContactAdminModal onClose={() => setShowContactModal(false)} />}
         
         <div className="flex items-center justify-center min-h-screen bg-lemon">
             <div className="w-full max-w-md p-8 space-y-8 bg-black rounded-lg shadow-2xl relative">
@@ -159,16 +161,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPa
                     )}
                     <div className="space-y-4 rounded-md shadow-sm">
                         <div>
-                            <label htmlFor="identifier" className="sr-only">Email or Phone</label>
+                            <label htmlFor="email" className="sr-only">Email Address</label>
                             <input
-                                id="identifier"
-                                name="identifier"
-                                type="text"
+                                id="email"
+                                name="email"
+                                type="email"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 className="relative block w-full px-3 py-3 text-white placeholder-gray-400 bg-gray-900 border border-gray-700 rounded-md appearance-none focus:outline-none focus:ring-lemon focus:border-lemon focus:z-10 sm:text-sm"
-                                placeholder="Email or Mobile Number"
+                                placeholder="Email Address"
                             />
                         </div>
                         <div className="relative">
@@ -210,9 +212,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigateToRegister, onForgotPa
                     <div className="space-y-3">
                         <button
                             type="submit"
-                            className="relative flex justify-center w-full px-4 py-3 text-sm font-bold text-black bg-lemon border border-transparent rounded-md group hover:bg-lemon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lemon"
+                            disabled={loading}
+                            className="relative flex justify-center w-full px-4 py-3 text-sm font-bold text-black bg-lemon border border-transparent rounded-md group hover:bg-lemon-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lemon disabled:opacity-50"
                         >
-                            Sign in
+                            {loading ? 'Signing in...' : 'Sign in'}
                         </button>
                         
                         <button

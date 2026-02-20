@@ -1,10 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { ref, set } from 'firebase/database';
 import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser, UserStatus } from '../types';
+import { MOCK_MENU_ITEMS } from '../constants';
 
 interface RegisterProps {
-    onRegister: (newUser: Omit<RegisteredUser, 'id' | 'status' | 'lastLogin' | 'subscriptionEndDate' | 'menu' | 'address' | 'deliveryCharge' | 'isDeliveryEnabled' | 'isPrinterEnabled' | 'taxRate' | 'fssai' | 'referralCode' | 'socialMedia'>, status: UserStatus, referralCode?: string) => void;
     onNavigateToLogin: () => void;
 }
 
@@ -25,7 +28,7 @@ const RegistrationSuccessModal: React.FC<{ status: UserStatus; onClose: () => vo
     </div>
 );
 
-const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) => {
+const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
     const [step, setStep] = useState<1 | 2>(1);
     const [formData, setFormData] = useState({ restaurantName: '', name: '', phone: '', email: '', password: '' });
     const [referralCode, setReferralCode] = useState('');
@@ -57,7 +60,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         window.location.href = UPI_PAYMENT_URL;
     };
 
-    const handleVerifyAndActivate = (e?: React.FormEvent) => {
+    const handleVerifyAndActivate = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         
         if (transactionId.length < 4) {
@@ -66,15 +69,41 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
         }
 
         setIsVerifying(true);
-        setTimeout(() => {
+        setError('');
+        
+        try {
+            // 1. Create User in Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+            const user = userCredential.user;
+
+            // 2. Create User Profile in Realtime Database
+            const uid = user.uid;
+            const newUser: RegisteredUser = {
+                ...formData,
+                id: uid,
+                status: UserStatus.Approved,
+                subscriptionEndDate: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0],
+                menu: MOCK_MENU_ITEMS,
+                address: '',
+                taxRate: 5,
+                deliveryCharge: 30,
+                isDeliveryEnabled: true,
+                isPrinterEnabled: true,
+                referralCode: referralCode || 'REF' + uid,
+                lastLogin: new Date().toISOString()
+            };
+
+            await set(ref(db, `global/users/${uid}`), newUser);
+            
             setIsVerifying(false);
-            // 2 months total (1 month paid + 1 month bonus)
-            onRegister(formData, UserStatus.Approved, referralCode);
             setShowSuccessModal(true);
-        }, 3000);
+        } catch (err: any) {
+            setIsVerifying(false);
+            setError(err.message);
+        }
     };
 
-    if (showSuccessModal) return <RegistrationSuccessModal status={UserStatus.Approved} onClose={onNavigateToLogin} />;
+    if (showSuccessModal) return <RegistrationSuccessModal status={UserStatus.Approved} onClose={() => window.location.reload()} />;
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-lemon p-4 overflow-y-auto">
@@ -147,7 +176,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onNavigateToLogin }) =>
 
                             <div className="bg-lemon/10 border border-lemon/20 p-4 rounded-2xl text-center">
                                 <p className="text-[10px] text-lemon font-black uppercase tracking-widest leading-relaxed">
-                                    Please share your restaurant name in the "Add Note" section during payment.
+                                    payment ar somoy add note a restaurant name share korun
                                 </p>
                             </div>
 

@@ -8,7 +8,7 @@ interface MarketManagementProps {
     users: RegisteredUser[];
     onAddProduct: (name: string, price: number, desc: string, image?: string) => void;
     onDeleteProduct: (id: number) => void;
-    onMessageUser: (userId: number, message: string) => void;
+    onMessageUser: (userId: string, message: string) => void;
     onUpdateStatus: (orderId: number, status: MarketplaceOrder['status'], deliveryDate?: string) => void;
     onDeleteOrder: (orderId: number) => void;
     onSendMessageOrder: (orderId: number, text: string, sender: 'user' | 'admin') => void;
@@ -83,7 +83,7 @@ const MarketManagement: React.FC<MarketManagementProps> = ({ products, orders, u
         }
     };
 
-    const getUserPhone = (userId: number) => {
+    const getUserPhone = (userId: string) => {
         const user = users.find(u => u.id === userId);
         return user?.phone || '';
     };

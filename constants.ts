@@ -34,7 +34,7 @@ export const MOCK_MENU_ITEMS: MenuItem[] = [
 
 export const MOCK_USERS: RegisteredUser[] = [
     { 
-        id: 1, 
+        id: '1', 
         name: 'Anil Kumar', 
         email: 'user@example.com', 
         phone: '9876543210', 
@@ -56,7 +56,7 @@ export const MOCK_USERS: RegisteredUser[] = [
 ];
 
 export const MOCK_TICKETS: SupportTicket[] = [
-    { id: 1, userId: 1, userName: 'Anil Kumar', restaurantName: 'BaBu SAHAB', subject: 'Billing Issue', messages: [
+    { id: 1, userId: '1', userName: 'Anil Kumar', restaurantName: 'BaBu SAHAB', subject: 'Billing Issue', messages: [
         { sender: 'user', text: 'My billing page is not loading correctly.', timestamp: new Date(Date.now() - 3600000) },
         // Fix: Changed admin to 'admin' string literal
         { sender: 'admin', text: 'We are looking into it.', timestamp: new Date(Date.now() - 1800000) }

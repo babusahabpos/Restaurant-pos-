@@ -6,7 +6,7 @@ interface AdminDashboardProps {
     users: RegisteredUser[];
     tickets: SupportTicket[];
     marketOrders: MarketplaceOrder[];
-    onApproveReject: (userId: number, decision: 'approve' | 'reject') => void;
+    onApproveReject: (userId: string, decision: 'approve' | 'reject') => void;
     onApproveMarketOrder: (order: MarketplaceOrder) => void;
     syncStatus?: { time: string; error: boolean };
     onDeepRecovery?: () => void;

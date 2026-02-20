@@ -58,7 +58,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                                 </button>
                             );
                         })}
-                        <button onClick={handleLogout} className="ml-4 p-2 text-gray-500 hover:text-red-500 transition-colors"><LogoutIcon className="w-5 h-5" /></button>
+                        <button onClick={() => { if(window.confirm('Logout from Admin?')) handleLogout(); }} className="ml-4 p-2 text-gray-500 hover:text-red-500 transition-colors"><LogoutIcon className="w-5 h-5" /></button>
                     </div>
                     
                     <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden bg-gray-800 p-2 rounded-md text-gray-400">
@@ -82,7 +82,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
                                 {getBadgeCount(item.name) > 0 && <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-[9px]">{getBadgeCount(item.name)}</span>}
                             </button>
                         ))}
-                        <button onClick={handleLogout} className="w-full text-left px-4 py-4 rounded-xl text-xs font-black uppercase text-red-500 bg-red-500/10">Logout</button>
+                        <button onClick={() => { if(window.confirm('Logout from Admin?')) handleLogout(); }} className="w-full text-left px-4 py-4 rounded-xl text-xs font-black uppercase text-red-500 bg-red-500/10">Logout</button>
                     </div>
                 </div>
             )}

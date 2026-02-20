@@ -34,7 +34,7 @@ export interface OrderItem extends MenuItem {
 
 export interface OrderStatusItem {
     id: number;
-    restaurantId: number;
+    restaurantId: string;
     type: 'Online' | 'Offline';
     status: 'Placed' | 'Preparation' | 'Completed';
     items: OrderItem[];
@@ -77,7 +77,7 @@ export enum UserStatus {
 }
 
 export interface RegisteredUser {
-    id: number;
+    id: string;
     name: string;
     phone: string;
     email: string;
@@ -112,7 +112,7 @@ export interface TicketMessage {
 
 export interface SupportTicket {
     id: number;
-    userId: number;
+    userId: string;
     userName: string;
     restaurantName: string;
     subject: string;
@@ -123,7 +123,7 @@ export interface SupportTicket {
 
 export interface AdminAlert {
     id: number | string;
-    userId: number | 'all';
+    userId: string | 'all';
     message: string;
 }
 
@@ -138,7 +138,7 @@ export interface MarketplaceProduct {
 
 export interface MarketplaceOrder {
     id: number;
-    userId: number;
+    userId: string;
     userName: string;
     restaurantName: string;
     productId: number;
@@ -181,7 +181,7 @@ export interface StaffLogEntry {
 
 export interface StaffRequirementRequest {
     id: number;
-    userId: number;
+    userId: string;
     restaurantName: string;
     requirement: string;
     salary: string;
@@ -242,7 +242,7 @@ export interface StaffMessage {
 // Payment Hub Types
 export interface PaymentMember {
     id: number;
-    userId: number;
+    userId: string;
     name: string;
     category: string;
     type: 'staff' | 'seller';

@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, onValue, set, update, push, remove } from 'firebase/database';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { ref, onValue, set, update, push, remove } from 'firebase/database';
 import Login from './components/Login';
 import Register from './components/Register';
 import MainLayout from './components/MainLayout';
@@ -32,27 +33,8 @@ import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS, MOCK_INVENTORY_ITEMS, MOCK_STAFF } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, InventoryItem, StaffMember, StaffLogEntry, PaymentMember, PaymentRecord, StaffMessage } from './types';
 
-/**
- * SYSTEM UPDATE: v1.0.1 - Force Vercel Rebuild
- * Ensuring all types and variable names are consistent for production build.
- */
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB6rJzFw7FwUP3MFveojRAUB7GuhAmGXHI",
-  authDomain: "babu-sahab.firebaseapp.com",
-  databaseURL: "https://babu-sahab-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "babu-sahab",
-  storageBucket: "babu-sahab.firebasestorage.app",
-  messagingSenderId: "544048344901",
-  appId: "1:544048344901:web:c55e7d2faaba5c1cd8982c",
-  measurementId: "G-1NDD8M4BJS"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
 function App() {
-    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer';
+    type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'loading';
     
     const isCustomerRoute = () => window.location.hash.includes('customer-order');
     const [lastSyncTime, setLastSyncTime] = useState<string>("Initializing...");
@@ -61,21 +43,8 @@ function App() {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
     const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
 
-    const [authState, setAuthState] = useState<AuthState>(() => {
-        if (isCustomerRoute()) return 'customer';
-        const savedSession = localStorage.getItem('babuSahabPos_session');
-        if (savedSession === 'adminLoggedIn') return 'adminLoggedIn';
-        if (savedSession === 'loggedIn') return 'loggedIn';
-        return 'login';
-    });
-
-    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(() => {
-        const savedUser = localStorage.getItem('babuSahabPos_activeUser');
-        if (savedUser) {
-            try { return JSON.parse(savedUser); } catch (e) { return null; }
-        }
-        return null;
-    });
+    const [authState, setAuthState] = useState<AuthState>(isCustomerRoute() ? 'customer' : 'loading');
+    const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
 
     const [orders, setOrders] = useState<OrderStatusItem[]>([]);
     const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
@@ -93,9 +62,43 @@ function App() {
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
 
     useEffect(() => {
-        if (authState !== 'customer' && authState !== 'register') localStorage.setItem('babuSahabPos_session', authState);
-        if (loggedInUser) localStorage.setItem('babuSahabPos_activeUser', JSON.stringify(loggedInUser));
-    }, [authState, loggedInUser]);
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                if (user.email === 'diptifoodice@gmail.com') {
+                    setAuthState('adminLoggedIn');
+                } else {
+                    // Fetch user data from DB
+                    const userRef = ref(db, `global/users/${user.uid}`);
+                    onValue(userRef, (snapshot) => {
+                        const userData = snapshot.val();
+                        if (userData) {
+                            if (userData.status === UserStatus.Blocked) {
+                                signOut(auth);
+                                alert("Your account is blocked. Contact Admin.");
+                                setAuthState('login');
+                            } else if (userData.status === UserStatus.Deleted) {
+                                signOut(auth);
+                                alert("Your account was deleted.");
+                                setAuthState('login');
+                            } else {
+                                setLoggedInUser(userData);
+                                setAuthState('loggedIn');
+                            }
+                        } else {
+                            // If user exists in Auth but not in DB (shouldn't happen with proper registration)
+                            setAuthState('loggedIn');
+                        }
+                    });
+                }
+            } else {
+                if (!isCustomerRoute()) {
+                    setAuthState('login');
+                }
+                setLoggedInUser(null);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const usersRef = ref(db, 'global/users');
@@ -110,7 +113,7 @@ function App() {
                 const list = Object.values(snapshot.val()) as RegisteredUser[];
                 setRegisteredUsers(list);
                 if (loggedInUser) {
-                    const updatedMe = list.find(u => u.id === loggedInUser.id);
+                    const updatedMe = list.find(u => u.id === loggedInUser.id || u.email === loggedInUser.email);
                     if (updatedMe) setLoggedInUser(updatedMe);
                 }
             }
@@ -150,72 +153,76 @@ function App() {
         });
 
         if (loggedInUser) {
-            onValue(ref(db, `orders/${loggedInUser.id}`), (snapshot) => {
+            const uid = loggedInUser.id;
+            onValue(ref(db, `orders/${uid}`), (snapshot) => {
                 if (snapshot.val()) setOrders(Object.values(snapshot.val()).map((o:any) => ({...o, timestamp: new Date(o.timestamp)})));
                 else setOrders([]);
             });
 
-            onValue(ref(db, `userdata/${loggedInUser.id}/inventory`), (snapshot) => {
+            onValue(ref(db, `userdata/${uid}/inventory`), (snapshot) => {
                 if (snapshot.val()) setInventory(Object.values(snapshot.val()));
                 else setInventory(MOCK_INVENTORY_ITEMS);
             });
 
-            onValue(ref(db, `userdata/${loggedInUser.id}/staff`), (snapshot) => {
+            onValue(ref(db, `userdata/${uid}/staff`), (snapshot) => {
                 if (snapshot.val()) setStaff(Object.values(snapshot.val()));
                 else setStaff([]);
             });
 
-            onValue(ref(db, `userdata/${loggedInUser.id}/staffLog`), (snapshot) => {
+            onValue(ref(db, `userdata/${uid}/staffLog`), (snapshot) => {
                 if (snapshot.val()) setStaffLog(Object.values(snapshot.val()).map((l:any) => ({...l, timestamp: new Date(l.timestamp)})));
                 else setStaffLog([]);
             });
 
-            onValue(ref(db, `userdata/${loggedInUser.id}/paymentMembers`), (snapshot) => {
+            onValue(ref(db, `userdata/${uid}/paymentMembers`), (snapshot) => {
                 if (snapshot.val()) setPaymentMembers(Object.values(snapshot.val()));
                 else setPaymentMembers([]);
             });
 
-            onValue(ref(db, `userdata/${loggedInUser.id}/paymentRecords`), (snapshot) => {
+            onValue(ref(db, `userdata/${uid}/paymentRecords`), (snapshot) => {
                 if (snapshot.val()) setPaymentRecords(Object.values(snapshot.val()));
                 else setPaymentRecords([]);
             });
         }
     }, [loggedInUser?.id]);
 
-    const handleLogin = (identifier: string, pass: string) => {
-        const input = identifier.trim().toLowerCase();
-        if (input === 'diptifoodice@gmail.com' && pass === 'suvo1992') { setAuthState('adminLoggedIn'); return 'admin'; }
-        const user = registeredUsers.find(u => (u.email.trim().toLowerCase() === input || u.phone.trim() === input) && u.password === pass);
-        if (user) {
-            if (user.status === UserStatus.Blocked) return 'blocked';
-            if (user.status === UserStatus.Deleted) return 'deleted';
-            setAuthState('loggedIn'); setLoggedInUser(user); return 'ok'; 
-        }
-        return 'not_found';
+    const handleLogout = () => {
+        signOut(auth);
     };
 
-    const handleLogout = () => {
-        if (window.confirm('Logout?')) {
-            setAuthState('login'); setLoggedInUser(null);
-            localStorage.removeItem('babuSahabPos_session');
-            localStorage.removeItem('babuSahabPos_activeUser');
-        }
-    };
+    if (authState === 'loading') return (
+        <div className="h-screen w-screen bg-black flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-lemon border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
 
     if (authState === 'customer' || isCustomerRoute()) return <CustomerOrderPage />;
-    if (authState === 'login') return <Login onLogin={handleLogin} onNavigateToRegister={() => setAuthState('register')} onForgotPassword={() => true} onContactAdmin={() => {}} />;
-    if (authState === 'register') return <Register onRegister={async (u, s) => {
-        const uid = Date.now();
-        const newUser = { ...u, id: uid, status: s, subscriptionEndDate: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0], menu: MOCK_MENU_ITEMS, taxRate: 5, deliveryCharge: 30, isDeliveryEnabled: true, isPrinterEnabled: true, referralCode: 'REF'+uid };
-        await set(ref(db, `global/users/${uid}`), newUser);
-    }} onNavigateToLogin={() => setAuthState('login')} />;
+    if (authState === 'login') return <Login onNavigateToRegister={() => setAuthState('register')} />;
+    if (authState === 'register') return <Register onNavigateToLogin={() => setAuthState('login')} />;
 
     return (
         <div className="relative h-screen w-screen overflow-hidden">
             {authState === 'adminLoggedIn' ? (
                 <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => update(ref(db, `global/users/${id}`), { status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected })} onApproveMarketOrder={(o) => update(ref(db, `global/marketOrders/${o.id}`), {status: 'Accepted'})} syncStatus={{ time: lastSyncTime, error: syncError }} />}
-                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => update(ref(db, `global/users/${id}`), { status: b ? UserStatus.Blocked : UserStatus.Approved })} onSendMessage={(id, m) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: id, message: m })} onPasswordChange={(id, p) => update(ref(db, `global/users/${id}`), { password: p })} onUpdateSubscription={(id, d) => update(ref(db, `global/users/${id}`), { subscriptionEndDate: d })} onUpdateMenu={(id, m) => update(ref(db, `global/users/${id}`), { menu: m })} onUpdateUserInfo={(id, name, email, phone, pass, rName) => update(ref(db, `global/users/${id}`), { name, email, phone, password: pass, restaurantName: rName })} onDeleteUser={(id) => remove(ref(db, `global/users/${id}`))} onAddUser={(u) => push(ref(db, 'global/users'), u)} />}
+                    {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => update(ref(db, `global/users/${id}`), { status: b ? UserStatus.Blocked : UserStatus.Approved })} onSendMessage={(id, m) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: id, message: m })} onPasswordChange={(id, p) => update(ref(db, `global/users/${id}`), { password: p })} onUpdateSubscription={(id, d) => update(ref(db, `global/users/${id}`), { subscriptionEndDate: d })} onUpdateMenu={(id, m) => update(ref(db, `global/users/${id}`), { menu: m })} onUpdateUserInfo={(id, name, email, phone, pass, rName) => update(ref(db, `global/users/${id}`), { name, email, phone, password: pass, restaurantName: rName })} onDeleteUser={(id) => remove(ref(db, `global/users/${id}`))} onAddUser={(u) => {
+                        const uid = Date.now().toString();
+                        const newUser = { 
+                            ...u, 
+                            id: uid, 
+                            status: UserStatus.Approved, 
+                            subscriptionEndDate: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0], 
+                            menu: MOCK_MENU_ITEMS, 
+                            address: '',
+                            taxRate: 5, 
+                            deliveryCharge: 30, 
+                            isDeliveryEnabled: true, 
+                            isPrinterEnabled: true, 
+                            referralCode: 'REF'+uid,
+                            lastLogin: new Date().toISOString()
+                        };
+                        set(ref(db, `global/users/${uid}`), newUser);
+                    }} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => { const pid = Date.now(); set(ref(db, `global/marketProducts/${pid}`), { id: pid, name: n, price: p, description: d, image: i }); }} onDeleteProduct={(id) => remove(ref(db, `global/marketProducts/${id}`))} onMessageUser={(uid, msg) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: uid, message: msg })} onUpdateStatus={(oid, s, d) => update(ref(db, `global/marketOrders/${oid}`), {status: s, deliveryDate: d})} onDeleteOrder={(oid) => remove(ref(db, `global/marketOrders/${oid}`))} onSendMessageOrder={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(tid, msg) => push(ref(db, `global/supportTickets/${tid}/messages`), { sender: 'admin', text: msg, timestamp: new Date().toISOString() })} onResolve={(tid) => update(ref(db, `global/supportTickets/${tid}`), { status: 'Resolved' })} onDelete={(tid) => remove(ref(db, `global/supportTickets/${tid}`))} />}
                 </AdminLayout>
