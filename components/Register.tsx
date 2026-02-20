@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { EyeOpenIcon, EyeClosedIcon } from './Icons';
 import { RegisteredUser, UserStatus } from '../types';
@@ -68,13 +68,25 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
             return;
         }
 
+        if (!formData.email.includes('@')) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+
         setIsVerifying(true);
         setError('');
         
         try {
+            // Sign out any existing user first to avoid conflicts
+            if (auth.currentUser) {
+                await signOut(auth);
+            }
+
+            console.log("Attempting registration for:", formData.email);
             // 1. Create User in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
             const user = userCredential.user;
+            console.log("Auth user created:", user.uid);
 
             // 2. Create User Profile in Realtime Database
             const uid = user.uid;
@@ -93,13 +105,20 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
                 lastLogin: new Date().toISOString()
             };
 
+            console.log("Writing to database path:", `global/users/${uid}`);
             await set(ref(db, `global/users/${uid}`), newUser);
+            console.log("Database write successful");
             
             setIsVerifying(false);
             setShowSuccessModal(true);
         } catch (err: any) {
+            console.error("Registration error:", err.code, err.message);
             setIsVerifying(false);
-            setError(err.message);
+            if (err.code === 'auth/email-already-in-use') {
+                setError("This email is already registered. Please try logging in.");
+            } else {
+                setError(err.message);
+            }
         }
     };
 
@@ -121,6 +140,12 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
                     <p className="mt-2 text-[9px] font-black text-gray-500 uppercase tracking-[0.3em]">
                         {step === 1 ? 'Join the Premium POS' : 'Identity Verification'}
                     </p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${auth ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className="text-[8px] text-gray-600 uppercase font-black tracking-widest">
+                            Firebase {auth ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
                 </div>
 
                 {error && <div className="bg-red-900/20 border border-red-800 p-4 rounded-2xl text-center"><p className="text-[10px] text-red-400 font-black uppercase tracking-widest">{error}</p></div>}

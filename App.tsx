@@ -62,15 +62,19 @@ function App() {
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
 
     useEffect(() => {
+        console.log("Initializing Auth Listener...");
         const unsubscribe = onAuthStateChanged(auth, (user) => {
+            console.log("Auth State Changed:", user ? `User: ${user.email} (${user.uid})` : "No User");
             if (user) {
                 if (user.email === 'diptifoodice@gmail.com') {
+                    console.log("Admin detected");
                     setAuthState('adminLoggedIn');
                 } else {
                     // Fetch user data from DB
                     const userRef = ref(db, `global/users/${user.uid}`);
                     onValue(userRef, (snapshot) => {
                         const userData = snapshot.val();
+                        console.log("User DB Data:", userData ? "Found" : "Not Found");
                         if (userData) {
                             if (userData.status === UserStatus.Blocked) {
                                 signOut(auth);
@@ -85,9 +89,16 @@ function App() {
                                 setAuthState('loggedIn');
                             }
                         } else {
-                            // If user exists in Auth but not in DB (shouldn't happen with proper registration)
+                            // If user exists in Auth but not in DB, we might still be writing it
+                            console.warn("User authenticated but no database record found for UID:", user.uid);
+                            // We'll give it a moment or set a minimal user object to allow entry
+                            // This prevents being stuck on the loading screen
                             setAuthState('loggedIn');
+                            // We don't set loggedInUser yet, the global users listener might find it
                         }
+                    }, (err) => {
+                        console.error("Database read error for user:", err);
+                        setSyncError(true);
                     });
                 }
             } else {
@@ -96,6 +107,8 @@ function App() {
                 }
                 setLoggedInUser(null);
             }
+        }, (err) => {
+            console.error("Auth state change error:", err);
         });
         return () => unsubscribe();
     }, []);
@@ -108,82 +121,111 @@ function App() {
         const staffJobsRef = ref(db, 'global/staffJobPosts');
         const restaurantJobsRef = ref(db, 'global/restaurantJobs');
 
-        onValue(usersRef, (snapshot) => {
-            if (snapshot.val()) {
-                const list = Object.values(snapshot.val()) as RegisteredUser[];
-                setRegisteredUsers(list);
-                if (loggedInUser) {
-                    const updatedMe = list.find(u => u.id === loggedInUser.id || u.email === loggedInUser.email);
-                    if (updatedMe) setLoggedInUser(updatedMe);
+        const unsubUsers = onValue(usersRef, (snapshot) => {
+            const data = snapshot.val();
+            const list = data ? Object.values(data) as RegisteredUser[] : [];
+            setRegisteredUsers(list);
+            
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                const updatedMe = list.find(u => u.id === currentUser.uid);
+                if (updatedMe) {
+                    setLoggedInUser(updatedMe);
+                    setAuthState('loggedIn');
                 }
             }
             setLastSyncTime(new Date().toLocaleTimeString());
-        }, () => setSyncError(true));
-
-        onValue(ticketsRef, (snapshot) => {
-            if (snapshot.val()) {
-                const list = Object.values(snapshot.val()).map((t: any) => ({
-                    ...t, lastUpdate: new Date(t.lastUpdate),
-                    messages: t.messages ? Object.values(t.messages) : []
-                })) as SupportTicket[];
-                setSupportTickets(list);
-            }
+            setSyncError(false);
+        }, (err) => {
+            console.error("Users fetch error:", err);
+            setSyncError(true);
         });
 
-        onValue(productsRef, (snapshot) => {
-            if (snapshot.val()) setMarketplaceProducts(Object.values(snapshot.val()));
+        const unsubTickets = onValue(ticketsRef, (snapshot) => {
+            const data = snapshot.val();
+            const list = data ? Object.values(data).map((t: any) => ({
+                ...t, lastUpdate: new Date(t.lastUpdate),
+                messages: t.messages ? Object.values(t.messages) : []
+            })) as SupportTicket[] : [];
+            setSupportTickets(list);
         });
 
-        onValue(marketOrdersRef, (snapshot) => {
-            if (snapshot.val()) {
-                const list = Object.values(snapshot.val()).map((o: any) => ({
-                    ...o, timestamp: new Date(o.timestamp),
-                    messages: o.messages ? Object.values(o.messages) : []
-                })) as MarketplaceOrder[];
-                setMarketOrders(list);
-            }
+        const unsubProducts = onValue(productsRef, (snapshot) => {
+            const data = snapshot.val();
+            setMarketplaceProducts(data ? Object.values(data) : []);
         });
 
-        onValue(staffJobsRef, (snapshot) => {
-            if (snapshot.val()) setStaffJobPosts(Object.values(snapshot.val()));
+        const unsubMarketOrders = onValue(marketOrdersRef, (snapshot) => {
+            const data = snapshot.val();
+            const list = data ? Object.values(data).map((o: any) => ({
+                ...o, timestamp: new Date(o.timestamp),
+                messages: o.messages ? Object.values(o.messages) : []
+            })) as MarketplaceOrder[] : [];
+            setMarketOrders(list);
         });
 
-        onValue(restaurantJobsRef, (snapshot) => {
-            if (snapshot.val()) setRestaurantJobs(Object.values(snapshot.val()));
+        const unsubStaffJobs = onValue(staffJobsRef, (snapshot) => {
+            const data = snapshot.val();
+            setStaffJobPosts(data ? Object.values(data) : []);
         });
 
-        if (loggedInUser) {
-            const uid = loggedInUser.id;
-            onValue(ref(db, `orders/${uid}`), (snapshot) => {
-                if (snapshot.val()) setOrders(Object.values(snapshot.val()).map((o:any) => ({...o, timestamp: new Date(o.timestamp)})));
-                else setOrders([]);
-            });
+        const unsubRestaurantJobs = onValue(restaurantJobsRef, (snapshot) => {
+            const data = snapshot.val();
+            setRestaurantJobs(data ? Object.values(data) : []);
+        });
 
-            onValue(ref(db, `userdata/${uid}/inventory`), (snapshot) => {
-                if (snapshot.val()) setInventory(Object.values(snapshot.val()));
-                else setInventory(MOCK_INVENTORY_ITEMS);
-            });
+        return () => {
+            unsubUsers();
+            unsubTickets();
+            unsubProducts();
+            unsubMarketOrders();
+            unsubStaffJobs();
+            unsubRestaurantJobs();
+        };
+    }, [loggedInUser?.id]);
 
-            onValue(ref(db, `userdata/${uid}/staff`), (snapshot) => {
-                if (snapshot.val()) setStaff(Object.values(snapshot.val()));
-                else setStaff([]);
-            });
+    useEffect(() => {
+        if (!loggedInUser) return;
 
-            onValue(ref(db, `userdata/${uid}/staffLog`), (snapshot) => {
-                if (snapshot.val()) setStaffLog(Object.values(snapshot.val()).map((l:any) => ({...l, timestamp: new Date(l.timestamp)})));
-                else setStaffLog([]);
-            });
+        const uid = loggedInUser.id;
+        const unsubOrders = onValue(ref(db, `orders/${uid}`), (snapshot) => {
+            const data = snapshot.val();
+            setOrders(data ? Object.values(data).map((o:any) => ({...o, timestamp: new Date(o.timestamp)})) : []);
+        });
 
-            onValue(ref(db, `userdata/${uid}/paymentMembers`), (snapshot) => {
-                if (snapshot.val()) setPaymentMembers(Object.values(snapshot.val()));
-                else setPaymentMembers([]);
-            });
+        const unsubInventory = onValue(ref(db, `userdata/${uid}/inventory`), (snapshot) => {
+            const data = snapshot.val();
+            setInventory(data ? Object.values(data) : MOCK_INVENTORY_ITEMS);
+        });
 
-            onValue(ref(db, `userdata/${uid}/paymentRecords`), (snapshot) => {
-                if (snapshot.val()) setPaymentRecords(Object.values(snapshot.val()));
-                else setPaymentRecords([]);
-            });
-        }
+        const unsubStaff = onValue(ref(db, `userdata/${uid}/staff`), (snapshot) => {
+            const data = snapshot.val();
+            setStaff(data ? Object.values(data) : []);
+        });
+
+        const unsubStaffLog = onValue(ref(db, `userdata/${uid}/staffLog`), (snapshot) => {
+            const data = snapshot.val();
+            setStaffLog(data ? Object.values(data).map((l:any) => ({...l, timestamp: new Date(l.timestamp)})) : []);
+        });
+
+        const unsubPaymentMembers = onValue(ref(db, `userdata/${uid}/paymentMembers`), (snapshot) => {
+            const data = snapshot.val();
+            setPaymentMembers(data ? Object.values(data) : []);
+        });
+
+        const unsubPaymentRecords = onValue(ref(db, `userdata/${uid}/paymentRecords`), (snapshot) => {
+            const data = snapshot.val();
+            setPaymentRecords(data ? Object.values(data) : []);
+        });
+
+        return () => {
+            unsubOrders();
+            unsubInventory();
+            unsubStaff();
+            unsubStaffLog();
+            unsubPaymentMembers();
+            unsubPaymentRecords();
+        };
     }, [loggedInUser?.id]);
 
     const handleLogout = () => {

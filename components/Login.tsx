@@ -116,11 +116,17 @@ const Login: React.FC<LoginProps> = ({ onNavigateToRegister }) => {
         setLoading(true);
         
         try {
+            console.log("Attempting login for:", email);
+            // Basic email validation
+            if (!email.includes('@')) {
+                throw new Error("Please enter a valid email address. Mobile number login is not supported yet.");
+            }
             await signInWithEmailAndPassword(auth, email, password);
-            // App.tsx handles the redirect via onAuthStateChanged
+            console.log("Login successful");
         } catch (err: any) {
+            console.error("Login error:", err.code, err.message);
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                setError('Invalid email or password.');
+                setError('Invalid email or password. Please make sure you are using the email you registered with.');
             } else {
                 setError(err.message);
             }
@@ -145,6 +151,12 @@ const Login: React.FC<LoginProps> = ({ onNavigateToRegister }) => {
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <div className={`w-2 h-2 rounded-full ${auth ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">
+                            Firebase {auth ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
                     {error && (
                         <div className="bg-red-900/30 border border-red-800 p-3 rounded text-center">
                             <p className="text-sm text-red-200 font-bold">{error}</p>
