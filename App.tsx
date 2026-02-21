@@ -82,6 +82,7 @@ function App() {
     const [marketOrders, setMarketOrders] = useState<MarketplaceOrder[]>([]);
     const [staffJobPosts, setStaffJobPosts] = useState<StaffJobPost[]>([]);
     const [restaurantJobs, setRestaurantJobs] = useState<RestaurantJobPost[]>([]);
+    const [staffRequests, setStaffRequests] = useState<StaffRequirementRequest[]>([]);
     
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
     const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -150,6 +151,7 @@ function App() {
         const marketOrdersRef = ref(db, 'global/marketOrders');
         const staffJobsRef = ref(db, 'global/staffJobPosts');
         const restaurantJobsRef = ref(db, 'global/restaurantJobs');
+        const staffRequestsRef = ref(db, 'global/staffRequirements');
 
         const unsubUsers = onValue(usersRef, (snapshot) => {
             const data = snapshot.val();
@@ -204,6 +206,11 @@ function App() {
             setRestaurantJobs(data ? Object.values(data) : []);
         });
 
+        const unsubStaffRequests = onValue(staffRequestsRef, (snapshot) => {
+            const data = snapshot.val();
+            setStaffRequests(data ? Object.values(data) : []);
+        });
+
         return () => {
             unsubUsers();
             unsubTickets();
@@ -211,6 +218,7 @@ function App() {
             unsubMarketOrders();
             unsubStaffJobs();
             unsubRestaurantJobs();
+            unsubStaffRequests();
         };
     }, [loggedInUser?.id]);
 
@@ -331,29 +339,61 @@ function App() {
                     }} />}
                     {currentAdminPage === AdminPage.UserOrders && <MarketManagement products={marketplaceProducts} orders={marketOrders} users={registeredUsers} onAddProduct={(n, p, d, i) => { const pid = Date.now(); set(ref(db, `global/marketProducts/${pid}`), { id: pid, name: n, price: p, description: d, image: i }); }} onDeleteProduct={(id) => remove(ref(db, `global/marketProducts/${id}`))} onMessageUser={(uid, msg) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: uid, message: msg })} onUpdateStatus={(oid, s, d) => update(ref(db, `global/marketOrders/${oid}`), {status: s, deliveryDate: d})} onDeleteOrder={(oid) => remove(ref(db, `global/marketOrders/${oid}`))} onSendMessageOrder={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} />}
                     {currentAdminPage === AdminPage.SupportTickets && <SupportTickets tickets={supportTickets} onReply={(tid, msg) => push(ref(db, `global/supportTickets/${tid}/messages`), { sender: 'admin', text: msg, timestamp: new Date().toISOString() })} onResolve={(tid) => update(ref(db, `global/supportTickets/${tid}`), { status: 'Resolved' })} onDelete={(tid) => remove(ref(db, `global/supportTickets/${tid}`))} />}
+                    {currentAdminPage === AdminPage.StaffHub && (
+                        <AdminStaffHub 
+                            jobPosts={staffJobPosts} 
+                            activeRestaurantJobs={restaurantJobs} 
+                            staffRequests={staffRequests}
+                            onApprove={(id: number) => update(ref(db, `global/staffJobPosts/${id}`), { status: 'Approved' })} 
+                            onDelete={(id: number) => remove(ref(db, `global/staffJobPosts/${id}`))} 
+                            onMessage={(phone: string, text: string) => {
+                                const mid = Date.now();
+                                set(ref(db, `global/staffMessages/${mid}`), { id: mid, senderName: 'Admin', recipientPhone: phone, text, timestamp: new Date().toISOString(), isRead: false });
+                            }}
+                            onCreateRestaurantJob={(job) => {
+                                const jid = Date.now();
+                                set(ref(db, `global/restaurantJobs/${jid}`), { ...job, id: jid, timestamp: new Date().toISOString() });
+                            }}
+                            onDeleteRestaurantJob={(id: number) => remove(ref(db, `global/restaurantJobs/${id}`))}
+                            onMarkRequestRead={(id: number) => update(ref(db, `global/staffRequirements/${id}`), { isRead: true })}
+                        />
+                    )}
+                    {currentAdminPage === AdminPage.SubscriptionRenewal && (
+                        <div className="bg-gray-900 p-10 rounded-[3rem] border border-gray-800 text-center">
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Subscription Management</h2>
+                            <p className="text-gray-500 text-xs mt-2 uppercase tracking-widest">Feature coming soon in next update</p>
+                        </div>
+                    )}
                 </AdminLayout>
             ) : (
-                loggedInUser && (
-                <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts} onDismissAlert={() => {}} loggedInUser={loggedInUser}>
-                    {currentPage === 'dashboard' && <Dashboard data={{ onlineSales: orders.filter(o => o.type==='Online' && o.status==='Completed').reduce((s,o)=>s+o.total,0), offlineSales: orders.filter(o => o.type==='Offline' && o.status==='Completed').reduce((s,o)=>s+o.total,0), onlineOrders: orders.filter(o=>o.type==='Online').length, offlineOrders: orders.filter(o=>o.type==='Offline').length }} orders={orders} onCompleteOrder={(id) => update(ref(db, `orders/${loggedInUser.id}/${id}`), { status: 'Completed' })} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => update(ref(db, `orders/${loggedInUser.id}/${o.id}`), o)} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
-                    {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} />}
-                    {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} />}
-                    {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} />}
-                    {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} loggedInUser={loggedInUser} />}
-                    {currentPage === 'inventory' && <Inventory items={inventory} setItems={(items) => set(ref(db, `userdata/${loggedInUser.id}/inventory`), items)} />}
-                    {currentPage === 'reports' && <Reports orders={orders} />}
-                    {currentPage === 'staff' && <Staff staff={staff} onAddStaff={(s) => { const sid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/staff/${sid}`), { ...s, id: sid, status: 'Clocked Out', lastAction: 'Never' }); }} onAction={(sid, action) => { const logId = Date.now(); const member = staff.find(m => m.id === sid); if(!member) return; let newStatus = member.status; if(action==='Clock In') newStatus='Clocked In'; if(action==='Clock Out') newStatus='Clocked Out'; if(action==='Take Break') newStatus='On Break'; if(action==='End Break') newStatus='Clocked In'; update(ref(db, `userdata/${loggedInUser.id}/staff/${sid}`), { status: newStatus, lastAction: new Date().toLocaleString() }); set(ref(db, `userdata/${loggedInUser.id}/staffLog/${logId}`), { id: logId, staffId: sid, staffName: member.name, action, timestamp: new Date().toISOString() }); }} staffLog={staffLog} />}
-                    {currentPage === 'payment' && <Payment members={paymentMembers} records={paymentRecords} onAddMember={(n, c, t) => { const mid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`), { id: mid, name: n, category: c, type: t }); }} onRecordPayment={(mid, p, d, dt) => { const rid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { id: rid, memberId: mid, paid: p, due: d, date: dt }); }} onUpdateRecord={(rid, p, d, dt) => update(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { paid: p, due: d, date: dt })} onDeleteRecord={(rid) => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`))} onDeleteMember={(mid) => { remove(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`)); paymentRecords.filter(r => r.memberId === mid).forEach(r => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${r.id}`))); }} />}
-                    {currentPage === 'market' && <Market products={marketplaceProducts} orders={marketOrders.filter(o => o.userId === loggedInUser.id)} onPlaceOrder={(pid, pn, pr, q) => { const oid = Date.now(); set(ref(db, `global/marketOrders/${oid}`), { id: oid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pid, productName: pn, price: pr, quantity: q, status: 'Pending', timestamp: new Date().toISOString() }); }} onCancelOrder={(id) => update(ref(db, `global/marketOrders/${id}`), {status: 'Cancelled'})} onSendMessage={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} user={loggedInUser} />}
-                    {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => update(ref(db, `global/users/${loggedInUser.id}`), updates)} onLogout={handleLogout} />}
-                    {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => { const tid = Date.now(); set(ref(db, `global/supportTickets/${tid}`), { id: tid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date().toISOString(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date().toISOString() }); }} onReplyToTicket={(tid, msg) => push(ref(db, `global/supportTickets/${tid}/messages`), { sender: 'user', text: msg, timestamp: new Date().toISOString() })} />}
-                    {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => alert('Sent!')} />}
-                    {currentPage === 'customerOffer' && <CustomerOffer orders={orders} restaurantName={loggedInUser.restaurantName} />}
-                    {currentPage === 'refer' && <Referral user={loggedInUser} />}
-                    {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
-                    {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={(req, sal) => { const rid = Date.now(); set(ref(db, `global/staffRequirements/${rid}`), { id: rid, userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary: sal, timestamp: new Date().toISOString(), isRead: false }); }} onMessageStaff={(p, t) => { const mid = Date.now(); set(ref(db, `global/staffMessages/${mid}`), { id: mid, senderName: loggedInUser.restaurantName, recipientPhone: p, text: t, timestamp: new Date().toISOString(), isRead: false }); }} />}
-                </MainLayout>
-                )
+                authState === 'loggedIn' ? (
+                    loggedInUser ? (
+                        <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts} onDismissAlert={() => {}} loggedInUser={loggedInUser}>
+                            {currentPage === 'dashboard' && <Dashboard data={{ onlineSales: orders.filter(o => o.type==='Online' && o.status==='Completed').reduce((s,o)=>s+o.total,0), offlineSales: orders.filter(o => o.type==='Offline' && o.status==='Completed').reduce((s,o)=>s+o.total,0), onlineOrders: orders.filter(o=>o.type==='Online').length, offlineOrders: orders.filter(o=>o.type==='Offline').length }} orders={orders} onCompleteOrder={(id) => update(ref(db, `orders/${loggedInUser.id}/${id}`), { status: 'Completed' })} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => update(ref(db, `orders/${loggedInUser.id}/${o.id}`), o)} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
+                            {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} />}
+                            {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} />}
+                            {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} />}
+                            {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} loggedInUser={loggedInUser} />}
+                            {currentPage === 'inventory' && <Inventory items={inventory} setItems={(items) => set(ref(db, `userdata/${loggedInUser.id}/inventory`), items)} />}
+                            {currentPage === 'reports' && <Reports orders={orders} />}
+                            {currentPage === 'staff' && <Staff staff={staff} onAddStaff={(s) => { const sid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/staff/${sid}`), { ...s, id: sid, status: 'Clocked Out', lastAction: 'Never' }); }} onAction={(sid, action) => { const logId = Date.now(); const member = staff.find(m => m.id === sid); if(!member) return; let newStatus = member.status; if(action==='Clock In') newStatus='Clocked In'; if(action==='Clock Out') newStatus='Clocked Out'; if(action==='Take Break') newStatus='On Break'; if(action==='End Break') newStatus='Clocked In'; update(ref(db, `userdata/${loggedInUser.id}/staff/${sid}`), { status: newStatus, lastAction: new Date().toLocaleString() }); set(ref(db, `userdata/${loggedInUser.id}/staffLog/${logId}`), { id: logId, staffId: sid, staffName: member.name, action, timestamp: new Date().toISOString() }); }} staffLog={staffLog} />}
+                            {currentPage === 'payment' && <Payment members={paymentMembers} records={paymentRecords} onAddMember={(n, c, t) => { const mid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`), { id: mid, name: n, category: c, type: t }); }} onRecordPayment={(mid, p, d, dt) => { const rid = Date.now(); set(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { id: rid, memberId: mid, paid: p, due: d, date: dt }); }} onUpdateRecord={(rid, p, d, dt) => update(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`), { paid: p, due: d, date: dt })} onDeleteRecord={(rid) => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${rid}`))} onDeleteMember={(mid) => { remove(ref(db, `userdata/${loggedInUser.id}/paymentMembers/${mid}`)); paymentRecords.filter(r => r.memberId === mid).forEach(r => remove(ref(db, `userdata/${loggedInUser.id}/paymentRecords/${r.id}`))); }} />}
+                            {currentPage === 'market' && <Market products={marketplaceProducts} orders={marketOrders.filter(o => o.userId === loggedInUser.id)} onPlaceOrder={(pid, pn, pr, q) => { const oid = Date.now(); set(ref(db, `global/marketOrders/${oid}`), { id: oid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, productId: pid, productName: pn, price: pr, quantity: q, status: 'Pending', timestamp: new Date().toISOString() }); }} onCancelOrder={(id) => update(ref(db, `global/marketOrders/${id}`), {status: 'Cancelled'})} onSendMessage={(oid, t, s) => push(ref(db, `global/marketOrders/${oid}/messages`), { sender: s, text: t, timestamp: new Date().toISOString() })} user={loggedInUser} />}
+                            {currentPage === 'settings' && <Settings user={loggedInUser} onSave={(updates) => update(ref(db, `global/users/${loggedInUser.id}`), updates)} onLogout={handleLogout} />}
+                            {currentPage === 'help' && <HelpAndSupport userTickets={supportTickets.filter(t => t.userId === loggedInUser.id)} onCreateTicket={(s, m, a, at) => { const tid = Date.now(); set(ref(db, `global/supportTickets/${tid}`), { id: tid, userId: loggedInUser.id, userName: loggedInUser.name, restaurantName: loggedInUser.restaurantName, subject: s, messages: [{ sender: 'user', text: m, timestamp: new Date().toISOString(), attachment: a, attachmentType: at }], status: 'Open', lastUpdate: new Date().toISOString() }); }} onReplyToTicket={(tid, msg) => push(ref(db, `global/supportTickets/${tid}/messages`), { sender: 'user', text: msg, timestamp: new Date().toISOString() })} />}
+                            {currentPage === 'subscription' && <Subscription user={loggedInUser} onRequestRenewal={() => alert('Sent!')} />}
+                            {currentPage === 'customerOffer' && <CustomerOffer orders={orders} restaurantName={loggedInUser.restaurantName} />}
+                            {currentPage === 'refer' && <Referral user={loggedInUser} />}
+                            {currentPage === 'social' && <SocialMedia user={loggedInUser} />}
+                            {currentPage === 'staffRequirements' && <StaffRequirements jobPosts={staffJobPosts} activeRestaurantJobs={restaurantJobs} onSubmitRequirement={(req, sal) => { const rid = Date.now(); set(ref(db, `global/staffRequirements/${rid}`), { id: rid, userId: loggedInUser.id, restaurantName: loggedInUser.restaurantName, requirement: req, salary: sal, timestamp: new Date().toISOString(), isRead: false }); }} onMessageStaff={(p, t) => { const mid = Date.now(); set(ref(db, `global/staffMessages/${mid}`), { id: mid, senderName: loggedInUser.restaurantName, recipientPhone: p, text: t, timestamp: new Date().toISOString(), isRead: false }); }} />}
+                        </MainLayout>
+                    ) : (
+                        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
+                            <div className="w-10 h-10 border-4 border-lemon border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="text-lemon font-black text-[10px] uppercase tracking-[0.3em]">Loading User Profile...</p>
+                        </div>
+                    )
+                ) : null
             )}
         </div>
     );
