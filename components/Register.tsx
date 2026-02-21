@@ -19,7 +19,7 @@ const RegistrationSuccessModal: React.FC<{ status: UserStatus; onClose: () => vo
             </div>
             <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Registration successful</h3>
             <p className="text-gray-400 text-sm mb-10 leading-relaxed">
-                Waiting admin approval. In 24 hour id active.
+                YOUR REGISTRATION SUCCESSFUL. PLEASE WAITING 24 HOUR ID ACTIVE.
             </p>
             <button onClick={onClose} className="w-full bg-lemon text-black font-black py-5 rounded-2xl hover:bg-lemon-dark transition shadow-xl shadow-lemon/20 uppercase text-xs tracking-[0.2em]">
                 Got it
@@ -210,7 +210,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
 
                             <div className="bg-lemon/10 border border-lemon/20 p-4 rounded-2xl text-center">
                                 <p className="text-[10px] text-lemon font-black uppercase tracking-widest leading-relaxed">
-                                    payment ar somoy add note a restaurant name share korun
+                                    Please add your restaurant name in the payment note/description
                                 </p>
                             </div>
 

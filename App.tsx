@@ -115,6 +115,13 @@ function App() {
                                 signOut(auth);
                                 alert("Your account was deleted.");
                                 setAuthState('login');
+                            } else if (userData.status === UserStatus.Rejected) {
+                                signOut(auth);
+                                alert("Your registration was rejected. Contact Admin.");
+                                setAuthState('login');
+                            } else if (userData.status === UserStatus.Pending) {
+                                setLoggedInUser(userData);
+                                setAuthState('loggedIn'); // We'll handle the view below
                             } else {
                                 setLoggedInUser(userData);
                                 setAuthState('loggedIn');
@@ -145,82 +152,79 @@ function App() {
     }, []);
 
     useEffect(() => {
-        const usersRef = ref(db, 'global/users');
-        const ticketsRef = ref(db, 'global/supportTickets');
+        const isAdmin = auth.currentUser?.email === 'diptifoodice@gmail.com';
+        
+        // Paths regular users CAN access
         const productsRef = ref(db, 'global/marketProducts');
-        const marketOrdersRef = ref(db, 'global/marketOrders');
         const staffJobsRef = ref(db, 'global/staffJobPosts');
         const restaurantJobsRef = ref(db, 'global/restaurantJobs');
+
+        // Paths ONLY Admin can access
+        const usersRef = ref(db, 'global/users');
+        const ticketsRef = ref(db, 'global/supportTickets');
+        const marketOrdersRef = ref(db, 'global/marketOrders');
         const staffRequestsRef = ref(db, 'global/staffRequirements');
 
-        const unsubUsers = onValue(usersRef, (snapshot) => {
-            const data = snapshot.val();
-            const list = data ? Object.values(data) as RegisteredUser[] : [];
-            setRegisteredUsers(list);
-            
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                const updatedMe = list.find(u => u.id === currentUser.uid);
-                if (updatedMe) {
-                    setLoggedInUser(updatedMe);
-                    setAuthState('loggedIn');
-                }
-            }
-            setLastSyncTime(new Date().toLocaleTimeString());
-            setSyncError(false);
-        }, (err) => {
-            console.error("Users fetch error:", err);
-            setSyncError(true);
-        });
+        const unsubs: (() => void)[] = [];
 
-        const unsubTickets = onValue(ticketsRef, (snapshot) => {
-            const data = snapshot.val();
-            const list = data ? Object.values(data).map((t: any) => ({
-                ...t, lastUpdate: new Date(t.lastUpdate),
-                messages: t.messages ? Object.values(t.messages) : []
-            })) as SupportTicket[] : [];
-            setSupportTickets(list);
-        });
-
-        const unsubProducts = onValue(productsRef, (snapshot) => {
+        // Global listeners for everyone
+        unsubs.push(onValue(productsRef, (snapshot) => {
             const data = snapshot.val();
             setMarketplaceProducts(data ? Object.values(data) : []);
-        });
+        }));
 
-        const unsubMarketOrders = onValue(marketOrdersRef, (snapshot) => {
-            const data = snapshot.val();
-            const list = data ? Object.values(data).map((o: any) => ({
-                ...o, timestamp: new Date(o.timestamp),
-                messages: o.messages ? Object.values(o.messages) : []
-            })) as MarketplaceOrder[] : [];
-            setMarketOrders(list);
-        });
-
-        const unsubStaffJobs = onValue(staffJobsRef, (snapshot) => {
+        unsubs.push(onValue(staffJobsRef, (snapshot) => {
             const data = snapshot.val();
             setStaffJobPosts(data ? Object.values(data) : []);
-        });
+        }));
 
-        const unsubRestaurantJobs = onValue(restaurantJobsRef, (snapshot) => {
+        unsubs.push(onValue(restaurantJobsRef, (snapshot) => {
             const data = snapshot.val();
             setRestaurantJobs(data ? Object.values(data) : []);
-        });
+        }));
 
-        const unsubStaffRequests = onValue(staffRequestsRef, (snapshot) => {
-            const data = snapshot.val();
-            setStaffRequests(data ? Object.values(data) : []);
-        });
+        // Admin-only listeners
+        if (isAdmin) {
+            unsubs.push(onValue(usersRef, (snapshot) => {
+                const data = snapshot.val();
+                const list = data ? Object.values(data) as RegisteredUser[] : [];
+                setRegisteredUsers(list);
+                setLastSyncTime(new Date().toLocaleTimeString());
+                setSyncError(false);
+            }, (err) => {
+                console.error("Admin Users fetch error:", err);
+                setSyncError(true);
+            }));
 
-        return () => {
-            unsubUsers();
-            unsubTickets();
-            unsubProducts();
-            unsubMarketOrders();
-            unsubStaffJobs();
-            unsubRestaurantJobs();
-            unsubStaffRequests();
-        };
-    }, [loggedInUser?.id]);
+            unsubs.push(onValue(ticketsRef, (snapshot) => {
+                const data = snapshot.val();
+                const list = data ? Object.values(data).map((t: any) => ({
+                    ...t, lastUpdate: new Date(t.lastUpdate),
+                    messages: t.messages ? Object.values(t.messages) : []
+                })) as SupportTicket[] : [];
+                setSupportTickets(list);
+            }));
+
+            unsubs.push(onValue(marketOrdersRef, (snapshot) => {
+                const data = snapshot.val();
+                const list = data ? Object.values(data).map((o: any) => ({
+                    ...o, timestamp: new Date(o.timestamp),
+                    messages: o.messages ? Object.values(o.messages) : []
+                })) as MarketplaceOrder[] : [];
+                setMarketOrders(list);
+            }));
+
+            unsubs.push(onValue(staffRequestsRef, (snapshot) => {
+                const data = snapshot.val();
+                setStaffRequests(data ? Object.values(data) : []);
+            }));
+        } else if (auth.currentUser) {
+            // Regular user: Only listen to their OWN market orders and tickets if needed
+            // But for now, we'll keep it simple and only fetch their profile in the other useEffect
+        }
+
+        return () => unsubs.forEach(unsub => unsub());
+    }, [authState, auth.currentUser?.email]);
 
     useEffect(() => {
         if (!loggedInUser) return;
@@ -302,6 +306,29 @@ function App() {
     if (authState === 'login') return <Login onNavigateToRegister={() => setAuthState('register')} />;
     if (authState === 'register') return <Register onNavigateToLogin={() => setAuthState('login')} />;
 
+    if (loggedInUser && loggedInUser.status === UserStatus.Pending && authState !== 'adminLoggedIn') {
+        return (
+            <div className="h-screen w-screen bg-black flex flex-col items-center justify-center p-8 text-center">
+                <div className="w-24 h-24 bg-lemon/10 rounded-full flex items-center justify-center mb-8 border-2 border-lemon/20 animate-pulse">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <h2 className="text-3xl font-black text-white mb-4 uppercase tracking-tighter italic">Terminal Pending</h2>
+                <p className="text-gray-400 text-sm mb-8 leading-relaxed max-w-xs">
+                    YOUR REGISTRATION SUCCESSFUL. PLEASE WAITING 24 HOUR ID ACTIVE.
+                </p>
+                <div className="space-y-4 w-full max-w-xs">
+                    <div className="bg-gray-900/50 p-4 rounded-2xl border border-gray-800">
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Restaurant</p>
+                        <p className="text-lemon font-bold">{loggedInUser.restaurantName}</p>
+                    </div>
+                    <button onClick={handleLogout} className="w-full bg-gray-800 text-white font-black py-4 rounded-2xl hover:bg-gray-700 transition uppercase text-xs tracking-widest">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="relative h-screen w-screen overflow-hidden">
             {notifications.map((msg, i) => (
@@ -318,7 +345,26 @@ function App() {
                     setCurrentPage={setCurrentAdminPage} 
                     handleLogout={handleLogout}
                 >
-                    {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => update(ref(db, `global/users/${id}`), { status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected })} onApproveMarketOrder={(o) => update(ref(db, `global/marketOrders/${o.id}`), {status: 'Accepted'})} syncStatus={{ time: lastSyncTime, error: syncError }} />}
+                    {currentAdminPage === AdminPage.Dashboard && (
+                        <AdminDashboard 
+                            users={registeredUsers} 
+                            tickets={supportTickets} 
+                            marketOrders={marketOrders} 
+                            onApproveReject={async (id, dec) => {
+                                try {
+                                    await update(ref(db, `global/users/${id}`), { 
+                                        status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected 
+                                    });
+                                    alert(`User ${dec === 'approve' ? 'Approved' : 'Rejected'} successfully.`);
+                                } catch (err: any) {
+                                    console.error("Admin action error:", err);
+                                    alert("Failed to update user status: " + err.message);
+                                }
+                            }} 
+                            onApproveMarketOrder={(o) => update(ref(db, `global/marketOrders/${o.id}`), {status: 'Accepted'})} 
+                            syncStatus={{ time: lastSyncTime, error: syncError }} 
+                        />
+                    )}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => update(ref(db, `global/users/${id}`), { status: b ? UserStatus.Blocked : UserStatus.Approved })} onSendMessage={(id, m) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: id, message: m })} onPasswordChange={(id, p) => update(ref(db, `global/users/${id}`), { password: p })} onUpdateSubscription={(id, d) => update(ref(db, `global/users/${id}`), { subscriptionEndDate: d })} onUpdateMenu={(id, m) => update(ref(db, `global/users/${id}`), { menu: m })} onUpdateUserInfo={(id, name, email, phone, pass, rName) => update(ref(db, `global/users/${id}`), { name, email, phone, password: pass, restaurantName: rName })} onDeleteUser={(id) => remove(ref(db, `global/users/${id}`))} onAddUser={(u) => {
                         const uid = Date.now().toString();
                         const newUser = { 
