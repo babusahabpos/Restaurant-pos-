@@ -23,6 +23,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, setCur
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const getBadgeCount = (name: AdminPage) => {
+        if (name === AdminPage.Dashboard) return badgeCounts.pendingUsers || 0;
         if (name === AdminPage.SupportTickets) return badgeCounts.tickets || 0;
         if (name === AdminPage.UserOrders) return badgeCounts.marketOrders || 0;
         return 0;

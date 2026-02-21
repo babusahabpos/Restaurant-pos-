@@ -33,15 +33,43 @@ import AdminStaffHub from './components/admin/AdminStaffHub';
 import { MOCK_USERS, MOCK_TICKETS, MOCK_MENU_ITEMS, MOCK_INVENTORY_ITEMS, MOCK_STAFF } from './constants';
 import { Page, OrderStatusItem, DashboardData, AdminPage, RegisteredUser, UserStatus, SupportTicket, AdminAlert, MenuItem, MarketplaceProduct, MarketplaceOrder, StaffJobPost, RestaurantJobPost, StaffRequirementRequest, InventoryItem, StaffMember, StaffLogEntry, PaymentMember, PaymentRecord, StaffMessage } from './types';
 
+const NotificationToast: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 5000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed top-20 right-4 z-[300] bg-lemon text-black p-4 rounded-2xl shadow-2xl border border-white/20 animate-bounce flex items-center gap-3">
+            <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
+            <p className="text-[10px] font-black uppercase tracking-widest">{message}</p>
+            <button onClick={onClose} className="ml-2 text-black/50 hover:text-black font-black">×</button>
+        </div>
+    );
+};
+
 function App() {
     type AuthState = 'login' | 'register' | 'loggedIn' | 'adminLoggedIn' | 'customer' | 'loading';
     
+    const [notifications, setNotifications] = useState<string[]>([]);
+    const prevCounts = useRef({ users: 0, tickets: 0, orders: 0 });
+
+    const addNotification = (msg: string) => {
+        setNotifications(prev => [...prev, msg]);
+    };
     const isCustomerRoute = () => window.location.hash.includes('customer-order');
     const [lastSyncTime, setLastSyncTime] = useState<string>("Initializing...");
     const [syncError, setSyncError] = useState<boolean>(false);
 
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-    const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(AdminPage.Dashboard);
+    const [currentAdminPage, setCurrentAdminPage] = useState<AdminPage>(() => {
+        const saved = localStorage.getItem('babuSahabAdminPage');
+        return (saved as AdminPage) || AdminPage.Dashboard;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('babuSahabAdminPage', currentAdminPage);
+    }, [currentAdminPage]);
 
     const [authState, setAuthState] = useState<AuthState>(isCustomerRoute() ? 'customer' : 'loading');
     const [loggedInUser, setLoggedInUser] = useState<RegisteredUser | null>(null);
@@ -68,8 +96,10 @@ function App() {
             if (user) {
                 if (user.email === 'diptifoodice@gmail.com') {
                     console.log("Admin detected");
+                    localStorage.setItem('babuSahabIsAdmin', 'true');
                     setAuthState('adminLoggedIn');
                 } else {
+                    localStorage.removeItem('babuSahabIsAdmin');
                     // Fetch user data from DB
                     const userRef = ref(db, `global/users/${user.uid}`);
                     onValue(userRef, (snapshot) => {
@@ -228,7 +258,29 @@ function App() {
         };
     }, [loggedInUser?.id]);
 
+    useEffect(() => {
+        if (authState !== 'adminLoggedIn') return;
+
+        const pendingUsersCount = registeredUsers.filter(u => u.status === UserStatus.Pending).length;
+        const openTicketsCount = supportTickets.filter(t => t.status === 'Open').length;
+        const pendingOrdersCount = marketOrders.filter(o => o.status === 'Pending').length;
+
+        if (pendingUsersCount > prevCounts.current.users) {
+            addNotification(`New Registration Request (${pendingUsersCount})`);
+        }
+        if (openTicketsCount > prevCounts.current.tickets) {
+            addNotification(`New Support Ticket (${openTicketsCount})`);
+        }
+        if (pendingOrdersCount > prevCounts.current.orders) {
+            addNotification(`New Market Order (${pendingOrdersCount})`);
+        }
+
+        prevCounts.current = { users: pendingUsersCount, tickets: openTicketsCount, orders: pendingOrdersCount };
+    }, [registeredUsers.length, supportTickets.length, marketOrders.length, authState]);
+
     const handleLogout = () => {
+        localStorage.removeItem('babuSahabIsAdmin');
+        localStorage.removeItem('babuSahabAdminPage');
         signOut(auth);
     };
 
@@ -244,8 +296,20 @@ function App() {
 
     return (
         <div className="relative h-screen w-screen overflow-hidden">
+            {notifications.map((msg, i) => (
+                <NotificationToast key={i} message={msg} onClose={() => setNotifications(prev => prev.filter((_, idx) => idx !== i))} />
+            ))}
             {authState === 'adminLoggedIn' ? (
-                <AdminLayout badgeCounts={{ tickets: supportTickets.filter(t => t.status === 'Open').length, marketOrders: marketOrders.filter(o => o.status === 'Pending').length }} currentPage={currentAdminPage} setCurrentPage={setCurrentAdminPage} handleLogout={handleLogout}>
+                <AdminLayout 
+                    badgeCounts={{ 
+                        tickets: supportTickets.filter(t => t.status === 'Open').length, 
+                        marketOrders: marketOrders.filter(o => o.status === 'Pending').length,
+                        pendingUsers: registeredUsers.filter(u => u.status === UserStatus.Pending).length
+                    }} 
+                    currentPage={currentAdminPage} 
+                    setCurrentPage={setCurrentAdminPage} 
+                    handleLogout={handleLogout}
+                >
                     {currentAdminPage === AdminPage.Dashboard && <AdminDashboard users={registeredUsers} tickets={supportTickets} marketOrders={marketOrders} onApproveReject={(id, dec) => update(ref(db, `global/users/${id}`), { status: dec === 'approve' ? UserStatus.Approved : UserStatus.Rejected })} onApproveMarketOrder={(o) => update(ref(db, `global/marketOrders/${o.id}`), {status: 'Accepted'})} syncStatus={{ time: lastSyncTime, error: syncError }} />}
                     {currentAdminPage === AdminPage.UserManagement && <UserManagement users={registeredUsers} onBlockUser={(id, b) => update(ref(db, `global/users/${id}`), { status: b ? UserStatus.Blocked : UserStatus.Approved })} onSendMessage={(id, m) => push(ref(db, `global/adminAlerts`), { id: Date.now(), userId: id, message: m })} onPasswordChange={(id, p) => update(ref(db, `global/users/${id}`), { password: p })} onUpdateSubscription={(id, d) => update(ref(db, `global/users/${id}`), { subscriptionEndDate: d })} onUpdateMenu={(id, m) => update(ref(db, `global/users/${id}`), { menu: m })} onUpdateUserInfo={(id, name, email, phone, pass, rName) => update(ref(db, `global/users/${id}`), { name, email, phone, password: pass, restaurantName: rName })} onDeleteUser={(id) => remove(ref(db, `global/users/${id}`))} onAddUser={(u) => {
                         const uid = Date.now().toString();

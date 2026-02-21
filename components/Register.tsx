@@ -17,12 +17,12 @@ const RegistrationSuccessModal: React.FC<{ status: UserStatus; onClose: () => vo
             <div className="w-24 h-24 bg-lemon/10 rounded-full flex items-center justify-center mx-auto mb-8 border-2 border-lemon/20">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFFF00" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
-            <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">ID ACTIVATED!</h3>
+            <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Registration successful</h3>
             <p className="text-gray-400 text-sm mb-10 leading-relaxed">
-                Your account is now ready. Welcome to the premium community of <span className="text-lemon font-bold">BaBu SAHAB</span>.
+                Waiting admin approval. In 24 hour id active.
             </p>
             <button onClick={onClose} className="w-full bg-lemon text-black font-black py-5 rounded-2xl hover:bg-lemon-dark transition shadow-xl shadow-lemon/20 uppercase text-xs tracking-[0.2em]">
-                Start Billing Now
+                Got it
             </button>
         </div>
     </div>
@@ -102,7 +102,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
             const newUser: RegisteredUser = {
                 ...formData,
                 id: uid,
-                status: UserStatus.Approved,
+                status: isAdmin ? UserStatus.Approved : UserStatus.Pending,
                 subscriptionEndDate: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0],
                 menu: MOCK_MENU_ITEMS,
                 address: '',

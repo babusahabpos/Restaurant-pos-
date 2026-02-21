@@ -76,7 +76,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users = [], tickets = [
                         {pendingUsers.length > 0 ? pendingUsers.map(user => (
                             <div key={user.id} className="p-5 bg-black border border-gray-800 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 border-l-lemon shadow-lg group">
                                 <div className="text-center sm:text-left flex-1">
-                                    <p className="font-black text-white uppercase text-sm leading-tight group-hover:text-lemon transition-colors">{user.restaurantName}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-black text-white uppercase text-sm leading-tight group-hover:text-lemon transition-colors">{user.restaurantName}</p>
+                                        {user.lastLogin && (new Date().getTime() - new Date(user.lastLogin).getTime() < 600000) && (
+                                            <span className="bg-lemon text-black text-[8px] font-black px-1.5 py-0.5 rounded animate-pulse">NEW</span>
+                                        )}
+                                    </div>
                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{user.name} • <span className="text-gray-400">{user.phone}</span></p>
                                 </div>
                                 <div className="flex gap-2 w-full sm:w-auto">
