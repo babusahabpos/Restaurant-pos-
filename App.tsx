@@ -90,6 +90,75 @@ function App() {
     const [paymentMembers, setPaymentMembers] = useState<PaymentMember[]>([]);
     const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
 
+    // --- 4 AM BUSINESS DAY LOGIC ---
+    const getBusinessDateString = (date: Date) => {
+        const d = new Date(date.getTime());
+        d.setHours(d.getHours() - 4);
+        return d.toDateString();
+    };
+
+    const triggerPrint = (content: string) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write('<html><head><title>Print</title></head><body>' + content + '</body></html>');
+            doc.close();
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                }, 1000);
+            }, 500);
+        }
+    };
+
+    const createKOTContent = (order: Omit<OrderStatusItem, 'id' | 'status' | 'timestamp' | 'restaurantId'>) => {
+        return `
+            <style>
+                body { font-family: 'Courier New', monospace; font-size: 11pt; width: 80mm; margin: 0; padding: 5px; color: black; }
+                .center { text-align: center; }
+                h3 { margin: 5px 0; border-bottom: 1px solid black; padding-bottom: 5px; }
+                p { margin: 2px 0; }
+                hr { border: none; border-top: 1px dashed black; margin: 5px 0; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th, td { padding: 4px 2px; text-align: left; }
+                .qty { text-align: center; width: 50px; }
+            </style>
+            <div class="center">
+                <h3>KITCHEN ORDER TICKET</h3>
+                <p><strong>${order.sourceInfo}</strong></p>
+                <p>DATE: ${new Date().toLocaleDateString()}</p>
+                <p>TIME: ${new Date().toLocaleTimeString()}</p>
+            </div>
+            <hr>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ITEM NAME</th>
+                        <th class="qty">QTY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${order.items.map(i => `
+                        <tr>
+                            <td><strong>${i.name.toUpperCase()}</strong></td>
+                            <td class="qty"><strong>${i.quantity}</strong></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <hr>
+            <div class="center" style="margin-top: 10px;">
+                <p>*** NO PRICE ON KOT ***</p>
+                <p>*** KITCHEN COPY ***</p>
+            </div>
+        `;
+    };
+
     useEffect(() => {
         console.log("Initializing Auth Listener...");
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -415,9 +484,49 @@ function App() {
                 authState === 'loggedIn' ? (
                     loggedInUser ? (
                         <MainLayout currentPage={currentPage} setCurrentPage={setCurrentPage} handleLogout={handleLogout} alerts={alerts} onDismissAlert={() => {}} loggedInUser={loggedInUser}>
-                            {currentPage === 'dashboard' && <Dashboard data={{ onlineSales: orders.filter(o => o.type==='Online' && o.status==='Completed').reduce((s,o)=>s+o.total,0), offlineSales: orders.filter(o => o.type==='Offline' && o.status==='Completed').reduce((s,o)=>s+o.total,0), onlineOrders: orders.filter(o=>o.type==='Online').length, offlineOrders: orders.filter(o=>o.type==='Offline').length }} orders={orders} onCompleteOrder={(id) => update(ref(db, `orders/${loggedInUser.id}/${id}`), { status: 'Completed' })} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} address={loggedInUser.address} fssai={loggedInUser.fssai || ""} menuItems={loggedInUser.menu} onUpdateOrder={(o) => update(ref(db, `orders/${loggedInUser.id}/${o.id}`), o)} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} onNavigateToQrMenu={() => setCurrentPage('qrMenu')} />}
-                            {currentPage === 'billing' && <Billing menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} taxRate={loggedInUser.taxRate} restaurantName={loggedInUser.restaurantName} isPrinterEnabled={loggedInUser.isPrinterEnabled || true} />}
-                            {currentPage === 'online' && <OnlineOrders menuItems={loggedInUser.menu} onPrintKOT={(o) => { const oid = Date.now(); set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); }} />}
+                            {currentPage === 'dashboard' && (
+                                <Dashboard 
+                                    data={{ 
+                                        onlineSales: orders.filter(o => o.type==='Online' && o.status==='Completed' && getBusinessDateString(new Date(o.timestamp)) === getBusinessDateString(new Date())).reduce((s,o)=>s+o.total,0), 
+                                        offlineSales: orders.filter(o => o.type==='Offline' && o.status==='Completed' && getBusinessDateString(new Date(o.timestamp)) === getBusinessDateString(new Date())).reduce((s,o)=>s+o.total,0), 
+                                        onlineOrders: orders.filter(o=>o.type==='Online' && getBusinessDateString(new Date(o.timestamp)) === getBusinessDateString(new Date())).length, 
+                                        offlineOrders: orders.filter(o=>o.type==='Offline' && getBusinessDateString(new Date(o.timestamp)) === getBusinessDateString(new Date())).length 
+                                    }} 
+                                    orders={orders} 
+                                    onCompleteOrder={(id) => update(ref(db, `orders/${loggedInUser.id}/${id}`), { status: 'Completed' })} 
+                                    taxRate={loggedInUser.taxRate} 
+                                    restaurantName={loggedInUser.restaurantName} 
+                                    address={loggedInUser.address} 
+                                    fssai={loggedInUser.fssai || ""} 
+                                    menuItems={loggedInUser.menu} 
+                                    onUpdateOrder={(o) => update(ref(db, `orders/${loggedInUser.id}/${o.id}`), { ...o, timestamp: o.timestamp.toISOString() })} 
+                                    isPrinterEnabled={loggedInUser.isPrinterEnabled || true} 
+                                    onNavigateToQrMenu={() => setCurrentPage('qrMenu')} 
+                                />
+                            )}
+                            {currentPage === 'billing' && (
+                                <Billing 
+                                    menuItems={loggedInUser.menu} 
+                                    onPrintKOT={(o) => { 
+                                        const oid = Date.now(); 
+                                        set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); 
+                                        if (loggedInUser.isPrinterEnabled) triggerPrint(createKOTContent(o));
+                                    }} 
+                                    taxRate={loggedInUser.taxRate} 
+                                    restaurantName={loggedInUser.restaurantName} 
+                                    isPrinterEnabled={loggedInUser.isPrinterEnabled || true} 
+                                />
+                            )}
+                            {currentPage === 'online' && (
+                                <OnlineOrders 
+                                    menuItems={loggedInUser.menu} 
+                                    onPrintKOT={(o) => { 
+                                        const oid = Date.now(); 
+                                        set(ref(db, `orders/${loggedInUser.id}/${oid}`), { ...o, id: oid, status: 'Preparation', timestamp: new Date().toISOString() }); 
+                                        if (loggedInUser.isPrinterEnabled) triggerPrint(createKOTContent(o));
+                                    }} 
+                                />
+                            )}
                             {currentPage === 'menu' && <Menu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} />}
                             {currentPage === 'qrMenu' && <QrMenu menu={loggedInUser.menu} setMenu={(m) => update(ref(db, `global/users/${loggedInUser.id}`), { menu: m })} loggedInUser={loggedInUser} />}
                             {currentPage === 'inventory' && <Inventory items={inventory} setItems={(items) => set(ref(db, `userdata/${loggedInUser.id}/inventory`), items)} />}
