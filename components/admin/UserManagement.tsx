@@ -284,6 +284,7 @@ const UserManagement: React.FC<{
                                         <p className="font-black text-white uppercase text-sm">{user.restaurantName}</p>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{user.name}</p>
                                         <p className="text-[9px] text-gray-600 lowercase">{user.email}</p>
+                                        {user.transactionId && <p className="text-[8px] text-lemon font-black uppercase mt-1 tracking-tighter">TXN: {user.transactionId}</p>}
                                     </td>
                                     <td className="px-6 py-5">
                                         <p className="text-lemon font-bold text-xs">{user.phone}</p>

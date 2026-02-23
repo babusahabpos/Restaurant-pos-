@@ -93,6 +93,7 @@ export interface RegisteredUser {
     status: UserStatus;
     lastLogin: string;
     subscriptionEndDate: string; 
+    transactionId?: string;
     referralCode?: string;
     referredBy?: string; 
     socialMedia?: {

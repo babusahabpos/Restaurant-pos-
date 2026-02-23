@@ -104,6 +104,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
                 id: uid,
                 status: isAdmin ? UserStatus.Approved : UserStatus.Pending,
                 subscriptionEndDate: new Date(Date.now() + 60*24*60*60*1000).toISOString().split('T')[0],
+                transactionId: transactionId || '',
                 menu: MOCK_MENU_ITEMS,
                 address: '',
                 taxRate: 5,

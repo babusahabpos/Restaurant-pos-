@@ -83,6 +83,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ users = [], tickets = [
                                         )}
                                     </div>
                                     <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{user.name} • <span className="text-gray-400">{user.phone}</span></p>
+                                    {user.transactionId && (
+                                        <p className="text-[9px] text-lemon font-black uppercase mt-1 tracking-widest bg-lemon/5 px-2 py-1 rounded-lg inline-block border border-lemon/10">TXN: {user.transactionId}</p>
+                                    )}
                                 </div>
                                 <div className="flex gap-2 w-full sm:w-auto">
                                     <button onClick={() => onApproveReject(user.id, 'approve')} className="flex-1 sm:flex-none bg-lemon text-black font-black py-2.5 px-6 rounded-2xl text-[10px] uppercase shadow-lg active:scale-95 transition-all">Approve</button>
