@@ -498,6 +498,7 @@ function App() {
                                     restaurantName={loggedInUser.restaurantName} 
                                     address={loggedInUser.address} 
                                     fssai={loggedInUser.fssai || ""} 
+                                    restaurantPhone={loggedInUser.phone}
                                     menuItems={loggedInUser.menu} 
                                     onUpdateOrder={(o) => update(ref(db, `orders/${loggedInUser.id}/${o.id}`), { ...o, timestamp: o.timestamp.toISOString() })} 
                                     isPrinterEnabled={loggedInUser.isPrinterEnabled || true} 
