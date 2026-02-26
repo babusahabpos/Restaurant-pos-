@@ -255,11 +255,22 @@ const TodaysOrdersModal: React.FC<{
     onClose: () => void;
     onPrintBill: (order: OrderStatusItem) => void;
 }> = ({ orders, onClose, onPrintBill }) => {
+    const getOrderTypeLabel = (order: OrderStatusItem) => {
+        const info = order.sourceInfo.toLowerCase();
+        if (info.includes('swiggy')) return 'Swiggy';
+        if (info.includes('zomato')) return 'Zomato';
+        if (info.includes('table')) return 'Dine-in';
+        if (info.includes('takeaway')) return 'Takeaway';
+        if (info.includes('delivery')) return 'Delivery';
+        if (order.type === 'Online') return 'QR Order';
+        return 'Offline';
+    };
+
     return (
         <div className="fixed inset-0 bg-black/90 flex justify-center items-center z-[60] p-4">
             <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-gray-800">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-black uppercase text-lemon tracking-widest">Today's Sales Log</h3>
+                    <h3 className="text-xl font-black uppercase text-lemon tracking-widest">Today's Sales History</h3>
                     <button onClick={onClose} className="bg-gray-800 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">&times;</button>
                 </div>
                 <div className="overflow-y-auto no-scrollbar">
@@ -268,7 +279,10 @@ const TodaysOrdersModal: React.FC<{
                             {orders.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime()).map(order => (
                                 <div key={order.id} className="bg-black/50 border border-gray-800 p-4 rounded-xl flex justify-between items-center">
                                     <div className="flex-1">
-                                        <p className="text-xs font-black uppercase text-lemon">{order.sourceInfo}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs font-black uppercase text-lemon">{order.sourceInfo}</p>
+                                            <span className="text-[8px] font-black bg-gray-800 text-gray-400 px-2 py-0.5 rounded uppercase tracking-widest">{getOrderTypeLabel(order)}</span>
+                                        </div>
                                         <p className="text-[10px] text-gray-500">{new Date(order.timestamp).toLocaleTimeString()}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
@@ -514,31 +528,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
         setEditingOrder(null);
     };
 
-    const handleSendDailyReport = () => {
-        const currentBusinessDay = getBusinessDateString(new Date());
-        const reportOrders = orders.filter(o => getBusinessDateString(new Date(o.timestamp)) === currentBusinessDay && o.status === 'Completed');
-        
-        const onlineSales = reportOrders.filter(o => o.type === 'Online').reduce((s, o) => s + o.total, 0);
-        const offlineSales = reportOrders.filter(o => o.type === 'Offline').reduce((s, o) => s + o.total, 0);
-        const totalSales = onlineSales + offlineSales;
-
-        let reportText = `*DAILY SALES REPORT*\n`;
-        reportText += `*Restaurant:* ${restaurantName}\n`;
-        reportText += `*Business Day:* ${currentBusinessDay}\n`;
-        reportText += `--------------------------\n`;
-        reportText += `*Online Sales:* ₹${onlineSales.toFixed(0)}\n`;
-        reportText += `*Offline Sales:* ₹${offlineSales.toFixed(0)}\n`;
-        reportText += `*Total Sales:* ₹${totalSales.toFixed(0)}\n`;
-        reportText += `*Total Orders:* ${reportOrders.length}\n`;
-        reportText += `--------------------------\n`;
-        reportText += `Generated at: ${new Date().toLocaleString()}`;
-
-        const encodedText = encodeURIComponent(reportText);
-        // Use a default phone or prompt for one? For now, we'll try to use the restaurant's phone if available, but it's not in props.
-        // We'll just open WhatsApp with the text.
-        window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-    };
-
     const handleSettleAndPrint = (orderId: number, paymentMethod: string) => {
         const order = orders.find(o => o.id === orderId);
         if (order) {
@@ -729,11 +718,11 @@ const Dashboard: React.FC<DashboardProps> = ({ data, orders, onCompleteOrder, ta
                     icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>} 
                 />
                 <StatCard 
-                    onClick={handleSendDailyReport}
-                    title="Daily Report" 
-                    value="WhatsApp" 
-                    subtext="Send Summary" 
-                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>} 
+                    onClick={() => setShowTodaysOrders(true)}
+                    title="Today Orders" 
+                    value={todaysOrdersProcessed.length.toString()} 
+                    subtext="View History" 
+                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>} 
                 />
             </div>
 
