@@ -49,7 +49,7 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
                     <div className="bg-lemon/5 p-8 rounded-[2.5rem] inline-block border-2 border-dashed border-lemon/30 backdrop-blur-md mb-8">
                         <p className="text-gray-500 text-[10px] uppercase tracking-[0.3em] font-black mb-3">Your Terminal Code</p>
                         <div className="text-4xl md:text-6xl font-mono font-black text-white tracking-widest italic">
-                            {user.referralCode || 'BS-X001'}
+                            {user.referralCode || user.restaurantName.toUpperCase().replace(/\s+/g, '_')}
                         </div>
                     </div>
 

@@ -39,12 +39,13 @@ const UrlModal: React.FC<UrlModalProps> = ({ isOpen, onClose, menuUrl, restauran
 
     const handleDownloadPdf = () => {
         try {
-            if (typeof jspdf === 'undefined') {
+            const jspdfLib = (window as any).jspdf;
+            if (!jspdfLib) {
                 alert("PDF Generator library not loaded. Please refresh.");
                 return;
             }
 
-            const { jsPDF } = jspdf;
+            const { jsPDF } = jspdfLib;
             const doc = new jsPDF();
             
             // Generate QR Code Modules directly for vector-like quality (drawing rectangles)

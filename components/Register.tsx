@@ -111,7 +111,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
                 deliveryCharge: 30,
                 isDeliveryEnabled: true,
                 isPrinterEnabled: true,
-                referralCode: referralCode || 'REF' + uid,
+                referralCode: formData.restaurantName.toUpperCase().replace(/\s+/g, '_'),
                 lastLogin: new Date().toISOString()
             };
 
@@ -172,6 +172,7 @@ const Register: React.FC<RegisterProps> = ({ onNavigateToLogin }) => {
                                 {showPassword ? <EyeClosedIcon className="w-5 h-5"/> : <EyeOpenIcon className="w-5 h-5"/>}
                             </button>
                         </div>
+                        <input type="text" value={referralCode} onChange={e => setReferralCode(e.target.value)} className="w-full px-4 py-4 text-white bg-gray-900 border border-gray-800 rounded-2xl outline-none focus:border-lemon font-bold text-sm" placeholder="Referral Code (Optional)"/>
                         
                         <button type="submit" className="w-full bg-lemon text-black font-black py-5 rounded-[1.5rem] hover:bg-lemon-dark transition shadow-xl shadow-lemon/20 uppercase text-xs tracking-widest mt-4">
                             Proceed to Identity
