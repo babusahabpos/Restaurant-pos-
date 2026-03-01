@@ -377,7 +377,7 @@ const PendingOrdersModal: React.FC<{
                                     </div>
 
                                     {/* Right Side: Options/Buttons */}
-                                    <div className="flex flex-row lg:grid lg:grid-cols-2 gap-2 shrink-0 w-full lg:w-72 overflow-x-auto no-scrollbar lg:overflow-visible">
+                                    <div className="flex flex-wrap gap-2 shrink-0 w-full lg:w-72 lg:grid lg:grid-cols-2">
                                         <button onClick={() => onPrintKOT(order)} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-800 text-lemon border border-lemon/10 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                                             KOT
@@ -398,7 +398,7 @@ const PendingOrdersModal: React.FC<{
                                             </button>
                                             
                                             {showBillOptions === order.id && (
-                                                <div className="absolute top-full left-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-2 z-[100] animate-fade-in">
+                                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-2 z-[100] animate-fade-in">
                                                     <button 
                                                         onClick={() => { onPrintBill(order); setShowBillOptions(null); }}
                                                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-left transition-all"
