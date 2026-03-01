@@ -9,19 +9,27 @@ interface ReferralProps {
 const Referral: React.FC<ReferralProps> = ({ user }) => {
     const [copied, setCopied] = useState(false);
 
+    const getReferralCode = () => {
+        return (!user.referralCode || user.referralCode.startsWith('REF-')) 
+            ? user.restaurantName.toUpperCase().replace(/\s+/g, '_') 
+            : user.referralCode;
+    };
+
     const handleCopy = () => {
-        if (user.referralCode) {
-            navigator.clipboard.writeText(user.referralCode);
+        const code = getReferralCode();
+        if (code) {
+            navigator.clipboard.writeText(code);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
     };
 
     const handleShare = () => {
-        const shareUrl = `${window.location.origin}?ref=${user.referralCode}`;
+        const code = getReferralCode();
+        const shareUrl = `${window.location.origin}?ref=${code}`;
         const shareData = {
             title: 'BaBu SAHAB POS - Join Now!',
-            text: `Use my referral code ${user.referralCode} to join BaBu SAHAB POS and manage your restaurant efficiently!`,
+            text: `Use my referral code ${code} to join BaBu SAHAB POS and manage your restaurant efficiently!`,
             url: shareUrl
         };
 
@@ -49,7 +57,7 @@ const Referral: React.FC<ReferralProps> = ({ user }) => {
                     <div className="bg-lemon/5 p-8 rounded-[2.5rem] inline-block border-2 border-dashed border-lemon/30 backdrop-blur-md mb-8">
                         <p className="text-gray-500 text-[10px] uppercase tracking-[0.3em] font-black mb-3">Your Terminal Code</p>
                         <div className="text-4xl md:text-6xl font-mono font-black text-white tracking-widest italic">
-                            {user.referralCode || user.restaurantName.toUpperCase().replace(/\s+/g, '_')}
+                            {getReferralCode()}
                         </div>
                     </div>
 

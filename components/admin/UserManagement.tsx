@@ -286,7 +286,11 @@ const UserManagement: React.FC<{
                                         <p className="text-[9px] text-gray-600 lowercase">{user.email}</p>
                                         <div className="flex flex-wrap gap-2 mt-1">
                                             {user.transactionId && <span className="text-[8px] text-lemon font-black uppercase tracking-tighter bg-lemon/10 px-1 rounded">TXN: {user.transactionId}</span>}
-                                            {user.referralCode && <span className="text-[8px] text-blue-400 font-black uppercase tracking-tighter bg-blue-400/10 px-1 rounded">REF: {user.referralCode}</span>}
+                                            {user.referralCode && (
+                                                <span className="text-[8px] text-blue-400 font-black uppercase tracking-tighter bg-blue-400/10 px-1 rounded">
+                                                    REF: {user.referralCode.startsWith('REF-') ? user.restaurantName.toUpperCase().replace(/\s+/g, '_') : user.referralCode}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-6 py-5">
