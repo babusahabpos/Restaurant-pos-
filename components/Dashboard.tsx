@@ -398,7 +398,7 @@ const PendingOrdersModal: React.FC<{
                                             </button>
                                             
                                             {showBillOptions === order.id && (
-                                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-2 z-[100] animate-fade-in">
+                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-2 z-[100] animate-fade-in">
                                                     <button 
                                                         onClick={() => { onPrintBill(order); setShowBillOptions(null); }}
                                                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 text-left transition-all"
